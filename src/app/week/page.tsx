@@ -5,6 +5,7 @@ import { updateItineraryItemAction, respondSurpriseAction } from "@/app/week/act
 import { generateWeekItineraryAction } from "@/app/week/itineraryActions";
 import { getSwapAlternativesAction, applySwapAction } from "@/app/week/swapActions";
 import { DEMO_ITEMS, DEMO_SURPRISE } from "@/lib/demoData";
+import { formatCost, formatTime } from "@/lib/itinerary/format";
 import type { CategoryName } from "@/lib/categories";
 import type { ItineraryItemView, SurpriseView } from "@/lib/types";
 
@@ -17,17 +18,6 @@ type ActivityRow = {
   price_estimate: number | null;
   booking_url: string | null;
 };
-
-function formatCost(price: number | null) {
-  if (price === null) return "Price TBC";
-  if (price === 0) return "Free";
-  return `£${price}`;
-}
-
-function formatTime(dateTime: string | null, slot: string) {
-  if (!dateTime) return slot.charAt(0).toUpperCase() + slot.slice(1);
-  return new Date(dateTime).toLocaleTimeString("en-GB", { hour: "numeric", minute: "2-digit" });
-}
 
 export default async function WeekPage() {
   const supabase = await createClient();
