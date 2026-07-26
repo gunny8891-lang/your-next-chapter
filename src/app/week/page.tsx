@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { ThisWeekView } from "@/components/ThisWeekView";
 import { updateItineraryItemAction, respondSurpriseAction } from "@/app/week/actions";
+import { generateWeekItineraryAction } from "@/app/week/itineraryActions";
 import { DEMO_ITEMS, DEMO_SURPRISE } from "@/lib/demoData";
 import type { CategoryName } from "@/lib/categories";
 import type { ItineraryItemView, SurpriseView } from "@/lib/types";
@@ -109,6 +110,7 @@ export default async function WeekPage() {
       isDemo={isDemo}
       onItemAction={updateItineraryItemAction}
       onSurpriseAction={respondSurpriseAction}
+      onGenerate={generateWeekItineraryAction}
     />
   );
 }

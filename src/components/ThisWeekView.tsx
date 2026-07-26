@@ -6,6 +6,7 @@ import { T } from "@/lib/theme";
 import { CATEGORY, DAYS } from "@/lib/categories";
 import { Pill } from "@/components/Pill";
 import { ItemDetailModal } from "@/components/ItemDetailModal";
+import { GenerateWeekButton } from "@/components/GenerateWeekButton";
 import { logout } from "@/app/auth/actions";
 import type { ItineraryItemView, SurpriseView, MemberAction } from "@/lib/types";
 
@@ -16,6 +17,7 @@ export function ThisWeekView({
   isDemo,
   onItemAction,
   onSurpriseAction,
+  onGenerate,
 }: {
   locationLabel: string;
   items: ItineraryItemView[];
@@ -23,6 +25,7 @@ export function ThisWeekView({
   isDemo: boolean;
   onItemAction: (itemId: string, action: "accepted" | "swapped" | "skipped") => Promise<void>;
   onSurpriseAction: (cardId: string, response: "accepted" | "dismissed") => Promise<void>;
+  onGenerate: () => Promise<{ error: string | null; usedFallback?: boolean }>;
 }) {
   const itemsByDay = useMemo(() => {
     const map: Record<string, ItineraryItemView[]> = {};
@@ -85,9 +88,12 @@ export function ThisWeekView({
           <p style={{ color: "#EAE3D0", fontSize: 13, margin: "0 0 4px", letterSpacing: 0.4, fontWeight: 600 }}>YOUR PERFECT WEEK</p>
           <h1 style={{ fontFamily: "Georgia, serif", color: "#fff", fontSize: 26, margin: 0 }}>{locationLabel}</h1>
           {isDemo && (
-            <p style={{ color: "#EAE3D0", fontSize: 12.5, marginTop: 8, opacity: 0.85 }}>
-              Showing a demo week — live itinerary generation isn&apos;t wired up yet.
-            </p>
+            <>
+              <p style={{ color: "#EAE3D0", fontSize: 12.5, marginTop: 8, opacity: 0.85 }}>
+                Showing a demo week — generate your real, personalised week below.
+              </p>
+              <GenerateWeekButton onGenerate={onGenerate} />
+            </>
           )}
 
           <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
