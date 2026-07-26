@@ -15,6 +15,15 @@ export type ItineraryItemView = {
   bookingUrl: string | null;
 };
 
+export type SwapAlternative = {
+  id: string;
+  title: string;
+  category: CategoryName;
+  address: string | null;
+  priceEstimate: number | null;
+  tags: string[];
+};
+
 export type SurpriseView = {
   id: string;
   title: string;

@@ -3,6 +3,7 @@ import { createClient } from "@/utils/supabase/server";
 import { ThisWeekView } from "@/components/ThisWeekView";
 import { updateItineraryItemAction, respondSurpriseAction } from "@/app/week/actions";
 import { generateWeekItineraryAction } from "@/app/week/itineraryActions";
+import { getSwapAlternativesAction, applySwapAction } from "@/app/week/swapActions";
 import { DEMO_ITEMS, DEMO_SURPRISE } from "@/lib/demoData";
 import type { CategoryName } from "@/lib/categories";
 import type { ItineraryItemView, SurpriseView } from "@/lib/types";
@@ -111,6 +112,8 @@ export default async function WeekPage() {
       onItemAction={updateItineraryItemAction}
       onSurpriseAction={respondSurpriseAction}
       onGenerate={generateWeekItineraryAction}
+      onGetSwapAlternatives={getSwapAlternativesAction}
+      onApplySwap={applySwapAction}
     />
   );
 }

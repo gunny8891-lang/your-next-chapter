@@ -6,9 +6,12 @@ import { T } from "@/lib/theme";
 import { CATEGORY, DAYS } from "@/lib/categories";
 import { Pill } from "@/components/Pill";
 import { ItemDetailModal } from "@/components/ItemDetailModal";
+import { SwapAlternativesPanel } from "@/components/SwapAlternativesPanel";
 import { GenerateWeekButton } from "@/components/GenerateWeekButton";
 import { logout } from "@/app/auth/actions";
-import type { ItineraryItemView, SurpriseView, MemberAction } from "@/lib/types";
+import type { ItineraryItemView, SurpriseView, MemberAction, SwapAlternative } from "@/lib/types";
+
+const isRealItem = (id: string) => !id.startsWith("demo-");
 
 export function ThisWeekView({
   locationLabel,
@@ -18,6 +21,8 @@ export function ThisWeekView({
   onItemAction,
   onSurpriseAction,
   onGenerate,
+  onGetSwapAlternatives,
+  onApplySwap,
 }: {
   locationLabel: string;
   items: ItineraryItemView[];
@@ -26,6 +31,8 @@ export function ThisWeekView({
   onItemAction: (itemId: string, action: "accepted" | "swapped" | "skipped") => Promise<void>;
   onSurpriseAction: (cardId: string, response: "accepted" | "dismissed") => Promise<void>;
   onGenerate: () => Promise<{ error: string | null; usedFallback?: boolean }>;
+  onGetSwapAlternatives: (itemId: string) => Promise<{ error: string | null; alternatives: SwapAlternative[] }>;
+  onApplySwap: (itemId: string, newActivityId: string) => Promise<{ error: string | null }>;
 }) {
   const itemsByDay = useMemo(() => {
     const map: Record<string, ItineraryItemView[]> = {};
@@ -45,6 +52,10 @@ export function ThisWeekView({
     surprise?.response ?? null
   );
   const [openItemId, setOpenItemId] = useState<string | null>(null);
+  const [swapItemId, setSwapItemId] = useState<string | null>(null);
+  const [swapAlternatives, setSwapAlternatives] = useState<SwapAlternative[]>([]);
+  const [swapLoading, setSwapLoading] = useState(false);
+  const [swapError, setSwapError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   const openingSurprise = openItemId === "surprise";
@@ -57,13 +68,42 @@ export function ThisWeekView({
       startTransition(() => {
         onSurpriseAction(surprise.id, response);
       });
-    } else if (openItem) {
+      setOpenItemId(null);
+      return;
+    }
+
+    if (openItem && action === "swapped" && isRealItem(openItem.id)) {
+      // Real items get an alternatives picker instead of an immediate swap.
+      setOpenItemId(null);
+      setSwapItemId(openItem.id);
+      setSwapAlternatives([]);
+      setSwapError(null);
+      setSwapLoading(true);
+      startTransition(async () => {
+        const result = await onGetSwapAlternatives(openItem.id);
+        setSwapLoading(false);
+        if (result.error) setSwapError(result.error);
+        else setSwapAlternatives(result.alternatives);
+      });
+      return;
+    }
+
+    if (openItem) {
       setStatuses((s) => ({ ...s, [openItem.id]: action }));
       startTransition(() => {
         onItemAction(openItem.id, action);
       });
     }
     setOpenItemId(null);
+  };
+
+  const handleChooseAlternative = (alt: SwapAlternative) => {
+    if (!swapItemId) return;
+    setStatuses((s) => ({ ...s, [swapItemId]: "pending" }));
+    startTransition(() => {
+      onApplySwap(swapItemId, alt.id);
+    });
+    setSwapItemId(null);
   };
 
   const dayItems = itemsByDay[activeDay] ?? [];
@@ -193,6 +233,16 @@ export function ThisWeekView({
           status={openingSurprise ? surpriseStatus : statuses[openItem.id]}
           onClose={() => setOpenItemId(null)}
           onAction={handleAction}
+        />
+      )}
+
+      {swapItemId && (
+        <SwapAlternativesPanel
+          isLoading={swapLoading}
+          alternatives={swapAlternatives}
+          error={swapError}
+          onChoose={handleChooseAlternative}
+          onClose={() => setSwapItemId(null)}
         />
       )}
     </div>
