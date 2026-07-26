@@ -1,5 +1,6 @@
 import type { GeneratedItem, GeneratedItinerary } from "@/lib/itinerary/schema";
 import { DAYS_OF_WEEK } from "@/lib/itinerary/schema";
+import { scoreActivity, type AffinityScores } from "@/lib/memory/scoring";
 
 type CandidateActivity = {
   id: string;
@@ -11,27 +12,16 @@ type CandidateActivity = {
 
 /**
  * Rules-based fallback per spec section 6.2: if the LLM's output fails validation
- * twice, pick the highest-rated unused activities matching the member's top interests,
- * spread across distinct categories.
+ * twice, pick the highest-scoring unused activities (same Memory Agent weighting
+ * used for the LLM path), spread across distinct categories.
  */
-export function buildFallbackItinerary(
-  candidates: CandidateActivity[],
-  topInterests: string[]
-): GeneratedItinerary {
-  const scored = candidates
-    .map((a) => ({
-      activity: a,
-      matchesInterest: topInterests.some((interest) => a.tags.includes(interest)),
-    }))
-    .sort((a, b) => {
-      if (a.matchesInterest !== b.matchesInterest) return a.matchesInterest ? -1 : 1;
-      return (b.activity.rating ?? 0) - (a.activity.rating ?? 0);
-    });
+export function buildFallbackItinerary(candidates: CandidateActivity[], affinity: AffinityScores): GeneratedItinerary {
+  const scored = [...candidates].sort((a, b) => scoreActivity(b, affinity) - scoreActivity(a, affinity));
 
   const items: GeneratedItem[] = [];
   const usedCategories = new Set<string>();
 
-  for (const { activity } of scored) {
+  for (const activity of scored) {
     if (items.length >= 7) break;
     if (usedCategories.has(activity.category)) continue;
     usedCategories.add(activity.category);

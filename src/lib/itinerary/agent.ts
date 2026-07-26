@@ -2,8 +2,13 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { validateGeneratedItinerary, type GeneratedItinerary } from "@/lib/itinerary/schema";
 import { buildFallbackItinerary } from "@/lib/itinerary/fallback";
+import { computeAffinity, scoreActivity, summarizeAffinity, type PreferenceSignalRow } from "@/lib/memory/scoring";
 
 const MODEL = "claude-sonnet-5";
+const MAX_CANDIDATES_SENT_TO_LLM = 40;
+// An activity is treated as a hard exclusion once its weighted score drops this low —
+// roughly two recent "disliked" signals against it.
+const DISLIKE_EXCLUSION_THRESHOLD = -3;
 
 type ActivityRow = {
   id: string;
@@ -15,32 +20,21 @@ type ActivityRow = {
   rating: number | null;
 };
 
-type SignalRow = {
-  signal_type: string;
-  source: string;
-  activities: { title: string; category: string } | null;
-};
-
 function buildPrompt(
   profile: { location_text: string | null; travel_radius_km: number | null; personality: unknown; goals: string[]; budget_band: string | null },
   activities: ActivityRow[],
-  signals: SignalRow[]
+  affinitySummary: string
 ) {
   const candidateList = activities
     .map((a) => `- id=${a.id} | ${a.title} | category=${a.category} | tags=[${a.tags.join(", ")}] | price=${a.price_estimate ?? "unknown"} | ${a.address ?? ""}`)
     .join("\n");
 
-  const signalSummary = signals.length
-    ? signals
-        .map((s) => `- ${s.source} (${s.signal_type}) on "${s.activities?.title ?? "unknown"}" (${s.activities?.category ?? "unknown"})`)
-        .join("\n")
-    : "No history yet — this is the member's first week.";
-
   const system = `You are the Itinerary Agent for "Your Next Chapter", an AI retirement concierge. \
 Build a balanced weekly plan of 5-7 activities for a member, chosen only from the candidate activities provided. \
 Rules: aim for at least 4 of the 7 categories (Move, Connect, Learn, Explore, Give Back, Wellness, Joy), \
-never pick more than 2 items from the same category, and avoid repeating activities the member recently skipped. \
-Respond with ONLY valid JSON matching this exact shape, no prose, no markdown fences: \
+never pick more than 2 items from the same category, and weigh the member's affinity scores and category gaps below \
+when choosing — lean toward categories/activities they've responded well to, and toward under-represented categories \
+to keep the week balanced. Respond with ONLY valid JSON matching this exact shape, no prose, no markdown fences: \
 {"items": [{"day": "Mon"|"Tue"|"Wed"|"Thu"|"Fri"|"Sat"|"Sun", "slot": "morning"|"afternoon"|"evening", "activity_id": "<id from candidates>", "rationale": "<one sentence, second person, warm tone>"}]}`;
 
   const user = `Member profile:
@@ -50,10 +44,10 @@ Respond with ONLY valid JSON matching this exact shape, no prose, no markdown fe
 - Goals: ${profile.goals.join(", ") || "none recorded"}
 - Budget band: ${profile.budget_band ?? "unknown"}
 
-Recent activity history (last 4 weeks):
-${signalSummary}
+Member history (Memory Agent summary, last 4 weeks):
+${affinitySummary}
 
-Candidate activities (choose activity_id only from this list):
+Candidate activities, ordered by how well they match this member's history (choose activity_id only from this list):
 ${candidateList}`;
 
   return { system, user };
@@ -97,18 +91,34 @@ export async function generateItinerary(
     .select("id, title, category, address, price_estimate, tags, rating")
     .eq("status", "active");
 
-  const candidateActivities = (activities ?? []) as ActivityRow[];
+  const allActiveActivities = (activities ?? []) as ActivityRow[];
 
   const fourWeeksAgo = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString();
   const { data: signals } = await supabase
     .from("preference_signals")
-    .select("signal_type, source, activities(title, category)")
+    .select("signal_type, activity_id, created_at, activities(category, tags)")
     .eq("member_id", memberId)
     .gte("created_at", fourWeeksAgo)
     .order("created_at", { ascending: false })
-    .limit(20);
+    .limit(50);
 
-  const { system, user } = buildPrompt(profile ?? { location_text: null, travel_radius_km: null, personality: {}, goals: [], budget_band: null }, candidateActivities, (signals ?? []) as unknown as SignalRow[]);
+  const affinity = computeAffinity((signals ?? []) as unknown as PreferenceSignalRow[]);
+
+  // Drop activities the member has clearly rejected before they're even considered,
+  // rather than relying on the LLM to remember to avoid them.
+  const eligibleActivities = allActiveActivities.filter(
+    (a) => (affinity.activityScores[a.id] ?? 0) > DISLIKE_EXCLUSION_THRESHOLD
+  );
+
+  const candidateActivities = [...eligibleActivities]
+    .sort((a, b) => scoreActivity(b, affinity) - scoreActivity(a, affinity))
+    .slice(0, MAX_CANDIDATES_SENT_TO_LLM);
+
+  const { system, user } = buildPrompt(
+    profile ?? { location_text: null, travel_radius_km: null, personality: {}, goals: [], budget_band: null },
+    candidateActivities,
+    summarizeAffinity(affinity)
+  );
 
   let lastError: string | null = null;
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -122,6 +132,5 @@ export async function generateItinerary(
     }
   }
 
-  const topInterests = [...(profile?.goals ?? [])];
-  return { itinerary: buildFallbackItinerary(candidateActivities, topInterests), usedFallback: true };
+  return { itinerary: buildFallbackItinerary(candidateActivities, affinity), usedFallback: true };
 }
