@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "your-next-chapter",
-      "runtimeExecutable": "C:\\Users\\gunny\\AppData\\Local\\Temp\\claude\\C--Users-gunny-Documents-Your-Next-Chapter\\6f7642c7-8bc1-4df8-a51b-6f10fba67db8\\scratchpad\\run-dev.cmd",
-      "runtimeArgs": [],
+      "runtimeExecutable": "cmd.exe",
+      "runtimeArgs": ["/d", "/c", "set PATH=C:\\Program Files\\nodejs;%PATH% && npm run dev"],
       "port": 3000
     }
   ]
