@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Sun, Clock, MapPin, Banknote, Check, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { Sun, Clock, MapPin, Banknote, Check, Sparkles, Settings } from "lucide-react";
 import { T } from "@/lib/theme";
 import { CATEGORY, DAYS } from "@/lib/categories";
 import { Pill } from "@/components/Pill";
@@ -119,11 +120,16 @@ export function ThisWeekView({
               </div>
               <span style={{ fontFamily: "Georgia, serif", fontSize: 17, color: "#fff" }}>Your Next Chapter</span>
             </div>
-            <form action={logout}>
-              <button type="submit" style={{ background: "none", border: "none", color: "#EAE3D0", fontSize: 12.5, cursor: "pointer" }}>
-                Log out
-              </button>
-            </form>
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <Link href="/account" style={{ color: "#EAE3D0", fontSize: 12.5, textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
+                <Settings size={13} /> Account
+              </Link>
+              <form action={logout}>
+                <button type="submit" style={{ background: "none", border: "none", color: "#EAE3D0", fontSize: 12.5, cursor: "pointer" }}>
+                  Log out
+                </button>
+              </form>
+            </div>
           </div>
           <p style={{ color: "#EAE3D0", fontSize: 13, margin: "0 0 4px", letterSpacing: 0.4, fontWeight: 600 }}>YOUR PERFECT WEEK</p>
           <h1 style={{ fontFamily: "Georgia, serif", color: "#fff", fontSize: 26, margin: 0 }}>{locationLabel}</h1>
