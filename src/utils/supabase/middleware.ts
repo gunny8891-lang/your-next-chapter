@@ -22,6 +22,12 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
+  // API routes authenticate themselves (e.g. bearer tokens for cron jobs) —
+  // they're never gated by the member session cookie.
+  if (request.nextUrl.pathname.startsWith("/api/")) {
+    return supabaseResponse;
+  }
+
   // Refreshes the session cookie if needed — required before reading user
   // state in Server Components, which can't set cookies themselves.
   const {
