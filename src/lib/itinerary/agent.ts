@@ -18,23 +18,35 @@ type ActivityRow = {
   price_estimate: number | null;
   tags: string[];
   rating: number | null;
+  accessibility_notes: string | null;
 };
 
-function buildPrompt(
-  profile: { location_text: string | null; travel_radius_km: number | null; personality: unknown; goals: string[]; budget_band: string | null },
-  activities: ActivityRow[],
-  affinitySummary: string
-) {
+type ProfileForPrompt = {
+  location_text: string | null;
+  travel_radius_km: number | null;
+  personality: unknown;
+  goals: string[];
+  interests: string[];
+  budget_band: string | null;
+  dietary_preferences: string | null;
+  mobility_notes: string | null;
+};
+
+function buildPrompt(profile: ProfileForPrompt, activities: ActivityRow[], affinitySummary: string) {
   const candidateList = activities
-    .map((a) => `- id=${a.id} | ${a.title} | category=${a.category} | tags=[${a.tags.join(", ")}] | price=${a.price_estimate ?? "unknown"} | ${a.address ?? ""}`)
+    .map((a) => {
+      const accessibility = a.accessibility_notes ? ` | accessibility: ${a.accessibility_notes}` : "";
+      return `- id=${a.id} | ${a.title} | category=${a.category} | tags=[${a.tags.join(", ")}] | price=${a.price_estimate ?? "unknown"} | ${a.address ?? ""}${accessibility}`;
+    })
     .join("\n");
 
   const system = `You are the Itinerary Agent for "Your Next Chapter", an AI retirement concierge. \
 Build a balanced weekly plan of 5-7 activities for a member, chosen only from the candidate activities provided. \
 Rules: aim for at least 4 of the 7 categories (Move, Connect, Learn, Explore, Give Back, Wellness, Joy), \
-never pick more than 2 items from the same category, and weigh the member's affinity scores and category gaps below \
-when choosing — lean toward categories/activities they've responded well to, and toward under-represented categories \
-to keep the week balanced. Respond with ONLY valid JSON matching this exact shape, no prose, no markdown fences: \
+never pick more than 2 items from the same category, weigh the member's affinity scores and category gaps below \
+when choosing, and respect the member's mobility notes and dietary preferences — never pick something clearly \
+unsuitable for them (e.g. a long strenuous walk for someone with limited mobility). Respond with ONLY valid JSON \
+matching this exact shape, no prose, no markdown fences: \
 {"items": [{"day": "Mon"|"Tue"|"Wed"|"Thu"|"Fri"|"Sat"|"Sun", "slot": "morning"|"afternoon"|"evening", "activity_id": "<id from candidates>", "rationale": "<one sentence, second person, warm tone>"}]}`;
 
   const user = `Member profile:
@@ -42,7 +54,10 @@ to keep the week balanced. Respond with ONLY valid JSON matching this exact shap
 - Travel radius: ${profile.travel_radius_km ?? "unknown"} km
 - Personality: ${JSON.stringify(profile.personality)}
 - Goals: ${profile.goals.join(", ") || "none recorded"}
+- Interests: ${profile.interests.join(", ") || "none recorded"}
 - Budget band: ${profile.budget_band ?? "unknown"}
+- Dietary preferences: ${profile.dietary_preferences ?? "none recorded"}
+- Mobility notes: ${profile.mobility_notes ?? "none recorded"}
 
 Member history (Memory Agent summary, last 4 weeks):
 ${affinitySummary}
@@ -82,13 +97,13 @@ export async function generateItinerary(
 ): Promise<{ itinerary: GeneratedItinerary; usedFallback: boolean }> {
   const { data: profile } = await supabase
     .from("member_profiles")
-    .select("location_text, travel_radius_km, personality, goals, budget_band")
+    .select("location_text, travel_radius_km, personality, goals, interests, budget_band, dietary_preferences, mobility_notes")
     .eq("user_id", memberId)
     .single();
 
   const { data: activities } = await supabase
     .from("activities")
-    .select("id, title, category, address, price_estimate, tags, rating")
+    .select("id, title, category, address, price_estimate, tags, rating, accessibility_notes")
     .eq("status", "active");
 
   const allActiveActivities = (activities ?? []) as ActivityRow[];
@@ -115,7 +130,16 @@ export async function generateItinerary(
     .slice(0, MAX_CANDIDATES_SENT_TO_LLM);
 
   const { system, user } = buildPrompt(
-    profile ?? { location_text: null, travel_radius_km: null, personality: {}, goals: [], budget_band: null },
+    profile ?? {
+      location_text: null,
+      travel_radius_km: null,
+      personality: {},
+      goals: [],
+      interests: [],
+      budget_band: null,
+      dietary_preferences: null,
+      mobility_notes: null,
+    },
     candidateActivities,
     summarizeAffinity(affinity)
   );
