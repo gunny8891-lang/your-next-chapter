@@ -11,6 +11,10 @@ export type RawActivityCandidate = {
   priceEstimate: number | null;
   bookingUrl: string;
   tags: string[];
+  /** Defaults to 'active' in the pipeline if omitted. Sources with lower-confidence
+   * extraction (e.g. LLM-parsed pages) should set 'needs_review' + adminNotes. */
+  status?: "active" | "needs_review";
+  adminNotes?: string | null;
 };
 
 export interface DiscoverySource {

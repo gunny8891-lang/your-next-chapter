@@ -64,7 +64,8 @@ export async function runDiscoveryAgent(
         booking_url: c.bookingUrl,
         source: "discovery_agent" as const,
         tags: c.tags,
-        status: "active" as const,
+        status: c.status ?? "active",
+        admin_notes: c.adminNotes ?? null,
       }));
 
       const { error, count } = await supabase.from("activities").insert(rows, { count: "exact" });
