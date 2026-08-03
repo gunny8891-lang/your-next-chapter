@@ -19,6 +19,7 @@ export function ThisWeekView({
   items,
   surprise,
   isDemo,
+  isAdmin,
   onItemAction,
   onSurpriseAction,
   onGenerate,
@@ -29,6 +30,7 @@ export function ThisWeekView({
   items: ItineraryItemView[];
   surprise: SurpriseView;
   isDemo: boolean;
+  isAdmin: boolean;
   onItemAction: (itemId: string, action: "accepted" | "swapped" | "skipped") => Promise<void>;
   onSurpriseAction: (cardId: string, response: "accepted" | "dismissed") => Promise<void>;
   onGenerate: () => Promise<{ error: string | null; usedFallback?: boolean }>;
@@ -121,6 +123,11 @@ export function ThisWeekView({
               <span style={{ fontFamily: "Georgia, serif", fontSize: 17, color: "#fff" }}>Your Next Chapter</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              {isAdmin && (
+                <Link href="/admin/activities" style={{ color: "#EAE3D0", fontSize: 12.5, textDecoration: "none" }}>
+                  Review Queue
+                </Link>
+              )}
               <Link href="/account" style={{ color: "#EAE3D0", fontSize: 12.5, textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
                 <Settings size={13} /> Account
               </Link>

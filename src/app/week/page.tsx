@@ -34,6 +34,9 @@ export default async function WeekPage() {
 
   if (!profile) redirect("/onboarding");
 
+  const { data: userRow } = await supabase.from("users").select("role").eq("id", user.id).single();
+  const isAdmin = userRow?.role === "admin";
+
   const { data: itinerary } = await supabase
     .from("itineraries")
     .select(
@@ -99,6 +102,7 @@ export default async function WeekPage() {
       items={items}
       surprise={surprise}
       isDemo={isDemo}
+      isAdmin={isAdmin}
       onItemAction={updateItineraryItemAction}
       onSurpriseAction={respondSurpriseAction}
       onGenerate={generateWeekItineraryAction}
