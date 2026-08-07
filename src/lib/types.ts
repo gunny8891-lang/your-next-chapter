@@ -13,6 +13,7 @@ export type ItineraryItemView = {
   day: string;
   status: MemberAction;
   bookingUrl: string | null;
+  behaviorNote?: string | null;
 };
 
 export type SwapAlternative = {
@@ -22,6 +23,12 @@ export type SwapAlternative = {
   address: string | null;
   priceEstimate: number | null;
   tags: string[];
+};
+
+export type ChatMessageView = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
 };
 
 export type SurpriseView = {

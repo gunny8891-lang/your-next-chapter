@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { Sun, Clock, MapPin, Banknote, Check, Sparkles, Settings } from "lucide-react";
+import { Sun, Clock, MapPin, Banknote, Check, Sparkles, Settings, MessageCircle } from "lucide-react";
 import { T } from "@/lib/theme";
 import { CATEGORY, DAYS } from "@/lib/categories";
 import { Pill } from "@/components/Pill";
@@ -128,6 +128,9 @@ export function ThisWeekView({
                   Review Queue
                 </Link>
               )}
+              <Link href="/chat" style={{ color: "#EAE3D0", fontSize: 12.5, textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
+                <MessageCircle size={13} /> Ask
+              </Link>
               <Link href="/account" style={{ color: "#EAE3D0", fontSize: 12.5, textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
                 <Settings size={13} /> Account
               </Link>
@@ -216,6 +219,9 @@ export function ThisWeekView({
                 <span style={{ fontSize: 13.5, color: T.inkSoft, display: "flex", alignItems: "center", gap: 5 }}><MapPin size={13} /> {item.location}</span>
                 <span style={{ fontSize: 13.5, color: T.inkSoft, display: "flex", alignItems: "center", gap: 5 }}><Banknote size={13} /> {item.cost}</span>
               </div>
+              {item.behaviorNote && (
+                <p style={{ fontSize: 12.5, color: T.primarySoft, margin: "10px 0 0", fontStyle: "italic" }}>{item.behaviorNote}</p>
+              )}
             </div>
           );
         })}
