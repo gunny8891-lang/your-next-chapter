@@ -48,6 +48,9 @@ export function ItemDetailModal({
         <div style={{ background: T.bg, borderRadius: 12, padding: "14px 16px", marginBottom: 22 }}>
           <p style={{ fontSize: 13, fontWeight: 700, color: T.primary, margin: "0 0 4px", letterSpacing: 0.3 }}>WHY WE PICKED THIS</p>
           <p style={{ fontSize: 14.5, color: T.ink, margin: 0, lineHeight: 1.5 }}>{item.why}</p>
+          {"behaviorNote" in item && item.behaviorNote && (
+            <p style={{ fontSize: 13, color: T.primarySoft, margin: "8px 0 0", fontStyle: "italic" }}>{item.behaviorNote}</p>
+          )}
         </div>
 
         {status === "accepted" ? (

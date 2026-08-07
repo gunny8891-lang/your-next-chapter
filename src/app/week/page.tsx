@@ -6,6 +6,7 @@ import { generateWeekItineraryAction } from "@/app/week/itineraryActions";
 import { getSwapAlternativesAction, applySwapAction } from "@/app/week/swapActions";
 import { DEMO_ITEMS, DEMO_SURPRISE } from "@/lib/demoData";
 import { formatCost, formatTime } from "@/lib/itinerary/format";
+import { computeBehavioralRationale, formatBehavioralRationale, getRecentWindowStartIso } from "@/lib/memory/rationale";
 import type { CategoryName } from "@/lib/categories";
 import type { ItineraryItemView, SurpriseView } from "@/lib/types";
 
@@ -17,6 +18,7 @@ type ActivityRow = {
   date_time: string | null;
   price_estimate: number | null;
   booking_url: string | null;
+  tags: string[];
 };
 
 export default async function WeekPage() {
@@ -40,12 +42,26 @@ export default async function WeekPage() {
   const { data: itinerary } = await supabase
     .from("itineraries")
     .select(
-      "id, week_start_date, itinerary_items(id, day_of_week, slot, member_action, rationale_text, activities(id, title, category, address, date_time, price_estimate, booking_url))"
+      "id, week_start_date, itinerary_items(id, day_of_week, slot, member_action, rationale_text, activities(id, title, category, address, date_time, price_estimate, booking_url, tags))"
     )
     .eq("member_id", user.id)
     .order("week_start_date", { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  // "Why this changed": real behavioral signal (last 4 weeks of accepted items),
+  // never a fabricated reason — see computeBehavioralRationale.
+  const fourWeeksAgo = getRecentWindowStartIso(28);
+  const { data: recentLikedSignals } = await supabase
+    .from("preference_signals")
+    .select("activity_id, signal_type, created_at, activities(id, tags)")
+    .eq("member_id", user.id)
+    .eq("signal_type", "liked")
+    .gte("created_at", fourWeeksAgo);
+
+  const recentLikedActivities = (recentLikedSignals ?? [])
+    .map((s) => s.activities as unknown as { id: string; tags: string[] } | null)
+    .filter((a): a is { id: string; tags: string[] } => a !== null);
 
   const { data: surpriseCard } = await supabase
     .from("surprise_me_cards")
@@ -62,6 +78,7 @@ export default async function WeekPage() {
       ?.filter((row) => row.activities)
       .map((row) => {
         const activity = row.activities as unknown as ActivityRow;
+        const rationale = computeBehavioralRationale(activity, recentLikedActivities);
         return {
           id: row.id,
           day: row.day_of_week,
@@ -73,6 +90,7 @@ export default async function WeekPage() {
           why: row.rationale_text ?? "",
           status: row.member_action as ItineraryItemView["status"],
           bookingUrl: activity.booking_url,
+          behaviorNote: rationale ? formatBehavioralRationale(rationale) : null,
         };
       }) ?? [];
 
