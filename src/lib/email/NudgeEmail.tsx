@@ -5,7 +5,18 @@ export type NudgeActivity = {
   title: string;
   category: string;
   address: string | null;
+  dateTime: string | null;
+  bookingUrl: string | null;
 };
+
+function formatNudgeTime(dateTime: string | null): string | null {
+  if (!dateTime) return null;
+  return new Date(dateTime).toLocaleString("en-GB", {
+    weekday: "long",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
 
 export function NudgeEmail({
   message,
@@ -55,8 +66,17 @@ export function NudgeEmail({
             <Heading as="h3" style={{ fontFamily: "Georgia, serif", fontSize: 17, color: T.ink, margin: "0 0 6px" }}>
               {activity.title}
             </Heading>
-            {activity.address && (
-              <Text style={{ fontSize: 13.5, color: T.inkSoft, margin: 0 }}>{activity.address}</Text>
+            {(formatNudgeTime(activity.dateTime) || activity.address) && (
+              <Text style={{ fontSize: 13.5, color: T.inkSoft, margin: 0 }}>
+                {[formatNudgeTime(activity.dateTime), activity.address].filter(Boolean).join(" · ")}
+              </Text>
+            )}
+            {activity.bookingUrl && (
+              <Text style={{ fontSize: 13.5, margin: "8px 0 0" }}>
+                <a href={activity.bookingUrl} style={{ color: T.accent }}>
+                  View details / book →
+                </a>
+              </Text>
             )}
           </Section>
 

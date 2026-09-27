@@ -13,6 +13,8 @@ type ActivityRow = {
   tags: string[];
   rating: number | null;
   price_estimate: number | null;
+  date_time: string | null;
+  booking_url: string | null;
 };
 
 export type NudgeCandidate = {
@@ -39,7 +41,7 @@ export async function detectNudgeCandidate(admin: SupabaseClient, memberId: stri
 
   const { data: activities } = await admin
     .from("activities")
-    .select("id, title, category, address, tags, rating, price_estimate")
+    .select("id, title, category, address, tags, rating, price_estimate, date_time, booking_url")
     .eq("status", "active");
   const allActive = (activities ?? []) as ActivityRow[];
 

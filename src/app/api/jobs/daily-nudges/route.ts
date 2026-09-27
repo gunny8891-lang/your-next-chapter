@@ -50,6 +50,8 @@ export async function GET(request: Request) {
         title: candidate.activity.title,
         category: candidate.activity.category,
         address: candidate.activity.address,
+        dateTime: candidate.activity.date_time,
+        bookingUrl: candidate.activity.booking_url,
       });
 
       await admin.from("nudges").insert({
