@@ -6,9 +6,9 @@ import { updateProfileAction, deleteAccountAction } from "@/app/account/actions"
 export default async function AccountPage({
   searchParams,
 }: {
-  searchParams: Promise<{ saved?: string; deleteError?: string }>;
+  searchParams: Promise<{ saved?: string; deleteError?: string; planError?: string }>;
 }) {
-  const { saved, deleteError } = await searchParams;
+  const { saved, deleteError, planError } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -34,6 +34,7 @@ export default async function AccountPage({
       profile={profile}
       subscription={subscription}
       saved={saved === "1"}
+      planError={planError}
       deleteError={deleteError}
       onSave={updateProfileAction}
       onDeleteAccount={deleteAccountAction}

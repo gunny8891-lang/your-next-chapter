@@ -42,6 +42,7 @@ export function AccountSettingsForm({
   profile,
   subscription,
   saved,
+  planError,
   deleteError,
   onSave,
   onDeleteAccount,
@@ -50,6 +51,7 @@ export function AccountSettingsForm({
   profile: Profile;
   subscription: Subscription;
   saved: boolean;
+  planError?: string;
   deleteError?: string;
   onSave: (formData: FormData) => Promise<void>;
   onDeleteAccount: () => Promise<void>;
@@ -69,9 +71,14 @@ export function AccountSettingsForm({
       </div>
 
       <div style={{ maxWidth: 560, margin: "0 auto", padding: "24px 20px 60px" }}>
-        {saved && (
+        {saved && !planError && (
           <div style={{ background: "#E7F0E9", border: "1px solid #7C9A82", borderRadius: 10, padding: "12px 14px", marginBottom: 20, fontSize: 14, color: T.primary }}>
-            Your profile has been updated.
+            Your profile has been updated and this week&apos;s plan has been refreshed.
+          </div>
+        )}
+        {saved && planError && (
+          <div style={{ background: "#F5E9E2", border: "1px solid #D3A98C", borderRadius: 10, padding: "12px 14px", marginBottom: 20, fontSize: 14, color: "#8A4A28" }}>
+            Your profile was saved, but we couldn&apos;t refresh this week&apos;s plan just now ({planError}). It&apos;ll regenerate automatically next Sunday, or you can try again from This Week.
           </div>
         )}
 
@@ -84,7 +91,10 @@ export function AccountSettingsForm({
 
           <form action={onSave}>
             <Field label="Location">
-              <input name="location_text" defaultValue={profile.location_text ?? ""} style={inputStyle} placeholder="e.g. Near Richmond, London" />
+              <input name="location_text" defaultValue={profile.location_text ?? ""} style={inputStyle} placeholder="e.g. Bath, Somerset" />
+              <p style={{ fontSize: 12.5, color: T.inkSoft, margin: "6px 0 0" }}>
+                Changing this updates where your weekly activities are chosen from.
+              </p>
             </Field>
 
             <Field label="Travel radius (km)">

@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
+import { geocodeLocation } from "@/lib/geo/geocode";
+import { generateAndSaveItinerary } from "@/lib/itinerary/generateAndSave";
 
 function parseTagList(value: FormDataEntryValue | null): string[] {
   return String(value ?? "")
@@ -21,11 +23,32 @@ export async function updateProfileAction(formData: FormData) {
 
   const radiusRaw = formData.get("travel_radius_km");
   const budgetRaw = String(formData.get("budget_band") ?? "");
+  const newLocationText = String(formData.get("location_text") ?? "").trim() || null;
+
+  const { data: existing } = await supabase
+    .from("member_profiles")
+    .select("location_text, location_lat, location_lng")
+    .eq("user_id", user.id)
+    .single();
+
+  // Only re-geocode when the location text actually changed — avoids hitting
+  // Nominatim on every save of an unrelated field, and avoids clobbering a
+  // known-good coordinate when the text is untouched.
+  let locationLat = existing?.location_lat ?? null;
+  let locationLng = existing?.location_lng ?? null;
+  const locationChanged = newLocationText !== (existing?.location_text ?? null);
+  if (locationChanged) {
+    const geocoded = newLocationText ? await geocodeLocation(newLocationText) : null;
+    locationLat = geocoded?.lat ?? null;
+    locationLng = geocoded?.lng ?? null;
+  }
 
   await supabase
     .from("member_profiles")
     .update({
-      location_text: String(formData.get("location_text") ?? "").trim() || null,
+      location_text: newLocationText,
+      location_lat: locationLat,
+      location_lng: locationLng,
       travel_radius_km: radiusRaw ? Number(radiusRaw) : null,
       budget_band: ["low", "medium", "high"].includes(budgetRaw) ? budgetRaw : null,
       dietary_preferences: String(formData.get("dietary_preferences") ?? "").trim() || null,
@@ -35,8 +58,15 @@ export async function updateProfileAction(formData: FormData) {
     })
     .eq("user_id", user.id);
 
+  // Regenerate this week's plan immediately so a location (or any other
+  // preference) change is reflected right away, rather than waiting for
+  // Sunday's batch job.
+  const admin = createAdminClient();
+  const generated = await generateAndSaveItinerary(admin, user.id);
+
   revalidatePath("/account");
-  redirect("/account?saved=1");
+  revalidatePath("/week");
+  redirect(`/account?saved=1${generated.error ? `&planError=${encodeURIComponent(generated.error)}` : ""}`);
 }
 
 export async function deleteAccountAction() {
