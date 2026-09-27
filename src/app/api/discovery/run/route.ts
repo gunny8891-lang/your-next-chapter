@@ -3,6 +3,7 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { runDiscoveryAgent } from "@/lib/discovery/run";
 import { createTicketmasterSource } from "@/lib/discovery/sources/ticketmaster";
 import { createClaudeWebSource } from "@/lib/discovery/sources/claudeWeb";
+import { createClaudeWebSearchSource } from "@/lib/discovery/sources/claudeWebSearch";
 
 // Triggered by Vercel Cron (see vercel.json) once deployed, or manually via
 // curl with the same bearer token in the meantime.
@@ -13,6 +14,21 @@ export async function GET(request: Request) {
   }
 
   const admin = createAdminClient();
-  const results = await runDiscoveryAgent(admin, [createTicketmasterSource(), createClaudeWebSource()]);
+
+  // Drives the location-dynamic source from wherever members actually are,
+  // rather than a hardcoded region list.
+  const { data: profiles } = await admin.from("member_profiles").select("location_text");
+  const regions = Array.from(
+    new Set(
+      (profiles ?? [])
+        .map((p) => p.location_text?.replace(/^Near /, "").trim())
+        .filter((region): region is string => !!region)
+    )
+  );
+
+  const sources = [createTicketmasterSource(), createClaudeWebSource()];
+  if (regions.length > 0) sources.push(createClaudeWebSearchSource(regions));
+
+  const results = await runDiscoveryAgent(admin, sources);
   return NextResponse.json({ results });
 }
