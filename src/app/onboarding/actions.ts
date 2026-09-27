@@ -2,7 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { geocodeLocation } from "@/lib/geo/geocode";
+import { generateAndSaveItinerary } from "@/lib/itinerary/generateAndSave";
 import type { OnboardingAnswers } from "@/components/OnboardingFlow";
 
 const RADIUS_KM: Record<string, number> = {
@@ -45,6 +47,11 @@ export async function saveOnboardingAction(answers: OnboardingAnswers) {
     },
     { onConflict: "user_id" }
   );
+
+  // Generate a real first week right away rather than leaving the member on
+  // demo placeholder data until they notice a "Generate my week" button.
+  const admin = createAdminClient();
+  await generateAndSaveItinerary(admin, user.id);
 
   redirect("/week");
 }
