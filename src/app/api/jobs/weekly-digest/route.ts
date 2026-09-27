@@ -11,6 +11,7 @@ type ActivityRow = {
   address: string | null;
   date_time: string | null;
   price_estimate: number | null;
+  booking_url: string | null;
   description?: string | null;
 };
 
@@ -53,7 +54,7 @@ export async function GET(request: Request) {
 
     const { data: itineraryItems } = await admin
       .from("itinerary_items")
-      .select("day_of_week, slot, rationale_text, activities(title, category, address, date_time, price_estimate)")
+      .select("day_of_week, slot, rationale_text, activities(title, category, address, date_time, price_estimate, booking_url)")
       .eq("itinerary_id", generated.itineraryId);
 
     const items: DigestItem[] = (itineraryItems ?? [])
@@ -68,12 +69,13 @@ export async function GET(request: Request) {
           location: activity.address ?? "Location TBC",
           cost: formatCost(activity.price_estimate),
           why: row.rationale_text ?? "",
+          bookingUrl: activity.booking_url,
         };
       });
 
     const { data: surpriseCard } = await admin
       .from("surprise_me_cards")
-      .select("activities(title, address, price_estimate, description)")
+      .select("activities(title, address, price_estimate, description, booking_url)")
       .eq("member_id", member.user_id)
       .eq("week_start_date", getCurrentWeekStart())
       .maybeSingle();
@@ -86,6 +88,7 @@ export async function GET(request: Request) {
         location: activity.address ?? "Location TBC",
         cost: formatCost(activity.price_estimate),
         why: activity.description ?? "",
+        bookingUrl: activity.booking_url,
       };
     })();
 

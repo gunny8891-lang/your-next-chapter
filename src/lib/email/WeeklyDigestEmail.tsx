@@ -9,6 +9,7 @@ export type DigestItem = {
   location: string;
   cost: string;
   why: string;
+  bookingUrl: string | null;
 };
 
 export type DigestSurprise = {
@@ -16,6 +17,7 @@ export type DigestSurprise = {
   location: string;
   cost: string;
   why: string;
+  bookingUrl: string | null;
 } | null;
 
 export function WeeklyDigestEmail({
@@ -72,6 +74,13 @@ export function WeeklyDigestEmail({
                 {item.time} · {item.location} · {item.cost}
               </Text>
               <Text style={{ fontSize: 13.5, color: T.ink, margin: 0, lineHeight: 1.5 }}>{item.why}</Text>
+              {item.bookingUrl && (
+                <Text style={{ fontSize: 13.5, margin: "8px 0 0" }}>
+                  <a href={item.bookingUrl} style={{ color: T.accent }}>
+                    View details / book →
+                  </a>
+                </Text>
+              )}
             </Section>
           ))}
 
@@ -94,6 +103,13 @@ export function WeeklyDigestEmail({
               <Text style={{ fontSize: 13.5, color: T.inkSoft, margin: 0 }}>
                 {surprise.location} · {surprise.cost}
               </Text>
+              {surprise.bookingUrl && (
+                <Text style={{ fontSize: 13.5, margin: "8px 0 0" }}>
+                  <a href={surprise.bookingUrl} style={{ color: T.accent }}>
+                    View details / book →
+                  </a>
+                </Text>
+              )}
             </Section>
           )}
 
