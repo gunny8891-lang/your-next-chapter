@@ -8,21 +8,26 @@ const ONBOARD_STEPS = [
   {
     q: "Hello — I'll get to know you in a short chat, then build your first week. Where should we start looking for things to do?",
     field: "location",
-    options: ["Near Richmond, London", "Near York", "Near Bristol", "Somewhere else"],
+    type: "text" as const,
+    placeholder: "e.g. Bath, Somerset",
+    suggestions: ["Richmond, London", "York", "Bristol"],
   },
   {
     q: "Good. And roughly how far would you like to travel for a typical outing?",
     field: "radius",
+    type: "options" as const,
     options: ["Walking distance only", "Up to 3 miles", "Up to 10 miles", "I'm happy to travel further"],
   },
   {
     q: "What sounds most like you on a free afternoon?",
     field: "personality",
+    type: "options" as const,
     options: ["A long walk, just me", "Coffee with one or two friends", "A group class or club", "A day trip somewhere new"],
   },
   {
     q: "Last one — what would make this next chapter feel worthwhile?",
     field: "goal",
+    type: "options" as const,
     options: ["Meeting new people", "Staying active", "Learning something new", "Giving back locally"],
   },
 ] as const;
@@ -32,12 +37,14 @@ export type OnboardingAnswers = Record<string, string>;
 export function OnboardingFlow({ onDone }: { onDone: (answers: OnboardingAnswers) => Promise<void> }) {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<OnboardingAnswers>({});
+  const [textValue, setTextValue] = useState("");
   const [isPending, startTransition] = useTransition();
   const current = ONBOARD_STEPS[step];
 
   const choose = (opt: string) => {
     const next = { ...answers, [current.field]: opt };
     setAnswers(next);
+    setTextValue("");
     if (step < ONBOARD_STEPS.length - 1) {
       setTimeout(() => setStep(step + 1), 150);
     } else {
@@ -67,32 +74,96 @@ export function OnboardingFlow({ onDone }: { onDone: (answers: OnboardingAnswers
           </p>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {current.options.map((opt) => (
-            <button
-              key={opt}
-              disabled={isPending}
-              onClick={() => choose(opt)}
-              style={{
-                textAlign: "left",
-                fontSize: 17,
-                padding: "16px 20px",
-                borderRadius: 12,
-                border: `1.5px solid ${answers[current.field] === opt ? T.primary : T.line}`,
-                background: answers[current.field] === opt ? T.primary : T.surface,
-                color: answers[current.field] === opt ? "#fff" : T.ink,
-                cursor: isPending ? "default" : "pointer",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                transition: "all 0.15s",
-              }}
-            >
-              {opt}
-              <ArrowRight size={16} style={{ opacity: 0.6 }} />
-            </button>
-          ))}
-        </div>
+        {current.type === "text" ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ display: "flex", gap: 10 }}>
+              <input
+                autoFocus
+                disabled={isPending}
+                value={textValue}
+                onChange={(e) => setTextValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && textValue.trim()) choose(textValue.trim());
+                }}
+                placeholder={current.placeholder}
+                style={{
+                  flex: 1,
+                  fontSize: 17,
+                  padding: "16px 20px",
+                  borderRadius: 12,
+                  border: `1.5px solid ${T.line}`,
+                  background: T.surface,
+                  color: T.ink,
+                  outline: "none",
+                }}
+              />
+              <button
+                disabled={isPending || !textValue.trim()}
+                onClick={() => choose(textValue.trim())}
+                style={{
+                  padding: "0 20px",
+                  borderRadius: 12,
+                  border: "none",
+                  background: textValue.trim() ? T.primary : T.line,
+                  color: "#fff",
+                  cursor: isPending || !textValue.trim() ? "default" : "pointer",
+                }}
+              >
+                <ArrowRight size={18} />
+              </button>
+            </div>
+
+            {current.suggestions && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {current.suggestions.map((s) => (
+                  <button
+                    key={s}
+                    disabled={isPending}
+                    onClick={() => setTextValue(s)}
+                    style={{
+                      fontSize: 14,
+                      padding: "8px 14px",
+                      borderRadius: 20,
+                      border: `1px solid ${T.line}`,
+                      background: T.surface,
+                      color: T.inkSoft,
+                      cursor: isPending ? "default" : "pointer",
+                    }}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {current.options.map((opt) => (
+              <button
+                key={opt}
+                disabled={isPending}
+                onClick={() => choose(opt)}
+                style={{
+                  textAlign: "left",
+                  fontSize: 17,
+                  padding: "16px 20px",
+                  borderRadius: 12,
+                  border: `1.5px solid ${answers[current.field] === opt ? T.primary : T.line}`,
+                  background: answers[current.field] === opt ? T.primary : T.surface,
+                  color: answers[current.field] === opt ? "#fff" : T.ink,
+                  cursor: isPending ? "default" : "pointer",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  transition: "all 0.15s",
+                }}
+              >
+                {opt}
+                <ArrowRight size={16} style={{ opacity: 0.6 }} />
+              </button>
+            ))}
+          </div>
+        )}
 
         <p style={{ fontSize: 13, color: T.inkSoft, marginTop: 20 }}>
           Step {step + 1} of {ONBOARD_STEPS.length}

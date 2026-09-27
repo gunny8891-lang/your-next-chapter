@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { DiscoverySource } from "@/lib/discovery/types";
+import { geocodeLocation, sleep } from "@/lib/geo/geocode";
 
 export type DiscoveryRunResult = {
   source: string;
@@ -50,6 +51,20 @@ export async function runDiscoveryAgent(
 
     const toInsert = candidates.filter((c) => !existingUrls.has(c.bookingUrl));
     result.skippedExisting = candidates.length - toInsert.length;
+
+    // Most sources can't provide coordinates directly (an LLM reading a page
+    // has no lat/lng to give), so geocode from the address here — one place,
+    // regardless of source — respecting Nominatim's ~1 request/sec policy.
+    for (const c of toInsert) {
+      if (c.locationLat == null && c.locationLng == null && c.address) {
+        const coords = await geocodeLocation(c.address);
+        if (coords) {
+          c.locationLat = coords.lat;
+          c.locationLng = coords.lng;
+        }
+        await sleep(1100);
+      }
+    }
 
     if (toInsert.length > 0) {
       const rows = toInsert.map((c) => ({

@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
+import { geocodeLocation } from "@/lib/geo/geocode";
 import type { OnboardingAnswers } from "@/components/OnboardingFlow";
 
 const RADIUS_KM: Record<string, number> = {
@@ -27,10 +28,16 @@ export async function saveOnboardingAction(answers: OnboardingAnswers) {
 
   const goalTag = answers.goal ? GOAL_TAG[answers.goal] ?? null : null;
 
+  // Best-effort — a member whose town doesn't resolve still completes onboarding;
+  // they just won't get distance-filtered results until this can be retried.
+  const geocoded = answers.location ? await geocodeLocation(answers.location) : null;
+
   await supabase.from("member_profiles").upsert(
     {
       user_id: user.id,
       location_text: answers.location ?? null,
+      location_lat: geocoded?.lat ?? null,
+      location_lng: geocoded?.lng ?? null,
       travel_radius_km: answers.radius ? RADIUS_KM[answers.radius] ?? null : null,
       personality: answers.personality ? { free_time_pref: answers.personality } : {},
       goals: goalTag ? [goalTag] : [],

@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { validateGeneratedItinerary, type GeneratedItinerary } from "@/lib/itinerary/schema";
 import { buildFallbackItinerary } from "@/lib/itinerary/fallback";
 import { computeAffinity, scoreActivity, summarizeAffinity, type PreferenceSignalRow } from "@/lib/memory/scoring";
+import { haversineDistanceKm } from "@/lib/geo/haversine";
 
 const MODEL = "claude-sonnet-5";
 const MAX_CANDIDATES_SENT_TO_LLM = 40;
@@ -19,10 +20,14 @@ type ActivityRow = {
   tags: string[];
   rating: number | null;
   accessibility_notes: string | null;
+  location_lat: number | null;
+  location_lng: number | null;
 };
 
 type ProfileForPrompt = {
   location_text: string | null;
+  location_lat: number | null;
+  location_lng: number | null;
   travel_radius_km: number | null;
   personality: unknown;
   goals: string[];
@@ -31,6 +36,27 @@ type ProfileForPrompt = {
   dietary_preferences: string | null;
   mobility_notes: string | null;
 };
+
+/**
+ * Restricts candidates to those within the member's travel radius, when we have
+ * enough real coordinates to judge that. Falls back to no filtering (rather than
+ * an empty candidate set) whenever either side of the comparison is unknown —
+ * missing profile coordinates, no radius set, or an activity that hasn't been
+ * geocoded yet — since an unfiltered recommendation beats none at all.
+ */
+function filterByDistance(activities: ActivityRow[], profile: ProfileForPrompt): ActivityRow[] {
+  if (profile.location_lat == null || profile.location_lng == null || profile.travel_radius_km == null) {
+    return activities;
+  }
+
+  return activities.filter((a) => {
+    if (a.location_lat == null || a.location_lng == null) return false;
+    return (
+      haversineDistanceKm(profile.location_lat!, profile.location_lng!, a.location_lat, a.location_lng) <=
+      profile.travel_radius_km!
+    );
+  });
+}
 
 function buildPrompt(profile: ProfileForPrompt, activities: ActivityRow[], affinitySummary: string) {
   const candidateList = activities
@@ -97,16 +123,32 @@ export async function generateItinerary(
 ): Promise<{ itinerary: GeneratedItinerary; usedFallback: boolean }> {
   const { data: profile } = await supabase
     .from("member_profiles")
-    .select("location_text, travel_radius_km, personality, goals, interests, budget_band, dietary_preferences, mobility_notes")
+    .select(
+      "location_text, location_lat, location_lng, travel_radius_km, personality, goals, interests, budget_band, dietary_preferences, mobility_notes"
+    )
     .eq("user_id", memberId)
     .single();
 
   const { data: activities } = await supabase
     .from("activities")
-    .select("id, title, category, address, price_estimate, tags, rating, accessibility_notes")
+    .select("id, title, category, address, price_estimate, tags, rating, accessibility_notes, location_lat, location_lng")
     .eq("status", "active");
 
-  const allActiveActivities = (activities ?? []) as ActivityRow[];
+  const allActiveActivities = filterByDistance(
+    (activities ?? []) as ActivityRow[],
+    profile ?? {
+      location_text: null,
+      location_lat: null,
+      location_lng: null,
+      travel_radius_km: null,
+      personality: {},
+      goals: [],
+      interests: [],
+      budget_band: null,
+      dietary_preferences: null,
+      mobility_notes: null,
+    }
+  );
 
   const fourWeeksAgo = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString();
   const { data: signals } = await supabase
@@ -132,6 +174,8 @@ export async function generateItinerary(
   const { system, user } = buildPrompt(
     profile ?? {
       location_text: null,
+      location_lat: null,
+      location_lng: null,
       travel_radius_km: null,
       personality: {},
       goals: [],
