@@ -5,6 +5,10 @@ import type { DiscoverySource, RawActivityCandidate } from "@/lib/discovery/type
 const MODEL = "claude-sonnet-5";
 const CATEGORIES: readonly CategoryName[] = ["Move", "Connect", "Learn", "Explore", "Give Back", "Wellness", "Joy"];
 const MAX_TOOL_USES = 6;
+// A heavier search (more pages read, more narration between tool calls) can
+// exhaust a small budget before reaching a final answer — 4096 was observed
+// to truncate mid-search for a genuinely real region ("Chelmsford").
+const MAX_TOKENS = 8192;
 
 type ExtractedItem = {
   title?: string;
@@ -47,13 +51,20 @@ JSON, no prose, no markdown fences: {"items": [{"title": string, "description": 
   ];
 
   const messages: Anthropic.MessageParam[] = [{ role: "user", content: user }];
-  let response = await client.messages.create({ model: MODEL, max_tokens: 4096, system, tools, messages });
+  let response = await client.messages.create({ model: MODEL, max_tokens: MAX_TOKENS, system, tools, messages });
 
   // Server-side tool loop caps at 10 internal iterations; pause_turn means it needs
   // another request to keep going with the same tool-use context.
   while (response.stop_reason === "pause_turn") {
     messages.push({ role: "assistant", content: response.content });
-    response = await client.messages.create({ model: MODEL, max_tokens: 4096, system, tools, messages });
+    response = await client.messages.create({ model: MODEL, max_tokens: MAX_TOKENS, system, tools, messages });
+  }
+
+  // A heavier search (more pages fetched, more narration) can exhaust the token
+  // budget before Claude ever reaches its final text answer — silently treating
+  // that as "found nothing" would be wrong, since we genuinely don't know.
+  if (response.stop_reason === "max_tokens") {
+    throw new Error(`Response for "${regionLabel}" was truncated at max_tokens before a final answer`);
   }
 
   // Claude narrates via multiple text blocks while orchestrating searches through

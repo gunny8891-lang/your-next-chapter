@@ -22,7 +22,9 @@ export async function GET(request: Request) {
     new Set(
       (profiles ?? [])
         .map((p) => p.location_text?.replace(/^Near /, "").trim())
-        .filter((region): region is string => !!region)
+        // "Somewhere else" is a leftover placeholder from onboarding's old fixed
+        // option list, not a real place — searching for it wastes a call.
+        .filter((region): region is string => !!region && region !== "Somewhere else")
     )
   );
 
