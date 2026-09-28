@@ -25,9 +25,9 @@ type ExtractedItem = {
  * Location-dynamic Discovery Agent source: uses Claude's server-side web_search
  * and web_fetch tools (both run inside a single API call — no client-side HTTP
  * or HTML parsing) to find and read real local activity pages for ANY given
- * region, not just a fixed set of known URLs. Like claudeWeb.ts, everything
- * lands as needs_review — LLM-discovered sources need a human pass before
- * reaching members.
+ * region, not just a fixed set of known URLs. Everything lands as needs_review
+ * by default; run.ts auto-activates a candidate without a human pass only when
+ * it has both a genuine per-event booking URL and a resolved location.
  */
 async function findActivitiesForRegion(apiKey: string, regionLabel: string): Promise<RawActivityCandidate[]> {
   const client = new Anthropic({ apiKey });
@@ -89,6 +89,7 @@ JSON, no prose, no markdown fences: {"items": [{"title": string, "description": 
         dateTime: item.dateTime ?? null,
         priceEstimate: item.priceEstimate ?? null,
         bookingUrl,
+        bookingUrlVerified: Boolean(item.sourceUrl),
         tags: item.tags ?? [],
         status: "needs_review",
         adminNotes: `Auto-discovered by Claude web search for "${regionLabel}" — verify details before activating.`,

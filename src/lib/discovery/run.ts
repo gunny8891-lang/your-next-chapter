@@ -16,6 +16,10 @@ export type DiscoveryRunResult = {
  * booking_url (each source's stable per-event URL), and inserts the rest as
  * source='discovery_agent'. Manual curation for the pilot region (supabase/seed.sql)
  * stays the primary source for now per spec section 2 — this tops it up.
+ *
+ * A needs_review candidate is auto-activated (skipping the admin queue) only
+ * when it has both a genuine per-event booking URL and a resolved location —
+ * see the loop below. Everything else still requires manual approval.
  */
 export async function runDiscoveryAgent(
   supabase: SupabaseClient,
@@ -64,6 +68,15 @@ export async function runDiscoveryAgent(
           c.locationLng = coords.lng;
         }
         await sleep(1100);
+      }
+
+      // Auto-activate without a human review pass, but only when a candidate
+      // is genuinely high-confidence: a real per-event booking URL (not a
+      // synthetic fallback) AND a resolved, geocodable location. Anything
+      // short of that — vague addresses, no real link — still needs review.
+      if (c.status === "needs_review" && c.bookingUrlVerified && c.locationLat != null && c.locationLng != null) {
+        c.status = "active";
+        c.adminNotes = c.adminNotes ? `${c.adminNotes} (auto-activated: verified URL + resolved location)` : null;
       }
     }
 
