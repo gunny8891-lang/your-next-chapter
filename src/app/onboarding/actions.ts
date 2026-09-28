@@ -1,10 +1,12 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { geocodeLocation } from "@/lib/geo/geocode";
 import { generateAndSaveItinerary } from "@/lib/itinerary/generateAndSave";
+import { triggerDiscoveryForRegion } from "@/lib/discovery/run";
 import type { OnboardingAnswers } from "@/components/OnboardingFlow";
 
 const RADIUS_KM: Record<string, number> = {
@@ -52,6 +54,13 @@ export async function saveOnboardingAction(answers: OnboardingAnswers) {
   // demo placeholder data until they notice a "Generate my week" button.
   const admin = createAdminClient();
   await generateAndSaveItinerary(admin, user.id);
+
+  // Kick off discovery for this region now rather than waiting for the
+  // nightly cron — queues candidates for admin review, doesn't itself
+  // populate the week just generated above (those still need approval).
+  if (answers.location) {
+    after(() => triggerDiscoveryForRegion(admin, answers.location!));
+  }
 
   redirect("/week");
 }

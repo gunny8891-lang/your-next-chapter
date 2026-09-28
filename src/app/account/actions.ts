@@ -2,10 +2,12 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { geocodeLocation } from "@/lib/geo/geocode";
 import { generateAndSaveItinerary } from "@/lib/itinerary/generateAndSave";
+import { triggerDiscoveryForRegion } from "@/lib/discovery/run";
 
 function parseTagList(value: FormDataEntryValue | null): string[] {
   return String(value ?? "")
@@ -63,6 +65,14 @@ export async function updateProfileAction(formData: FormData) {
   // Sunday's batch job.
   const admin = createAdminClient();
   const generated = await generateAndSaveItinerary(admin, user.id);
+
+  // A new location won't have any real candidates yet if the Discovery Agent
+  // has never searched it — kick that off now instead of waiting for the
+  // nightly cron. This only queues activities for admin review, though; it
+  // won't itself add anything to the week just generated above.
+  if (locationChanged && newLocationText) {
+    after(() => triggerDiscoveryForRegion(admin, newLocationText));
+  }
 
   revalidatePath("/account");
   revalidatePath("/week");

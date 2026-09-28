@@ -18,7 +18,7 @@ export function getCurrentWeekStart(): string {
 export async function generateAndSaveItinerary(
   admin: SupabaseClient,
   memberId: string
-): Promise<{ error: string | null; usedFallback?: boolean; itineraryId?: string }> {
+): Promise<{ error: string | null; usedFallback?: boolean; itineraryId?: string; itemCount?: number }> {
   const weekStartDate = getCurrentWeekStart();
   const { itinerary, usedFallback } = await generateItinerary(admin, memberId);
 
@@ -49,5 +49,5 @@ export async function generateAndSaveItinerary(
   const { error: itemsError } = await admin.from("itinerary_items").insert(rows);
   if (itemsError) return { error: itemsError.message };
 
-  return { error: null, usedFallback, itineraryId: itineraryRow.id };
+  return { error: null, usedFallback, itineraryId: itineraryRow.id, itemCount: rows.length };
 }

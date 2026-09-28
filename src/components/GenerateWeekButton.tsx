@@ -1,14 +1,16 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Sparkles } from "lucide-react";
 import { T } from "@/lib/theme";
 
 export function GenerateWeekButton({
   onGenerate,
 }: {
-  onGenerate: () => Promise<{ error: string | null; usedFallback?: boolean }>;
+  onGenerate: () => Promise<{ error: string | null; usedFallback?: boolean; itemCount?: number }>;
 }) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
 
@@ -18,9 +20,18 @@ export function GenerateWeekButton({
       const result = await onGenerate();
       if (result.error) {
         setMessage(`Couldn't generate your week: ${result.error}`);
+        return;
+      }
+      if (!result.itemCount) {
+        setMessage(
+          "We don't have any activities near you yet — we're searching now, so check back soon. In the meantime, here's a sample week."
+        );
       } else if (result.usedFallback) {
         setMessage("Generated using our backup picks — the AI response needed a fallback this time.");
       }
+      // The itinerary items just written server-side aren't reflected in this
+      // Server Component page's props until it re-renders.
+      router.refresh();
     });
   };
 
