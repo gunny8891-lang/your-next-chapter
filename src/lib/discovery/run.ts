@@ -2,11 +2,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { DiscoverySource } from "@/lib/discovery/types";
 import { geocodeLocation, sleep } from "@/lib/geo/geocode";
 import { createClaudeWebSearchSource } from "@/lib/discovery/sources/claudeWebSearch";
+import { generateAndSaveItinerary } from "@/lib/itinerary/generateAndSave";
 
 export type DiscoveryRunResult = {
   source: string;
   found: number;
   inserted: number;
+  insertedActive: number;
   skippedExisting: number;
   errors: string[];
 };
@@ -28,7 +30,14 @@ export async function runDiscoveryAgent(
   const results: DiscoveryRunResult[] = [];
 
   for (const source of sources) {
-    const result: DiscoveryRunResult = { source: source.name, found: 0, inserted: 0, skippedExisting: 0, errors: [] };
+    const result: DiscoveryRunResult = {
+      source: source.name,
+      found: 0,
+      inserted: 0,
+      insertedActive: 0,
+      skippedExisting: 0,
+      errors: [],
+    };
 
     let candidates;
     try {
@@ -99,7 +108,10 @@ export async function runDiscoveryAgent(
 
       const { error, count } = await supabase.from("activities").insert(rows, { count: "exact" });
       if (error) result.errors.push(error.message);
-      else result.inserted = count ?? toInsert.length;
+      else {
+        result.inserted = count ?? toInsert.length;
+        result.insertedActive = rows.filter((r) => r.status === "active").length;
+      }
     }
 
     results.push(result);
@@ -113,10 +125,19 @@ export async function runDiscoveryAgent(
  * `after()` when a member sets or changes their location — rather than
  * leaving a brand-new region with zero candidates until the nightly cron
  * happens to cover it. Swallows its own errors since nothing awaits this.
+ *
+ * If the run auto-activated any candidates (see runDiscoveryAgent), the
+ * member's itinerary is regenerated again so their week picks them up
+ * without them needing to click "Generate my real week" themselves. Skipped
+ * when nothing new went active, to avoid a wasted Itinerary Agent call.
  */
-export async function triggerDiscoveryForRegion(supabase: SupabaseClient, region: string): Promise<void> {
+export async function triggerDiscoveryForRegion(supabase: SupabaseClient, memberId: string, region: string): Promise<void> {
   try {
-    await runDiscoveryAgent(supabase, [createClaudeWebSearchSource([region])]);
+    const results = await runDiscoveryAgent(supabase, [createClaudeWebSearchSource([region])]);
+    const newlyActive = results.reduce((sum, r) => sum + r.insertedActive, 0);
+    if (newlyActive > 0) {
+      await generateAndSaveItinerary(supabase, memberId);
+    }
   } catch {
     // Best-effort — the nightly cron will retry this region regardless.
   }

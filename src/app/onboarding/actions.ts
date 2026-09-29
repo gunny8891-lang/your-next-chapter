@@ -59,7 +59,7 @@ export async function saveOnboardingAction(answers: OnboardingAnswers) {
   // nightly cron — queues candidates for admin review, doesn't itself
   // populate the week just generated above (those still need approval).
   if (answers.location) {
-    after(() => triggerDiscoveryForRegion(admin, answers.location!));
+    after(() => triggerDiscoveryForRegion(admin, user.id, answers.location!));
   }
 
   redirect("/week");

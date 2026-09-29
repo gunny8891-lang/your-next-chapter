@@ -71,7 +71,7 @@ export async function updateProfileAction(formData: FormData) {
   // nightly cron. This only queues activities for admin review, though; it
   // won't itself add anything to the week just generated above.
   if (locationChanged && newLocationText) {
-    after(() => triggerDiscoveryForRegion(admin, newLocationText));
+    after(() => triggerDiscoveryForRegion(admin, user.id, newLocationText));
   }
 
   revalidatePath("/account");
