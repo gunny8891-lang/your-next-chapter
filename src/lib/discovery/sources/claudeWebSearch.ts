@@ -4,7 +4,11 @@ import type { DiscoverySource, RawActivityCandidate } from "@/lib/discovery/type
 
 const MODEL = "claude-sonnet-5";
 const CATEGORIES: readonly CategoryName[] = ["Move", "Connect", "Learn", "Explore", "Give Back", "Wellness", "Joy"];
-const MAX_TOOL_USES = 6;
+// Raised from 6: searching for both the original retiree-focused sources AND
+// family-friendly ones (soft play, parks, playgrounds) in the same pass uses
+// more searches — 6 was observed to run out mid-search for a real region
+// ("Guildford, Surrey"), ending in a refusal instead of a JSON answer.
+const MAX_TOOL_USES = 10;
 // A heavier search (more pages read, more narration between tool calls) can
 // exhaust a small budget before reaching a final answer — 4096 was observed
 // to truncate mid-search for a genuinely real region ("Chelmsford").
@@ -35,15 +39,18 @@ async function findActivitiesForRegion(apiKey: string, regionLabel: string): Pro
   const system = `You find real, current local activities suitable for retirees (walks, talks, classes, \
 volunteering, social groups, visits) near a given region, for "Your Next Chapter", a retirement concierge app. \
 Search for things like: the local council's health walks or "what's on" page, the local U3A (University of the \
-Third Age) branch, National Trust properties nearby, and local Age UK volunteering opportunities. Fetch the most \
-promising pages and extract only activities that are genuinely described on them — never invent one. Map each to \
-exactly one category: ${CATEGORIES.join(", ")}. When you're done searching and fetching, respond with ONLY valid \
-JSON, no prose, no markdown fences: {"items": [{"title": string, "description": string, "category": string, \
-"address": string|null, "dateTime": string|null (ISO 8601 only if a specific date/time is genuinely given), \
-"priceEstimate": number|null, "tags": string[], "sourceUrl": string}]}. If you find nothing genuine, return \
-{"items": []}.`;
+Third Age) branch, National Trust properties nearby, and local Age UK volunteering opportunities. Also search for \
+places a grandparent could take a grandchild — soft play centres, parks, playgrounds, family-friendly museums or \
+farms — and tag every one of those with "grandchildren" in its tags array so they can be matched to members who \
+want them. Fetch the most promising pages and extract only activities that are genuinely described on them — never \
+invent one. Map each to exactly one category: ${CATEGORIES.join(", ")}. When you're done searching and fetching, \
+respond with ONLY valid JSON, no prose, no markdown fences: {"items": [{"title": string, "description": string, \
+"category": string, "address": string|null, "dateTime": string|null (ISO 8601 only if a specific date/time is \
+genuinely given), "priceEstimate": number|null, "tags": string[], "sourceUrl": string}]}. If you find nothing \
+genuine, return {"items": []}.`;
 
-  const user = `Find current local activities suitable for retirees near ${regionLabel}.`;
+  const user = `Find current local activities suitable for retirees near ${regionLabel}, including places they \
+could take a grandchild for a family-friendly outing (soft play, parks, playgrounds).`;
 
   const tools: Anthropic.Tool[] = [
     { type: "web_search_20260209" as const, name: "web_search", max_uses: MAX_TOOL_USES } as unknown as Anthropic.Tool,
@@ -72,7 +79,19 @@ JSON, no prose, no markdown fences: {"items": [{"title": string, "description": 
   const textBlocks = response.content.filter((block) => block.type === "text");
   const text = textBlocks.at(-1)?.text ?? "";
   const jsonMatch = text.match(/\{[\s\S]*\}/);
-  const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : { items: [] };
+
+  // A genuine "nothing found" always comes back as {"items": []} per the system
+  // prompt. No JSON at all despite non-empty text means Claude didn't comply —
+  // e.g. it hit a tool-usage limit and wrote an apologetic refusal instead —
+  // which must not be silently read as "searched and found nothing".
+  if (!jsonMatch) {
+    if (text.trim()) {
+      throw new Error(`No JSON in response for "${regionLabel}": ${text.slice(0, 200)}`);
+    }
+    return [];
+  }
+
+  const parsed = JSON.parse(jsonMatch[0]);
   const items = (parsed.items ?? []) as ExtractedItem[];
 
   return items

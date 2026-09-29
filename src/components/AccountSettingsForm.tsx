@@ -111,7 +111,7 @@ export function AccountSettingsForm({
             </Field>
 
             <Field label="Interests (comma-separated)">
-              <input name="interests" defaultValue={profile.interests.join(", ")} style={inputStyle} placeholder="e.g. gardening, history, walking" />
+              <input name="interests" defaultValue={profile.interests.join(", ")} style={inputStyle} placeholder="e.g. gardening, history, walking, grandchildren" />
             </Field>
 
             <Field label="Goals (comma-separated)">

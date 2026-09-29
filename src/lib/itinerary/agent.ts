@@ -71,8 +71,11 @@ Build a balanced weekly plan of 5-7 activities for a member, chosen only from th
 Rules: aim for at least 4 of the 7 categories (Move, Connect, Learn, Explore, Give Back, Wellness, Joy), \
 never pick more than 2 items from the same category, weigh the member's affinity scores and category gaps below \
 when choosing, and respect the member's mobility notes and dietary preferences — never pick something clearly \
-unsuitable for them (e.g. a long strenuous walk for someone with limited mobility). Respond with ONLY valid JSON \
-matching this exact shape, no prose, no markdown fences: \
+unsuitable for them (e.g. a long strenuous walk for someone with limited mobility). If the member's interests or \
+goals mention grandchildren or family visits, include one family-friendly outing (soft play, a park, a playground) \
+suitable for a grandparent to take a grandchild to, when a genuinely suitable one exists among the candidates — \
+never force one in if nothing suitable is available. Respond with ONLY valid JSON matching this exact shape, no \
+prose, no markdown fences: \
 {"items": [{"day": "Mon"|"Tue"|"Wed"|"Thu"|"Fri"|"Sat"|"Sun", "slot": "morning"|"afternoon"|"evening", "activity_id": "<id from candidates>", "rationale": "<one sentence, second person, warm tone>"}]}`;
 
   const user = `Member profile:
