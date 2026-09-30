@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { Sun, Clock, MapPin, Banknote, Check, Sparkles, Settings, MessageCircle, Compass } from "lucide-react";
+import { Sun, Clock, MapPin, Banknote, Check, Sparkles, Settings, MessageCircle, Compass, CalendarDays } from "lucide-react";
 import { T } from "@/lib/theme";
 import { CATEGORY, DAYS } from "@/lib/categories";
 import { Pill } from "@/components/Pill";
@@ -128,6 +128,9 @@ export function ThisWeekView({
                   Review Queue
                 </Link>
               )}
+              <Link href="/today" style={{ color: "#EAE3D0", fontSize: 12.5, textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
+                <CalendarDays size={13} /> Today
+              </Link>
               <Link href="/explore" style={{ color: "#EAE3D0", fontSize: 12.5, textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
                 <Sparkles size={13} /> Explore
               </Link>
