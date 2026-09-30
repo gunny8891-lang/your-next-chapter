@@ -60,7 +60,12 @@ function filterByDistance(activities: ActivityRow[], profile: ProfileForPrompt):
   });
 }
 
-function buildPrompt(profile: ProfileForPrompt, activities: ActivityRow[], affinitySummary: string) {
+function buildPrompt(
+  profile: ProfileForPrompt,
+  activities: ActivityRow[],
+  affinitySummary: string,
+  aspirations: string[]
+) {
   const candidateList = activities
     .map((a) => {
       const accessibility = a.accessibility_notes ? ` | accessibility: ${a.accessibility_notes}` : "";
@@ -76,8 +81,10 @@ when choosing, and respect the member's mobility notes and dietary preferences �
 unsuitable for them (e.g. a long strenuous walk for someone with limited mobility). If the member's interests or \
 goals mention grandchildren or family visits, include one family-friendly outing (soft play, a park, a playground) \
 suitable for a grandparent to take a grandchild to, when a genuinely suitable one exists among the candidates — \
-never force one in if nothing suitable is available. Respond with ONLY valid JSON matching this exact shape, no \
-prose, no markdown fences: \
+never force one in if nothing suitable is available. If a candidate activity is a genuine, specific step toward one \
+of the member's "My Chapter" aspirations below, say so plainly in that item's rationale (e.g. "You mentioned wanting \
+to learn photography — this beginner walk is a great low-pressure way to start.") — only when the connection is \
+real, never a stretch. Respond with ONLY valid JSON matching this exact shape, no prose, no markdown fences: \
 {"items": [{"day": "Mon"|"Tue"|"Wed"|"Thu"|"Fri"|"Sat"|"Sun", "slot": "morning"|"afternoon"|"evening", "activity_id": "<id from candidates>", "rationale": "<one sentence, second person, warm tone>"}]}`;
 
   const user = `Member profile:
@@ -89,6 +96,7 @@ prose, no markdown fences: \
 - Budget band: ${profile.budget_band ?? "unknown"}
 - Dietary preferences: ${profile.dietary_preferences ?? "none recorded"}
 - Mobility notes: ${profile.mobility_notes ?? "none recorded"}
+- My Chapter aspirations (things they'd still love to do): ${aspirations.join(", ") || "none recorded"}
 
 Member history (Memory Agent summary, last 4 weeks):
 ${affinitySummary}
@@ -172,6 +180,13 @@ export async function generateItinerary(
 
   const affinity = computeAffinity((signals ?? []) as unknown as PreferenceSignalRow[]);
 
+  const { data: goalRows } = await supabase
+    .from("goals")
+    .select("text")
+    .eq("member_id", memberId)
+    .eq("status", "active");
+  const aspirations = (goalRows ?? []).map((g) => g.text as string);
+
   // Drop activities the member has clearly rejected before they're even considered,
   // rather than relying on the LLM to remember to avoid them.
   const eligibleActivities = allActiveActivities.filter(
@@ -196,7 +211,8 @@ export async function generateItinerary(
       mobility_notes: null,
     },
     candidateActivities,
-    summarizeAffinity(affinity)
+    summarizeAffinity(affinity),
+    aspirations
   );
 
   let lastError: string | null = null;
