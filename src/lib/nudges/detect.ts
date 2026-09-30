@@ -4,6 +4,10 @@ import { PILOT_COORDINATES, getTodayWeather, isStrongOutdoorWeather } from "@/li
 
 const GAP_DAYS = 5;
 const NUDGE_COOLDOWN_DAYS = 7;
+// "It's been a while" per the brief's own example (last meaningful activity in
+// July, nudged months later) — 3 weeks is a reasonable middle ground for a
+// weekly-cadence app without being trigger-happy.
+const RECONNECT_GAP_DAYS = 21;
 
 type ActivityRow = {
   id: string;
@@ -18,8 +22,9 @@ type ActivityRow = {
 };
 
 export type NudgeCandidate = {
-  reason: "activity_gap" | "weather_match";
+  reason: "activity_gap" | "weather_match" | "people_reconnect";
   activity: ActivityRow;
+  person?: { name: string };
 } | null;
 
 /**
@@ -97,6 +102,35 @@ export async function detectNudgeCandidate(admin: SupabaseClient, memberId: stri
       .filter((a) => scoreActivity(a, affinity) >= 0)
       .sort((a, b) => scoreActivity(b, affinity) - scoreActivity(a, affinity))[0];
     if (best) return { reason: "weather_match", activity: best };
+  }
+
+  // Condition C: a person the member explicitly said they'd like to see more
+  // of, and hasn't logged seeing in RECONNECT_GAP_DAYS+ (or ever). This reads
+  // from the member's own stated intention, not an inference from behavior —
+  // never framed as detecting loneliness.
+  const { data: people } = await admin
+    .from("people")
+    .select("name, last_seen_date")
+    .eq("member_id", memberId)
+    .eq("wants_to_see_more", true);
+
+  const overdue = (people ?? [])
+    .map((p) => ({
+      name: p.name as string,
+      daysSince: p.last_seen_date
+        ? Math.floor((Date.now() - new Date(p.last_seen_date as string).getTime()) / (1000 * 60 * 60 * 24))
+        : Infinity,
+    }))
+    .filter((p) => p.daysSince >= RECONNECT_GAP_DAYS)
+    .sort((a, b) => b.daysSince - a.daysSince)[0];
+
+  if (overdue) {
+    const unseen = allActive.filter((a) => !seenActivityIds.has(a.id));
+    const social = unseen.filter((a) => a.category === "Connect");
+    const best =
+      [...social].sort((a, b) => scoreActivity(b, affinity) - scoreActivity(a, affinity))[0] ??
+      [...unseen].sort((a, b) => scoreActivity(b, affinity) - scoreActivity(a, affinity))[0];
+    if (best) return { reason: "people_reconnect", activity: best, person: { name: overdue.name } };
   }
 
   return null;

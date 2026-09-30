@@ -10,9 +10,10 @@ const MODEL = AI_MODELS.cheap;
 export async function writeNudgeMessage(
   supabase: SupabaseClient,
   memberId: string,
-  reason: "activity_gap" | "weather_match",
+  reason: "activity_gap" | "weather_match" | "people_reconnect",
   activity: { title: string; category: string; address: string | null },
-  interests: string[]
+  interests: string[],
+  person?: { name: string }
 ): Promise<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
@@ -20,7 +21,12 @@ export async function writeNudgeMessage(
   const reasonContext =
     reason === "activity_gap"
       ? "This member hasn't accepted anything in their weekly plan for 5+ days. Gently nudge them back in — no guilt-tripping, just a warm, low-key invitation."
-      : "The weather today is unusually good for an outdoor activity, and this one matches their interests and is something they haven't tried yet. Nudge them to make the most of it.";
+      : reason === "weather_match"
+      ? "The weather today is unusually good for an outdoor activity, and this one matches their interests and is something they haven't tried yet. Nudge them to make the most of it."
+      : `The member said they'd like to see ${person?.name ?? "this person"} more often, and it's been a while \
+since they last logged seeing them. Suggest this activity as a warm, natural occasion to reach out — mention \
+${person?.name ?? "them"} by name. Never use words like "lonely" or "alone", and never imply anything negative \
+about their social life — this is simply a nudge toward something they already said they wanted.`;
 
   const system = `You are writing a single short, warm, specific nudge message for a member of "Your Next Chapter", \
 an AI retirement concierge. One or two sentences, second person, no exclamation-mark overload, no generic \
