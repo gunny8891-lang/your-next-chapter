@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { computeAffinity, scoreActivity, type PreferenceSignalRow } from "@/lib/memory/scoring";
+import { scoreActivity } from "@/lib/memory/scoring";
+import { fetchRankedOpportunities, type OpportunityCandidate } from "@/lib/opportunities/engine";
 import { PILOT_COORDINATES, getTodayWeather, isStrongOutdoorWeather } from "@/lib/nudges/weather";
 
 const GAP_DAYS = 5;
@@ -9,17 +10,7 @@ const NUDGE_COOLDOWN_DAYS = 7;
 // weekly-cadence app without being trigger-happy.
 const RECONNECT_GAP_DAYS = 21;
 
-type ActivityRow = {
-  id: string;
-  title: string;
-  category: string;
-  address: string | null;
-  tags: string[];
-  rating: number | null;
-  price_estimate: number | null;
-  date_time: string | null;
-  booking_url: string | null;
-};
+type ActivityRow = OpportunityCandidate;
 
 export type NudgeCandidate = {
   reason: "activity_gap" | "weather_match" | "people_reconnect";
@@ -44,12 +35,6 @@ export async function detectNudgeCandidate(admin: SupabaseClient, memberId: stri
     .maybeSingle();
   if (recentNudge) return null;
 
-  const { data: activities } = await admin
-    .from("activities")
-    .select("id, title, category, address, tags, rating, price_estimate, date_time, booking_url")
-    .eq("status", "active");
-  const allActive = (activities ?? []) as ActivityRow[];
-
   const { data: memberItineraries } = await admin.from("itineraries").select("id").eq("member_id", memberId);
   const itineraryIds = (memberItineraries ?? []).map((i) => i.id as string);
   const { data: itineraryActivityRows } = itineraryIds.length
@@ -65,15 +50,12 @@ export async function detectNudgeCandidate(admin: SupabaseClient, memberId: stri
     ...(surpriseActivityRows ?? []).map((r) => r.activity_id as string).filter(Boolean),
   ]);
 
-  const fourWeeksAgo = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString();
-  const { data: signals } = await admin
-    .from("preference_signals")
-    .select("signal_type, activity_id, created_at, activities(category, tags)")
-    .eq("member_id", memberId)
-    .gte("created_at", fourWeeksAgo)
-    .order("created_at", { ascending: false })
-    .limit(50);
-  const affinity = computeAffinity((signals ?? []) as unknown as PreferenceSignalRow[]);
+  // Already distance-filtered and sorted highest-affinity-first — a real fix
+  // here, since this previously queried every active activity regardless of
+  // the member's travel radius.
+  const { candidates: unseen, affinity } = await fetchRankedOpportunities(admin, memberId, {
+    excludeActivityIds: seenActivityIds,
+  });
 
   // Condition A: no accepted item in GAP_DAYS.
   const gapSince = new Date(Date.now() - GAP_DAYS * 24 * 60 * 60 * 1000).toISOString();
@@ -88,8 +70,7 @@ export async function detectNudgeCandidate(admin: SupabaseClient, memberId: stri
     .maybeSingle();
 
   if (!recentAccept) {
-    const unseen = allActive.filter((a) => !seenActivityIds.has(a.id));
-    const best = [...unseen].sort((a, b) => scoreActivity(b, affinity) - scoreActivity(a, affinity))[0];
+    const best = unseen[0];
     if (best) return { reason: "activity_gap", activity: best };
   }
 
@@ -97,10 +78,7 @@ export async function detectNudgeCandidate(admin: SupabaseClient, memberId: stri
   // the member's affinity score doesn't already reject.
   const weather = await getTodayWeather(PILOT_COORDINATES.latitude, PILOT_COORDINATES.longitude);
   if (isStrongOutdoorWeather(weather)) {
-    const unseenOutdoor = allActive.filter((a) => !seenActivityIds.has(a.id) && a.tags.includes("outdoors"));
-    const best = [...unseenOutdoor]
-      .filter((a) => scoreActivity(a, affinity) >= 0)
-      .sort((a, b) => scoreActivity(b, affinity) - scoreActivity(a, affinity))[0];
+    const best = unseen.filter((a) => a.tags.includes("outdoors")).filter((a) => scoreActivity(a, affinity) >= 0)[0];
     if (best) return { reason: "weather_match", activity: best };
   }
 
@@ -125,11 +103,7 @@ export async function detectNudgeCandidate(admin: SupabaseClient, memberId: stri
     .sort((a, b) => b.daysSince - a.daysSince)[0];
 
   if (overdue) {
-    const unseen = allActive.filter((a) => !seenActivityIds.has(a.id));
-    const social = unseen.filter((a) => a.category === "Connect");
-    const best =
-      [...social].sort((a, b) => scoreActivity(b, affinity) - scoreActivity(a, affinity))[0] ??
-      [...unseen].sort((a, b) => scoreActivity(b, affinity) - scoreActivity(a, affinity))[0];
+    const best = unseen.filter((a) => a.category === "Connect")[0] ?? unseen[0];
     if (best) return { reason: "people_reconnect", activity: best, person: { name: overdue.name } };
   }
 

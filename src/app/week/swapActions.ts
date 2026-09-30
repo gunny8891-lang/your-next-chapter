@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
-import { computeAffinity, scoreActivity, type PreferenceSignalRow } from "@/lib/memory/scoring";
+import { fetchRankedOpportunities } from "@/lib/opportunities/engine";
 import type { SwapAlternative } from "@/lib/types";
 
 const MAX_ALTERNATIVES = 4;
@@ -30,28 +30,13 @@ export async function getSwapAlternativesAction(
     .from("itinerary_items")
     .select("activity_id")
     .eq("itinerary_id", item.itinerary_id);
-  const usedIds = new Set((usedRows ?? []).map((r) => r.activity_id));
+  const excludeIds = new Set([...(usedRows ?? []).map((r) => r.activity_id), item.activity_id]);
 
-  const { data: candidates } = await supabase
-    .from("activities")
-    .select("id, title, category, address, price_estimate, tags, rating")
-    .eq("category", category)
-    .eq("status", "active");
-
-  const eligible = (candidates ?? []).filter((a) => a.id !== item.activity_id && !usedIds.has(a.id));
-
-  const fourWeeksAgo = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString();
-  const { data: signals } = await supabase
-    .from("preference_signals")
-    .select("signal_type, activity_id, created_at, activities(category, tags)")
-    .eq("member_id", user.id)
-    .gte("created_at", fourWeeksAgo)
-    .limit(50);
-
-  const affinity = computeAffinity((signals ?? []) as unknown as PreferenceSignalRow[]);
-  const ranked = eligible
-    .sort((a, b) => scoreActivity(b, affinity) - scoreActivity(a, affinity))
-    .slice(0, MAX_ALTERNATIVES);
+  const { candidates } = await fetchRankedOpportunities(supabase, user.id, {
+    category,
+    excludeActivityIds: excludeIds,
+  });
+  const ranked = candidates.slice(0, MAX_ALTERNATIVES);
 
   return {
     error: null,

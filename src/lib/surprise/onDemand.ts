@@ -2,8 +2,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CategoryName } from "@/lib/categories";
 import type { SurpriseOption } from "@/lib/types";
-import { computeAffinity, scoreActivity, summarizeAffinity, type PreferenceSignalRow } from "@/lib/memory/scoring";
-import { filterByDistance } from "@/lib/geo/filterByDistance";
+import { summarizeAffinity } from "@/lib/memory/scoring";
+import { fetchRankedOpportunities } from "@/lib/opportunities/engine";
 import { getCurrentWeekStart } from "@/lib/itinerary/generateAndSave";
 import { callClaude } from "@/lib/ai/client";
 import { AI_MODELS } from "@/lib/ai/models";
@@ -17,19 +17,6 @@ const MAX_OPTIONS = 3;
 
 export type SurpriseWhen = "today" | "tomorrow" | "weekend";
 export type SurpriseWho = "just_me" | "partner" | "friends" | "family";
-
-type ActivityRow = {
-  id: string;
-  title: string;
-  category: string;
-  address: string | null;
-  price_estimate: number | null;
-  booking_url: string | null;
-  tags: string[];
-  rating: number | null;
-  location_lat: number | null;
-  location_lng: number | null;
-};
 
 const WHO_LABEL: Record<SurpriseWho, string> = {
   just_me: "just themself",
@@ -59,19 +46,9 @@ export async function getSurpriseOptions(
 ): Promise<SurpriseOption[]> {
   const { data: profile } = await supabase
     .from("member_profiles")
-    .select("location_lat, location_lng, travel_radius_km, budget_band, interests")
+    .select("budget_band, interests")
     .eq("user_id", memberId)
-    .single();
-
-  const { data: activities } = await supabase
-    .from("activities")
-    .select("id, title, category, address, price_estimate, booking_url, tags, rating, location_lat, location_lng")
-    .eq("status", "active");
-
-  const inRange = filterByDistance(
-    (activities ?? []) as ActivityRow[],
-    profile ?? { location_lat: null, location_lng: null, travel_radius_km: null }
-  );
+    .maybeSingle();
 
   // Don't suggest something already on this week's plan.
   const weekStartDate = getCurrentWeekStart();
@@ -84,20 +61,11 @@ export async function getSurpriseOptions(
   const scheduledIds = new Set(
     ((itinerary?.itinerary_items ?? []) as { activity_id: string }[]).map((i) => i.activity_id)
   );
-  const eligible = inRange.filter((a) => !scheduledIds.has(a.id));
-  if (eligible.length === 0) return [];
 
-  const fourWeeksAgo = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString();
-  const { data: signals } = await supabase
-    .from("preference_signals")
-    .select("signal_type, activity_id, created_at, activities(category, tags)")
-    .eq("member_id", memberId)
-    .gte("created_at", fourWeeksAgo)
-    .order("created_at", { ascending: false })
-    .limit(50);
-  const affinity = computeAffinity((signals ?? []) as unknown as PreferenceSignalRow[]);
-
-  const ranked = [...eligible].sort((a, b) => scoreActivity(b, affinity) - scoreActivity(a, affinity));
+  const { candidates: ranked, affinity } = await fetchRankedOpportunities(supabase, memberId, {
+    excludeActivityIds: scheduledIds,
+  });
+  if (ranked.length === 0) return [];
 
   // Deliberate novelty: mostly strong matches, but always leave room for a
   // handful of untried/lower-ranked picks — Surprise Me shouldn't just be

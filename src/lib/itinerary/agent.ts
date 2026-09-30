@@ -2,8 +2,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { validateGeneratedItinerary, type GeneratedItinerary } from "@/lib/itinerary/schema";
 import { buildFallbackItinerary } from "@/lib/itinerary/fallback";
-import { computeAffinity, scoreActivity, summarizeAffinity, type PreferenceSignalRow } from "@/lib/memory/scoring";
-import { filterByDistance } from "@/lib/geo/filterByDistance";
+import { summarizeAffinity } from "@/lib/memory/scoring";
+import { fetchRankedOpportunities, type OpportunityCandidate } from "@/lib/opportunities/engine";
 import { callClaude } from "@/lib/ai/client";
 import { AI_MODELS } from "@/lib/ai/models";
 
@@ -13,23 +13,8 @@ const MAX_CANDIDATES_SENT_TO_LLM = 40;
 // roughly two recent "disliked" signals against it.
 const DISLIKE_EXCLUSION_THRESHOLD = -3;
 
-type ActivityRow = {
-  id: string;
-  title: string;
-  category: string;
-  address: string | null;
-  price_estimate: number | null;
-  tags: string[];
-  rating: number | null;
-  accessibility_notes: string | null;
-  location_lat: number | null;
-  location_lng: number | null;
-};
-
 type ProfileForPrompt = {
   location_text: string | null;
-  location_lat: number | null;
-  location_lng: number | null;
   travel_radius_km: number | null;
   personality: unknown;
   goals: string[];
@@ -41,7 +26,7 @@ type ProfileForPrompt = {
 
 function buildPrompt(
   profile: ProfileForPrompt,
-  activities: ActivityRow[],
+  activities: OpportunityCandidate[],
   affinitySummary: string,
   aspirations: string[]
 ) {
@@ -121,43 +106,11 @@ export async function generateItinerary(
 ): Promise<{ itinerary: GeneratedItinerary; usedFallback: boolean }> {
   const { data: profile } = await supabase
     .from("member_profiles")
-    .select(
-      "location_text, location_lat, location_lng, travel_radius_km, personality, goals, interests, budget_band, dietary_preferences, mobility_notes"
-    )
+    .select("location_text, travel_radius_km, personality, goals, interests, budget_band, dietary_preferences, mobility_notes")
     .eq("user_id", memberId)
     .single();
 
-  const { data: activities } = await supabase
-    .from("activities")
-    .select("id, title, category, address, price_estimate, tags, rating, accessibility_notes, location_lat, location_lng")
-    .eq("status", "active");
-
-  const allActiveActivities = filterByDistance(
-    (activities ?? []) as ActivityRow[],
-    profile ?? {
-      location_text: null,
-      location_lat: null,
-      location_lng: null,
-      travel_radius_km: null,
-      personality: {},
-      goals: [],
-      interests: [],
-      budget_band: null,
-      dietary_preferences: null,
-      mobility_notes: null,
-    }
-  );
-
-  const fourWeeksAgo = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString();
-  const { data: signals } = await supabase
-    .from("preference_signals")
-    .select("signal_type, activity_id, created_at, activities(category, tags)")
-    .eq("member_id", memberId)
-    .gte("created_at", fourWeeksAgo)
-    .order("created_at", { ascending: false })
-    .limit(50);
-
-  const affinity = computeAffinity((signals ?? []) as unknown as PreferenceSignalRow[]);
+  const { candidates: rankedActivities, affinity } = await fetchRankedOpportunities(supabase, memberId);
 
   const { data: goalRows } = await supabase
     .from("goals")
@@ -166,21 +119,17 @@ export async function generateItinerary(
     .eq("status", "active");
   const aspirations = (goalRows ?? []).map((g) => g.text as string);
 
-  // Drop activities the member has clearly rejected before they're even considered,
-  // rather than relying on the LLM to remember to avoid them.
-  const eligibleActivities = allActiveActivities.filter(
-    (a) => (affinity.activityScores[a.id] ?? 0) > DISLIKE_EXCLUSION_THRESHOLD
-  );
-
-  const candidateActivities = [...eligibleActivities]
-    .sort((a, b) => scoreActivity(b, affinity) - scoreActivity(a, affinity))
+  // Drop activities the member has clearly rejected before they're even
+  // considered, rather than relying on the LLM to remember to avoid them.
+  // rankedActivities is already sorted by affinity score, so filtering
+  // preserves that order — no need to re-sort.
+  const candidateActivities = rankedActivities
+    .filter((a) => (affinity.activityScores[a.id] ?? 0) > DISLIKE_EXCLUSION_THRESHOLD)
     .slice(0, MAX_CANDIDATES_SENT_TO_LLM);
 
   const { system, user } = buildPrompt(
     profile ?? {
       location_text: null,
-      location_lat: null,
-      location_lng: null,
       travel_radius_km: null,
       personality: {},
       goals: [],

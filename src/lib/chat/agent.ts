@@ -1,24 +1,13 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { computeAffinity, scoreActivity, summarizeAffinity, type PreferenceSignalRow } from "@/lib/memory/scoring";
+import { summarizeAffinity } from "@/lib/memory/scoring";
+import { fetchRankedOpportunities, type OpportunityCandidate } from "@/lib/opportunities/engine";
 import { getCurrentWeekStart } from "@/lib/itinerary/generateAndSave";
 import { callClaude } from "@/lib/ai/client";
 import { AI_MODELS } from "@/lib/ai/models";
 
 const MODEL = AI_MODELS.smart;
 const MAX_CANDIDATES_SENT_TO_LLM = 30;
-
-type ActivityRow = {
-  id: string;
-  title: string;
-  category: string;
-  address: string | null;
-  date_time: string | null;
-  price_estimate: number | null;
-  tags: string[];
-  rating: number | null;
-  booking_url: string | null;
-};
 
 type ProfileForPrompt = {
   location_text: string | null;
@@ -33,7 +22,7 @@ type ThisWeekItemRow = {
   day_of_week: string;
   slot: string;
   member_action: string;
-  activities: { title: string; category: string; address: string | null; date_time: string | null } | null;
+  activities: { id: string; title: string; category: string; address: string | null; date_time: string | null } | null;
 };
 
 export type ChatHistoryMessage = { role: "user" | "assistant"; content: string };
@@ -48,7 +37,7 @@ function buildSystemPrompt(
   profile: ProfileForPrompt,
   todayLabel: string,
   weekItems: ThisWeekItemRow[],
-  candidateList: ActivityRow[],
+  candidateList: OpportunityCandidate[],
   affinitySummary: string
 ) {
   const weekItemsText = weekItems.length
@@ -116,37 +105,20 @@ export async function answerChatQuestion(
   const weekStartDate = getCurrentWeekStart();
   const { data: itinerary } = await supabase
     .from("itineraries")
-    .select("itinerary_items(day_of_week, slot, member_action, activities(title, category, address, date_time))")
+    .select("itinerary_items(day_of_week, slot, member_action, activities(id, title, category, address, date_time))")
     .eq("member_id", memberId)
     .eq("week_start_date", weekStartDate)
     .maybeSingle();
 
   const weekItems = (itinerary?.itinerary_items ?? []) as unknown as ThisWeekItemRow[];
-  const scheduledActivityTitles = new Set(weekItems.map((i) => i.activities?.title).filter(Boolean));
+  // By id, not title — two different activities could share a title, and a
+  // title-based check silently stops excluding if either title ever changes.
+  const scheduledActivityIds = new Set(weekItems.map((i) => i.activities?.id).filter(Boolean) as string[]);
 
-  const { data: activities } = await supabase
-    .from("activities")
-    .select("id, title, category, address, date_time, price_estimate, tags, rating, booking_url")
-    .eq("status", "active");
-
-  const allActiveActivities = ((activities ?? []) as ActivityRow[]).filter(
-    (a) => !scheduledActivityTitles.has(a.title)
-  );
-
-  const fourWeeksAgo = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString();
-  const { data: signals } = await supabase
-    .from("preference_signals")
-    .select("signal_type, activity_id, created_at, activities(category, tags)")
-    .eq("member_id", memberId)
-    .gte("created_at", fourWeeksAgo)
-    .order("created_at", { ascending: false })
-    .limit(50);
-
-  const affinity = computeAffinity((signals ?? []) as unknown as PreferenceSignalRow[]);
-
-  const candidateActivities = [...allActiveActivities]
-    .sort((a, b) => scoreActivity(b, affinity) - scoreActivity(a, affinity))
-    .slice(0, MAX_CANDIDATES_SENT_TO_LLM);
+  const { candidates: rankedActivities, affinity } = await fetchRankedOpportunities(supabase, memberId, {
+    excludeActivityIds: scheduledActivityIds,
+  });
+  const candidateActivities = rankedActivities.slice(0, MAX_CANDIDATES_SENT_TO_LLM);
 
   const system = buildSystemPrompt(
     profile ?? {
