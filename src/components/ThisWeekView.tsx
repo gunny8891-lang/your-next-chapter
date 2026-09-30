@@ -128,6 +128,9 @@ export function ThisWeekView({
                   Review Queue
                 </Link>
               )}
+              <Link href="/explore" style={{ color: "#EAE3D0", fontSize: 12.5, textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
+                <Sparkles size={13} /> Explore
+              </Link>
               <Link href="/chapter" style={{ color: "#EAE3D0", fontSize: 12.5, textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
                 <Compass size={13} /> My Chapter
               </Link>

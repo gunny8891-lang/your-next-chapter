@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { validateGeneratedItinerary, type GeneratedItinerary } from "@/lib/itinerary/schema";
 import { buildFallbackItinerary } from "@/lib/itinerary/fallback";
 import { computeAffinity, scoreActivity, summarizeAffinity, type PreferenceSignalRow } from "@/lib/memory/scoring";
-import { haversineDistanceKm } from "@/lib/geo/haversine";
+import { filterByDistance } from "@/lib/geo/filterByDistance";
 import { callClaude } from "@/lib/ai/client";
 import { AI_MODELS } from "@/lib/ai/models";
 
@@ -38,27 +38,6 @@ type ProfileForPrompt = {
   dietary_preferences: string | null;
   mobility_notes: string | null;
 };
-
-/**
- * Restricts candidates to those within the member's travel radius, when we have
- * enough real coordinates to judge that. Falls back to no filtering (rather than
- * an empty candidate set) whenever either side of the comparison is unknown —
- * missing profile coordinates, no radius set, or an activity that hasn't been
- * geocoded yet — since an unfiltered recommendation beats none at all.
- */
-function filterByDistance(activities: ActivityRow[], profile: ProfileForPrompt): ActivityRow[] {
-  if (profile.location_lat == null || profile.location_lng == null || profile.travel_radius_km == null) {
-    return activities;
-  }
-
-  return activities.filter((a) => {
-    if (a.location_lat == null || a.location_lng == null) return false;
-    return (
-      haversineDistanceKm(profile.location_lat!, profile.location_lng!, a.location_lat, a.location_lng) <=
-      profile.travel_radius_km!
-    );
-  });
-}
 
 function buildPrompt(
   profile: ProfileForPrompt,
