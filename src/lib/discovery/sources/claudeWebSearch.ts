@@ -1,8 +1,15 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { CategoryName } from "@/lib/categories";
 import type { DiscoverySource, RawActivityCandidate } from "@/lib/discovery/types";
+import { createAdminClient } from "@/utils/supabase/admin";
+import { callClaude } from "@/lib/ai/client";
+import { AI_MODELS } from "@/lib/ai/models";
 
-const MODEL = "claude-sonnet-5";
+// Kept on the smart tier: this does agentic multi-step tool orchestration
+// (web_search/web_fetch loops), not a simple single-pass task, and has
+// already proven fragile enough under this model to hold off tiering it down
+// without first watching its real cost/quality from the new logging below.
+const MODEL = AI_MODELS.smart;
 const CATEGORIES: readonly CategoryName[] = ["Move", "Connect", "Learn", "Explore", "Give Back", "Wellness", "Joy"];
 // Raised from 6: searching for both the original retiree-focused sources AND
 // family-friendly ones (soft play, parks, playgrounds) in the same pass uses
@@ -35,6 +42,8 @@ type ExtractedItem = {
  */
 async function findActivitiesForRegion(apiKey: string, regionLabel: string): Promise<RawActivityCandidate[]> {
   const client = new Anthropic({ apiKey });
+  const admin = createAdminClient();
+  const usageContext = { userId: null, feature: "discovery_claude_web_search" };
 
   const system = `You find real, current local activities suitable for retirees (walks, talks, classes, \
 volunteering, social groups, visits) near a given region, for "Your Next Chapter", a retirement concierge app. \
@@ -58,13 +67,13 @@ could take a grandchild for a family-friendly outing (soft play, parks, playgrou
   ];
 
   const messages: Anthropic.MessageParam[] = [{ role: "user", content: user }];
-  let response = await client.messages.create({ model: MODEL, max_tokens: MAX_TOKENS, system, tools, messages });
+  let response = await callClaude(client, admin, usageContext, { model: MODEL, max_tokens: MAX_TOKENS, system, tools, messages });
 
   // Server-side tool loop caps at 10 internal iterations; pause_turn means it needs
   // another request to keep going with the same tool-use context.
   while (response.stop_reason === "pause_turn") {
     messages.push({ role: "assistant", content: response.content });
-    response = await client.messages.create({ model: MODEL, max_tokens: MAX_TOKENS, system, tools, messages });
+    response = await callClaude(client, admin, usageContext, { model: MODEL, max_tokens: MAX_TOKENS, system, tools, messages });
   }
 
   // A heavier search (more pages fetched, more narration) can exhaust the token

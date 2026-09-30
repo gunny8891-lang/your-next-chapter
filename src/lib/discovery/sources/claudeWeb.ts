@@ -1,8 +1,13 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { CategoryName } from "@/lib/categories";
 import type { DiscoverySource, RawActivityCandidate } from "@/lib/discovery/types";
+import { createAdminClient } from "@/utils/supabase/admin";
+import { callClaude } from "@/lib/ai/client";
+import { AI_MODELS } from "@/lib/ai/models";
 
-const MODEL = "claude-sonnet-5";
+// Structured extraction from already-fetched text, no multi-step reasoning or
+// tool use — squarely the cheap-tier use case per the project brief.
+const MODEL = AI_MODELS.cheap;
 const MAX_PAGE_TEXT_CHARS = 15000;
 const CATEGORIES: readonly CategoryName[] = ["Move", "Connect", "Learn", "Explore", "Give Back", "Wellness", "Joy"];
 
@@ -52,7 +57,8 @@ prose, no markdown fences: {"items": [{"title": string, "description": string, "
 string|null, "dateTime": string|null (ISO 8601 only if a specific date/time is genuinely given), "priceEstimate": \
 number|null, "tags": string[]}]}`;
 
-  const response = await client.messages.create({
+  const admin = createAdminClient();
+  const response = await callClaude(client, admin, { userId: null, feature: "discovery_claude_web" }, {
     model: MODEL,
     max_tokens: 2048,
     system,

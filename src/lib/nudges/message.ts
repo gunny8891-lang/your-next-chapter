@@ -1,8 +1,15 @@
 import Anthropic from "@anthropic-ai/sdk";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { callClaude } from "@/lib/ai/client";
+import { AI_MODELS } from "@/lib/ai/models";
 
-const MODEL = "claude-sonnet-5";
+// Simple, short-form text generation — exactly the kind of task the project
+// brief calls out for the cheap tier rather than the smart one.
+const MODEL = AI_MODELS.cheap;
 
 export async function writeNudgeMessage(
+  supabase: SupabaseClient,
+  memberId: string,
   reason: "activity_gap" | "weather_match",
   activity: { title: string; category: string; address: string | null },
   interests: string[]
@@ -25,7 +32,7 @@ Activity: ${activity.title} (${activity.category}${activity.address ? `, ${activ
 Member interests: ${interests.join(", ") || "none recorded"}.`;
 
   const client = new Anthropic({ apiKey });
-  const response = await client.messages.create({
+  const response = await callClaude(client, supabase, { userId: memberId, feature: "nudge_message" }, {
     model: MODEL,
     max_tokens: 150,
     system,

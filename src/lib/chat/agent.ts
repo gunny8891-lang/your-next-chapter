@@ -2,8 +2,10 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { computeAffinity, scoreActivity, summarizeAffinity, type PreferenceSignalRow } from "@/lib/memory/scoring";
 import { getCurrentWeekStart } from "@/lib/itinerary/generateAndSave";
+import { callClaude } from "@/lib/ai/client";
+import { AI_MODELS } from "@/lib/ai/models";
 
-const MODEL = "claude-sonnet-5";
+const MODEL = AI_MODELS.smart;
 const MAX_CANDIDATES_SENT_TO_LLM = 30;
 
 type ActivityRow = {
@@ -167,7 +169,7 @@ export async function answerChatQuestion(
     { role: "user", content: question },
   ];
 
-  const response = await client.messages.create({
+  const response = await callClaude(client, supabase, { userId: memberId, feature: "concierge_chat" }, {
     model: MODEL,
     max_tokens: 400,
     system,

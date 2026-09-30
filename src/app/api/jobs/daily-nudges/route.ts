@@ -44,7 +44,7 @@ export async function GET(request: Request) {
         continue;
       }
 
-      const message = await writeNudgeMessage(candidate.reason, candidate.activity, member.interests);
+      const message = await writeNudgeMessage(admin, member.user_id, candidate.reason, candidate.activity, member.interests);
 
       await sendNudgeEmail(user.email, message, {
         title: candidate.activity.title,

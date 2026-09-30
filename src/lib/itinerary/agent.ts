@@ -4,8 +4,10 @@ import { validateGeneratedItinerary, type GeneratedItinerary } from "@/lib/itine
 import { buildFallbackItinerary } from "@/lib/itinerary/fallback";
 import { computeAffinity, scoreActivity, summarizeAffinity, type PreferenceSignalRow } from "@/lib/memory/scoring";
 import { haversineDistanceKm } from "@/lib/geo/haversine";
+import { callClaude } from "@/lib/ai/client";
+import { AI_MODELS } from "@/lib/ai/models";
 
-const MODEL = "claude-sonnet-5";
+const MODEL = AI_MODELS.smart;
 const MAX_CANDIDATES_SENT_TO_LLM = 40;
 // An activity is treated as a hard exclusion once its weighted score drops this low —
 // roughly two recent "disliked" signals against it.
@@ -97,7 +99,13 @@ ${candidateList}`;
   return { system, user };
 }
 
-async function callClaude(system: string, user: string, correction?: string) {
+async function requestItinerary(
+  supabase: SupabaseClient,
+  memberId: string,
+  system: string,
+  user: string,
+  correction?: string
+) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
 
@@ -108,7 +116,7 @@ async function callClaude(system: string, user: string, correction?: string) {
     messages.push({ role: "user", content: `Your last response was invalid: ${correction}. Please respond again with ONLY the corrected JSON.` });
   }
 
-  const response = await client.messages.create({
+  const response = await callClaude(client, supabase, { userId: memberId, feature: "itinerary_agent" }, {
     model: MODEL,
     max_tokens: 2048,
     system,
@@ -194,7 +202,7 @@ export async function generateItinerary(
   let lastError: string | null = null;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const raw = await callClaude(system, user, lastError ?? undefined);
+      const raw = await requestItinerary(supabase, memberId, system, user, lastError ?? undefined);
       const result = validateGeneratedItinerary(raw, candidateActivities);
       if (result.ok) return { itinerary: result.value, usedFallback: false };
       lastError = result.error;
