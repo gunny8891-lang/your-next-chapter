@@ -27,6 +27,27 @@ export type FetchOpportunitiesOptions = {
 };
 
 /**
+ * Takes the top `limit` of an already-ranked list, but guarantees every category
+ * that has anything at least `minPerCategory` slots. Plain top-N lets whichever
+ * category happens to sit first crowd the rest out — for a new member every
+ * score ties, so a week could be planned from one or two categories even when
+ * the database holds all seven. Order within the result is the original rank.
+ */
+export function selectBalanced<T extends { category: string }>(ranked: T[], limit: number, minPerCategory: number): T[] {
+  const picked = new Set<number>();
+  const perCategory = new Map<string, number>();
+  ranked.forEach((item, index) => {
+    const count = perCategory.get(item.category) ?? 0;
+    if (count < minPerCategory && picked.size < limit) {
+      picked.add(index);
+      perCategory.set(item.category, count + 1);
+    }
+  });
+  for (let index = 0; index < ranked.length && picked.size < limit; index++) picked.add(index);
+  return [...picked].sort((a, b) => a - b).map((index) => ranked[index]);
+}
+
+/**
  * The shared candidate-gathering pipeline behind every recommendation surface
  * (Itinerary Agent, on-demand Surprise Me, concierge chat, nudge detection,
  * swap alternatives): fetch the member's active activities, restrict to their

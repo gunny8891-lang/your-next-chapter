@@ -1,13 +1,14 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { summarizeAffinity } from "@/lib/memory/scoring";
-import { fetchRankedOpportunities, type OpportunityCandidate } from "@/lib/opportunities/engine";
+import { fetchRankedOpportunities, selectBalanced, type OpportunityCandidate } from "@/lib/opportunities/engine";
 import { getCurrentWeekStart } from "@/lib/itinerary/generateAndSave";
 import { callClaude } from "@/lib/ai/client";
 import { AI_MODELS } from "@/lib/ai/models";
 
 const MODEL = AI_MODELS.smart;
 const MAX_CANDIDATES_SENT_TO_LLM = 30;
+const MIN_CANDIDATES_PER_CATEGORY = 3;
 
 type ProfileForPrompt = {
   location_text: string | null;
@@ -118,7 +119,7 @@ export async function answerChatQuestion(
   const { candidates: rankedActivities, affinity } = await fetchRankedOpportunities(supabase, memberId, {
     excludeActivityIds: scheduledActivityIds,
   });
-  const candidateActivities = rankedActivities.slice(0, MAX_CANDIDATES_SENT_TO_LLM);
+  const candidateActivities = selectBalanced(rankedActivities, MAX_CANDIDATES_SENT_TO_LLM, MIN_CANDIDATES_PER_CATEGORY);
 
   const system = buildSystemPrompt(
     profile ?? {

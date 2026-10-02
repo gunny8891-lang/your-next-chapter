@@ -3,12 +3,14 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { validateGeneratedItinerary, type GeneratedItinerary } from "@/lib/itinerary/schema";
 import { buildFallbackItinerary } from "@/lib/itinerary/fallback";
 import { summarizeAffinity } from "@/lib/memory/scoring";
-import { fetchRankedOpportunities, type OpportunityCandidate } from "@/lib/opportunities/engine";
+import { fetchRankedOpportunities, selectBalanced, type OpportunityCandidate } from "@/lib/opportunities/engine";
 import { callClaude } from "@/lib/ai/client";
 import { AI_MODELS } from "@/lib/ai/models";
 
 const MODEL = AI_MODELS.smart;
 const MAX_CANDIDATES_SENT_TO_LLM = 40;
+// Floor per category so a week can be balanced even when one category dominates the ranking.
+const MIN_CANDIDATES_PER_CATEGORY = 4;
 // An activity is treated as a hard exclusion once its weighted score drops this low —
 // roughly two recent "disliked" signals against it.
 const DISLIKE_EXCLUSION_THRESHOLD = -3;
@@ -123,9 +125,11 @@ export async function generateItinerary(
   // considered, rather than relying on the LLM to remember to avoid them.
   // rankedActivities is already sorted by affinity score, so filtering
   // preserves that order — no need to re-sort.
-  const candidateActivities = rankedActivities
-    .filter((a) => (affinity.activityScores[a.id] ?? 0) > DISLIKE_EXCLUSION_THRESHOLD)
-    .slice(0, MAX_CANDIDATES_SENT_TO_LLM);
+  const candidateActivities = selectBalanced(
+    rankedActivities.filter((a) => (affinity.activityScores[a.id] ?? 0) > DISLIKE_EXCLUSION_THRESHOLD),
+    MAX_CANDIDATES_SENT_TO_LLM,
+    MIN_CANDIDATES_PER_CATEGORY
+  );
 
   const { system, user } = buildPrompt(
     profile ?? {

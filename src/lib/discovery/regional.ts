@@ -6,6 +6,7 @@ import {
   type PendingGeocode,
 } from "@/lib/discovery/run";
 import { createClaudeWebSearchSource } from "@/lib/discovery/sources/claudeWebSearch";
+import { ensureOpenStreetMapPlaces } from "@/lib/discovery/osmPlaces";
 import { generateAndSaveItinerary } from "@/lib/itinerary/generateAndSave";
 import { decideSearch, normalizeRegionKey, type RegionState, type SearchDecision } from "@/lib/discovery/throttle";
 import type { Coordinates } from "@/lib/geo/geocode";
@@ -197,8 +198,14 @@ export async function triggerDiscoveryForRegion(
   region: string
 ): Promise<void> {
   try {
-    const summary = await searchRegionsThrottled(supabase, [region], { maxSearches: 1 });
-    const newlyActive = summary.searched.reduce((sum, o) => sum + o.insertedActive, 0);
+    // The free place layer runs alongside the paid search, not after it: a
+    // regional search can take ~4.5 of the 5 minutes available, so queueing
+    // this behind it could get both cut off.
+    const [summary, places] = await Promise.all([
+      searchRegionsThrottled(supabase, [region], { maxSearches: 1 }),
+      ensureOpenStreetMapPlaces(supabase, region),
+    ]);
+    const newlyActive = summary.searched.reduce((sum, o) => sum + o.insertedActive, 0) + places.inserted;
     if (newlyActive > 0) await generateAndSaveItinerary(supabase, memberId);
   } catch {
     // Best-effort — the nightly job will pick this region up when it's due.
