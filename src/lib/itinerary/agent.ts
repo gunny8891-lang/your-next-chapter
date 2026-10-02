@@ -4,6 +4,7 @@ import { validateGeneratedItinerary, type GeneratedItinerary } from "@/lib/itine
 import { buildFallbackItinerary } from "@/lib/itinerary/fallback";
 import { summarizeAffinity } from "@/lib/memory/scoring";
 import { fetchRankedOpportunities, selectBalanced, type OpportunityCandidate } from "@/lib/opportunities/engine";
+import { alignToEvents, describeWhen, fitsDates, getCurrentWeekStart, londonToday, weekDates } from "@/lib/opportunities/schedule";
 import { callClaude } from "@/lib/ai/client";
 import { AI_MODELS } from "@/lib/ai/models";
 
@@ -26,16 +27,23 @@ type ProfileForPrompt = {
   mobility_notes: string | null;
 };
 
+function formatDay(isoDate: string): string {
+  return new Date(`${isoDate}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+}
+
 function buildPrompt(
   profile: ProfileForPrompt,
   activities: OpportunityCandidate[],
   affinitySummary: string,
-  aspirations: string[]
+  aspirations: string[],
+  weekContext: string
 ) {
   const candidateList = activities
     .map((a) => {
       const accessibility = a.accessibility_notes ? ` | accessibility: ${a.accessibility_notes}` : "";
-      return `- id=${a.id} | ${a.title} | category=${a.category} | tags=[${a.tags.join(", ")}] | price=${a.price_estimate ?? "unknown"} | ${a.address ?? ""}${accessibility}`;
+      const when = describeWhen(a);
+      const whenText = when ? (a.expires_at ? ` | ${when}` : ` | WHEN: ${when} (fixed)`) : "";
+      return `- id=${a.id} | ${a.title} | category=${a.category}${whenText} | tags=[${a.tags.join(", ")}] | price=${a.price_estimate ?? "unknown"} | ${a.address ?? ""}${accessibility}`;
     })
     .join("\n");
 
@@ -50,10 +58,12 @@ suitable for a grandparent to take a grandchild to, when a genuinely suitable on
 never force one in if nothing suitable is available. If a candidate activity is a genuine, specific step toward one \
 of the member's "My Chapter" aspirations below, say so plainly in that item's rationale (e.g. "You mentioned wanting \
 to learn photography — this beginner walk is a great low-pressure way to start.") — only when the connection is \
-real, never a stretch. Respond with ONLY valid JSON matching this exact shape, no prose, no markdown fences: \
+real, never a stretch. A candidate marked "WHEN" is a one-off event at that exact day and time: if you choose it, schedule it on that day. One marked "available until" can go on any day up to that date. Respond with ONLY valid JSON matching this exact shape, no prose, no markdown fences: \
 {"items": [{"day": "Mon"|"Tue"|"Wed"|"Thu"|"Fri"|"Sat"|"Sun", "slot": "morning"|"afternoon"|"evening", "activity_id": "<id from candidates>", "rationale": "<one sentence, second person, warm tone>"}]}`;
 
-  const user = `Member profile:
+  const user = `${weekContext}
+
+Member profile:
 - Location: ${profile.location_text ?? "unknown"}
 - Travel radius: ${profile.travel_radius_km ?? "unknown"} km
 - Personality: ${JSON.stringify(profile.personality)}
@@ -125,8 +135,17 @@ export async function generateItinerary(
   // considered, rather than relying on the LLM to remember to avoid them.
   // rankedActivities is already sorted by affinity score, so filtering
   // preserves that order — no need to re-sort.
+  // A one-off event is only plannable if it falls on a day of this week that
+  // hasn't passed. Without this the model was offered events weeks away and
+  // placed them on arbitrary days.
+  const weekStart = getCurrentWeekStart();
+  const today = londonToday();
+  const dates = weekDates(weekStart);
+  const remainingDates = Object.values(dates).filter((d) => d >= today);
+  const plannable = rankedActivities.filter((a) => fitsDates(a, remainingDates));
+
   const candidateActivities = selectBalanced(
-    rankedActivities.filter((a) => (affinity.activityScores[a.id] ?? 0) > DISLIKE_EXCLUSION_THRESHOLD),
+    plannable.filter((a) => (affinity.activityScores[a.id] ?? 0) > DISLIKE_EXCLUSION_THRESHOLD),
     MAX_CANDIDATES_SENT_TO_LLM,
     MIN_CANDIDATES_PER_CATEGORY
   );
@@ -144,7 +163,8 @@ export async function generateItinerary(
     },
     candidateActivities,
     summarizeAffinity(affinity),
-    aspirations
+    aspirations,
+    `Plan week: ${formatDay(dates.Mon)} to ${formatDay(dates.Sun)}. Today is ${formatDay(today)}.`
   );
 
   let lastError: string | null = null;
@@ -152,12 +172,15 @@ export async function generateItinerary(
     try {
       const raw = await requestItinerary(supabase, memberId, system, user, lastError ?? undefined);
       const result = validateGeneratedItinerary(raw, candidateActivities);
-      if (result.ok) return { itinerary: result.value, usedFallback: false };
+      if (result.ok) {
+        return { itinerary: { items: alignToEvents(result.value.items, candidateActivities, weekStart) }, usedFallback: false };
+      }
       lastError = result.error;
     } catch (err) {
       lastError = err instanceof Error ? err.message : "Unknown error calling Claude";
     }
   }
 
-  return { itinerary: buildFallbackItinerary(candidateActivities, affinity), usedFallback: true };
+  const fallback = buildFallbackItinerary(candidateActivities, affinity);
+  return { itinerary: { items: alignToEvents(fallback.items, candidateActivities, weekStart) }, usedFallback: true };
 }

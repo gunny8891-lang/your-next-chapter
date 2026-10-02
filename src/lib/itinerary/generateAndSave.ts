@@ -1,13 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { generateItinerary } from "@/lib/itinerary/agent";
+import { getCurrentWeekStart } from "@/lib/opportunities/schedule";
 
-export function getCurrentWeekStart(): string {
-  const now = new Date();
-  const diffToMonday = (now.getUTCDay() + 6) % 7; // 0 = Monday
-  const monday = new Date(now);
-  monday.setUTCDate(now.getUTCDate() - diffToMonday);
-  return monday.toISOString().slice(0, 10);
-}
+// Moved to opportunities/schedule so the planner can use it without importing
+// this file (which imports the planner). Re-exported for existing callers.
+export { getCurrentWeekStart };
 
 /**
  * Shared by the per-member "Generate my week" action and the weekly batch job —
