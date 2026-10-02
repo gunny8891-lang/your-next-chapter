@@ -12,6 +12,10 @@ export type RawActivityCandidate = {
   /** Last date a multi-date item (ongoing exhibition, seasonal series) is available, when the source states one. */
   availableUntil?: string | null;
   priceEstimate: number | null;
+  /** Weekly opening hours for a standing venue, in OpenStreetMap syntax ("Mo-Fr 09:00-17:00; Sa 10:00-16:00"). Stored in activities.recurrence_rule. */
+  openingHours?: string | null;
+  /** Typical visit length, when known. Stored in activities.duration_minutes. */
+  durationMinutes?: number | null;
   bookingUrl: string;
   /** True only when bookingUrl is a genuine per-event/per-listing URL the source
    * actually found — not a synthetic fallback (e.g. a fragment anchor on a

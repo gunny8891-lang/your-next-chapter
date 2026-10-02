@@ -116,6 +116,8 @@ export async function persistDiscovery(
         date_time: c.dateTime,
         expires_at: c.availableUntil ?? null,
         price_estimate: c.priceEstimate,
+        recurrence_rule: c.openingHours ?? null,
+        duration_minutes: c.durationMinutes ?? null,
         booking_url: c.bookingUrl,
         source: "discovery_agent" as const,
         tags: c.tags,

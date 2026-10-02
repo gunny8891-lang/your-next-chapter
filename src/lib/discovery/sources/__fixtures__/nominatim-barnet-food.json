@@ -1,0 +1,1051 @@
+[
+ {
+  "term": "tea room",
+  "place": {
+   "osm_type": "way",
+   "osm_id": 327678701,
+   "category": "amenity",
+   "type": "cafe",
+   "name": "Oakmere Tea & Dining Room",
+   "lat": "51.6955430",
+   "lon": "-0.1770141",
+   "importance": 0.00005512703135724449,
+   "extratags": {
+    "ref:GB:uprn": "10034170267"
+   },
+   "address": {
+    "amenity": "Oakmere Tea & Dining Room",
+    "house_number": "102",
+    "road": "High Street",
+    "neighbourhood": "Oakmere",
+    "town": "Potters Bar",
+    "city": "Hertsmere",
+    "county": "Hertfordshire",
+    "ISO3166-2-lvl6": "GB-HRT",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "EN6 5AT",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "cafe",
+  "place": {
+   "osm_type": "way",
+   "osm_id": 1033470073,
+   "category": "amenity",
+   "type": "cafe",
+   "name": "Cafe Corso",
+   "lat": "51.5975134",
+   "lon": "-0.1136393",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "cuisine": "sandwich",
+    "building": "house",
+    "opening_hours": "Mo-Fr 07:00-16:30; Sa 08:00-16:00"
+   },
+   "address": {
+    "amenity": "Cafe Corso",
+    "house_number": "1",
+    "road": "Ringslade Road",
+    "suburb": "Hornsey",
+    "city_district": "London Borough of Haringey",
+    "ISO3166-2-lvl8": "GB-HRY",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "N22 7TE",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "cafe",
+  "place": {
+   "osm_type": "node",
+   "osm_id": 14125912358,
+   "category": "amenity",
+   "type": "cafe",
+   "name": "Trent Park House of Secrets Cafe",
+   "lat": "51.6600079",
+   "lon": "-0.1347734",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "fhrs:id": "1965721",
+    "website": "https://trentparkhouse.org.uk/pages/tickets#:~:text=Facilities,Cafe",
+    "operator": "Blends & Beyond",
+    "opening_hours": "Tu-Su 09:00-17:00",
+    "outdoor_seating": "yes"
+   },
+   "address": {
+    "amenity": "Trent Park House of Secrets Cafe",
+    "road": "Daffodil Crescent",
+    "suburb": "Cockfosters",
+    "city_district": "London Borough of Enfield",
+    "ISO3166-2-lvl8": "GB-ENF",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "EN4 0EZ",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "cafe",
+  "place": {
+   "osm_type": "way",
+   "osm_id": 1035425164,
+   "category": "amenity",
+   "type": "cafe",
+   "name": "Joe & The Juice",
+   "lat": "51.5897545",
+   "lon": "-0.1448803",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "cuisine": "coffee_shop",
+    "building": "retail",
+    "takeaway": "yes",
+    "brand:website": "https://www.joejuice.com",
+    "brand:wikidata": "Q26221514",
+    "brand:wikipedia": "en:Joe & The Juice",
+    "opening_hours:signed": "no",
+    "check_date:opening_hours": "2025-03-15"
+   },
+   "address": {
+    "amenity": "Joe & The Juice",
+    "house_number": "27",
+    "road": "Muswell Hill Broadway",
+    "suburb": "Muswell Hill",
+    "city_district": "London Borough of Haringey",
+    "ISO3166-2-lvl8": "GB-HRY",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "N10 3HA",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "cafe",
+  "place": {
+   "osm_type": "way",
+   "osm_id": 325254486,
+   "category": "amenity",
+   "type": "cafe",
+   "name": "Canons Perk",
+   "lat": "51.6076762",
+   "lon": "-0.2954046",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "levels": "3",
+    "building": "yes",
+    "diet:vegan": "no",
+    "ref:GB:uprn": "100021249438;100023040119",
+    "diet:vegetarian": "yes"
+   },
+   "address": {
+    "amenity": "Canons Perk",
+    "house_number": "4",
+    "road": "Station Parade",
+    "neighbourhood": "Canons Park",
+    "suburb": "Stanmore",
+    "city_district": "London Borough of Harrow",
+    "ISO3166-2-lvl8": "GB-HRW",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "HA8 6RW",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "cafe",
+  "place": {
+   "osm_type": "node",
+   "osm_id": 2969164036,
+   "category": "amenity",
+   "type": "cafe",
+   "name": "Southgate Hockey Centre Bar",
+   "lat": "51.6563846",
+   "lon": "-0.1397322",
+   "importance": 0.00009307927061870783,
+   "extratags": {},
+   "address": {
+    "amenity": "Southgate Hockey Centre Bar",
+    "road": "Limes Avenue",
+    "suburb": "Cockfosters",
+    "city_district": "London Borough of Enfield",
+    "ISO3166-2-lvl8": "GB-ENF",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "EN4 0FQ",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "cafe",
+  "place": {
+   "osm_type": "node",
+   "osm_id": 13396083906,
+   "category": "amenity",
+   "type": "cafe",
+   "name": "Totally Espresso",
+   "lat": "51.5967417",
+   "lon": "-0.1975333",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "cuisine": "coffee_shop",
+    "fhrs:id": "756764",
+    "check_date": "2025-12-20",
+    "outdoor_seating": "yes"
+   },
+   "address": {
+    "amenity": "Totally Espresso",
+    "house_number": "2",
+    "road": "East End Road",
+    "suburb": "Church End",
+    "city_district": "London Borough of Barnet",
+    "ISO3166-2-lvl8": "GB-BNE",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "N3 3LT",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "cafe",
+  "place": {
+   "osm_type": "node",
+   "osm_id": 12385279652,
+   "category": "amenity",
+   "type": "cafe",
+   "name": "Melily Coffee",
+   "lat": "51.5839551",
+   "lon": "-0.1164346",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "website": "https://melilycoffee.com",
+    "opening_hours": "Mo-Su 06:00-19:00"
+   },
+   "address": {
+    "amenity": "Melily Coffee",
+    "house_number": "124",
+    "road": "Tottenham Lane",
+    "neighbourhood": "Ferme Park",
+    "suburb": "Hornsey",
+    "city_district": "London Borough of Haringey",
+    "ISO3166-2-lvl8": "GB-HRY",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "N8 7EL",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "cafe",
+  "place": {
+   "osm_type": "node",
+   "osm_id": 3874311762,
+   "category": "amenity",
+   "type": "cafe",
+   "name": "Costa",
+   "lat": "51.6022560",
+   "lon": "-0.1921034",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "cuisine": "coffee_shop",
+    "fhrs:id": "758239",
+    "takeaway": "yes",
+    "wheelchair": "limited",
+    "opening_hours": "Mo-Sa 06:30-20:00; Su 08:30-18:00",
+    "brand:wikidata": "Q608845"
+   },
+   "address": {
+    "amenity": "Costa",
+    "house_number": "32",
+    "road": "Ballards Lane",
+    "suburb": "Church End",
+    "city_district": "London Borough of Barnet",
+    "ISO3166-2-lvl8": "GB-BNE",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "N3 2BJ",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "cafe",
+  "place": {
+   "osm_type": "node",
+   "osm_id": 5001535598,
+   "category": "amenity",
+   "type": "cafe",
+   "name": "Little Dinosaurs",
+   "lat": "51.5912728",
+   "lon": "-0.1379996",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "email": "info@littledinosaurs.co.uk",
+    "website": "https://www.littledinosaurs.co.uk",
+    "wheelchair": "yes",
+    "opening_hours": "unsigned",
+    "opening_hours:signed": "no"
+   },
+   "address": {
+    "amenity": "Little Dinosaurs",
+    "road": "Alexandra Palace Way",
+    "suburb": "Muswell Hill",
+    "city_district": "London Borough of Haringey",
+    "ISO3166-2-lvl8": "GB-HRY",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "N10 2DP",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "cafe",
+  "place": {
+   "osm_type": "node",
+   "osm_id": 3174731014,
+   "category": "amenity",
+   "type": "cafe",
+   "name": "Diony & Adam",
+   "lat": "51.6128767",
+   "lon": "-0.1582378",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "phone": "+44 20 3620 2107",
+    "cuisine": "greek",
+    "fhrs:id": "1301435",
+    "opening_hours": "Mo-Su 08:00-23:00",
+    "outdoor_seating": "yes",
+    "contact:facebook": "dionyadam"
+   },
+   "address": {
+    "amenity": "Diony & Adam",
+    "road": "Friern Barnet Road",
+    "suburb": "Friern Barnet",
+    "city_district": "London Borough of Barnet",
+    "ISO3166-2-lvl8": "GB-BNE",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "N11 3DA",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "cafe",
+  "place": {
+   "osm_type": "node",
+   "osm_id": 4081187589,
+   "category": "amenity",
+   "type": "cafe",
+   "name": "Starbucks",
+   "lat": "51.6873078",
+   "lon": "-0.2216313",
+   "importance": 0.00005512703135724449,
+   "extratags": {
+    "cuisine": "coffee_shop",
+    "website": "https://www.starbucks.com/store-locator/store/1011281/potters-bar-welcome-brk-south-mim-welcome-break-group-ltd-starbucks-sout-bignalls-co",
+    "takeaway": "yes",
+    "wheelchair": "yes",
+    "brand:wikidata": "Q37158",
+    "indoor_seating": "yes",
+    "brand:wikipedia": "en:Starbucks",
+    "outdoor_seating": "no"
+   },
+   "address": {
+    "amenity": "Starbucks",
+    "road": "Wash Lane",
+    "village": "South Mimms",
+    "city": "Hertsmere",
+    "county": "Hertfordshire",
+    "ISO3166-2-lvl6": "GB-HRT",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "EN6 3QQ",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "cafe",
+  "place": {
+   "osm_type": "node",
+   "osm_id": 9254700507,
+   "category": "amenity",
+   "type": "cafe",
+   "name": "Costa",
+   "lat": "51.6565423",
+   "lon": "-0.2772128",
+   "importance": 0.00005512703135724449,
+   "extratags": {
+    "cuisine": "coffee_shop",
+    "fhrs:id": "429442",
+    "website": "https://www.costa.co.uk/stores/borehamwood",
+    "takeaway": "yes",
+    "opening_hours": "Mo-Fr 07:30-17:30; Sa,Su 08:30-17:00",
+    "brand:wikidata": "Q608845",
+    "indoor_seating": "yes",
+    "brand:wikipedia": "en:Costa Coffee",
+    "outdoor_seating": "yes"
+   },
+   "address": {
+    "amenity": "Costa",
+    "road": "Theobald Street",
+    "suburb": "Elstree and Borehamwood",
+    "town": "Borehamwood",
+    "city": "Hertsmere",
+    "county": "Hertfordshire",
+    "ISO3166-2-lvl6": "GB-HRT",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "WD6 4PR",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "restaurant",
+  "place": {
+   "osm_type": "node",
+   "osm_id": 519436797,
+   "category": "amenity",
+   "type": "restaurant",
+   "name": "Methi Restaurant",
+   "lat": "51.5988761",
+   "lon": "-0.1223495",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "cuisine": "indian",
+    "indoor_seating": "yes",
+    "outdoor_seating": "no"
+   },
+   "address": {
+    "amenity": "Methi Restaurant",
+    "road": "Crescent Mews",
+    "suburb": "Hornsey",
+    "city_district": "London Borough of Haringey",
+    "ISO3166-2-lvl8": "GB-HRY",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "N22 7BN",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "restaurant",
+  "place": {
+   "osm_type": "way",
+   "osm_id": 704705572,
+   "category": "amenity",
+   "type": "restaurant",
+   "name": "Rossella",
+   "lat": "51.5893245",
+   "lon": "-0.1461490",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "phone": "+44 20 8194 0091",
+    "cuisine": "italian",
+    "toilets": "yes",
+    "website": "https://rossella.co.uk/pages/muswell-hill",
+    "building": "yes",
+    "roof:shape": "flat",
+    "wheelchair": "yes",
+    "toilets:access": "customers",
+    "building:levels": "3",
+    "outdoor_seating": "yes",
+    "opening_hours:signed": "no",
+    "check_date:opening_hours": "2025-03-15"
+   },
+   "address": {
+    "amenity": "Rossella",
+    "house_number": "107",
+    "road": "Muswell Hill Road",
+    "suburb": "Muswell Hill",
+    "city_district": "London Borough of Haringey",
+    "ISO3166-2-lvl8": "GB-HRY",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "N10 3HS",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "restaurant",
+  "place": {
+   "osm_type": "node",
+   "osm_id": 12633147077,
+   "category": "amenity",
+   "type": "restaurant",
+   "name": "Bistro Aix",
+   "lat": "51.5816355",
+   "lon": "-0.1213611",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "cuisine": "french",
+    "website": "https://bistroaix.co.uk"
+   },
+   "address": {
+    "amenity": "Bistro Aix",
+    "house_number": "54",
+    "road": "Tottenham Lane",
+    "retail": "Topsfield Parade",
+    "suburb": "Crouch End",
+    "city_district": "London Borough of Haringey",
+    "ISO3166-2-lvl8": "GB-HRY",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "N8 9DE",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "restaurant",
+  "place": {
+   "osm_type": "node",
+   "osm_id": 12181710437,
+   "category": "amenity",
+   "type": "restaurant",
+   "name": "Little Resham",
+   "lat": "51.6111792",
+   "lon": "-0.2782704",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "cuisine": "indian",
+    "diet:vegetarian": "yes"
+   },
+   "address": {
+    "amenity": "Little Resham",
+    "house_number": "34",
+    "road": "Station Road",
+    "quarter": "Burnt Oak",
+    "town": "Edgware",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "HA8 7AB",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "restaurant",
+  "place": {
+   "osm_type": "node",
+   "osm_id": 9537480878,
+   "category": "amenity",
+   "type": "restaurant",
+   "name": "Franco Manca",
+   "lat": "51.5910933",
+   "lon": "-0.1414649",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "cuisine": "pizza",
+    "fhrs:id": "918801",
+    "takeaway": "yes",
+    "contact:phone": "+44 20 3026 5528",
+    "opening_hours": "Mo-Th 12:00-22:30; Fr,Sa 12:00-23:00; Su 12:00-22:00",
+    "brand:wikidata": "Q28404417",
+    "brand:wikipedia": "en:Franco Manca",
+    "contact:website": "https://www.francomanca.co.uk/restaurants/muswell-hill/"
+   },
+   "address": {
+    "amenity": "Franco Manca",
+    "house_number": "278",
+    "road": "Muswell Hill Broadway",
+    "suburb": "Muswell Hill",
+    "city_district": "London Borough of Haringey",
+    "ISO3166-2-lvl8": "GB-HRY",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "N10 2QR",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "restaurant",
+  "place": {
+   "osm_type": "node",
+   "osm_id": 13418170473,
+   "category": "amenity",
+   "type": "restaurant",
+   "name": "Nando's",
+   "lat": "51.5949319",
+   "lon": "-0.2609361",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "cuisine": "chicken;portuguese",
+    "website": "https://www.nandos.co.uk/restaurants/colindale",
+    "brand:wikidata": "Q3472954"
+   },
+   "address": {
+    "amenity": "Nando's",
+    "road": "Capitol Way",
+    "suburb": "Kingsbury",
+    "city_district": "London Borough of Brent",
+    "ISO3166-2-lvl8": "GB-BEN",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "NW9 0AF",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "restaurant",
+  "place": {
+   "osm_type": "node",
+   "osm_id": 7804014035,
+   "category": "amenity",
+   "type": "restaurant",
+   "name": "Mohammedi Indian Takeaway",
+   "lat": "51.6066626",
+   "lon": "-0.1195045",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "cuisine": "indian",
+    "takeaway": "yes"
+   },
+   "address": {
+    "amenity": "Mohammedi Indian Takeaway",
+    "house_number": "136c",
+    "road": "Myddleton Road",
+    "suburb": "Muswell Hill",
+    "city_district": "London Borough of Haringey",
+    "ISO3166-2-lvl8": "GB-HRY",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "N22 8NQ",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "restaurant",
+  "place": {
+   "osm_type": "node",
+   "osm_id": 249249967,
+   "category": "amenity",
+   "type": "restaurant",
+   "name": "Nando's",
+   "lat": "51.6178616",
+   "lon": "-0.3110722",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "cuisine": "chicken;portuguese",
+    "toilets": "yes",
+    "website": "https://www.nandos.co.uk/restaurants/stanmore",
+    "check_date": "2025-11-16",
+    "brand:wikidata": "Q3472954",
+    "toilets:access": "customers",
+    "brand:wikipedia": "en:Nando's"
+   },
+   "address": {
+    "amenity": "Nando's",
+    "road": "The Broadway",
+    "retail": "Stanmore Broadway",
+    "suburb": "Stanmore",
+    "city_district": "London Borough of Harrow",
+    "ISO3166-2-lvl8": "GB-HRW",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "HA7 4DW",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "restaurant",
+  "place": {
+   "osm_type": "node",
+   "osm_id": 10773721241,
+   "category": "amenity",
+   "type": "restaurant",
+   "name": "Karen's Diner",
+   "lat": "51.6559267",
+   "lon": "-0.1834197",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "website": "https://www.thehadleyhotel.com/karensdiner",
+    "opening_hours": "Tu-Th 17:00-22:00; Fr-Su 12:00-22:00"
+   },
+   "address": {
+    "amenity": "Karen's Diner",
+    "house_number": "113",
+    "road": "Hadley Road",
+    "quarter": "Barnet Vale",
+    "suburb": "New Barnet",
+    "city_district": "London Borough of Barnet",
+    "ISO3166-2-lvl8": "GB-BNE",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "EN5 5QR",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "restaurant",
+  "place": {
+   "osm_type": "node",
+   "osm_id": 379142164,
+   "category": "amenity",
+   "type": "restaurant",
+   "name": "The Two Brothers",
+   "lat": "51.5991604",
+   "lon": "-0.1964918",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "cuisine": "fish",
+    "takeaway": "yes",
+    "opening_hours": "Tu-Su 12:00-14:30,17:30-22:00",
+    "indoor_seating": "yes",
+    "outdoor_seating": "no"
+   },
+   "address": {
+    "amenity": "The Two Brothers",
+    "house_number": "297-303",
+    "road": "Regent's Park Road",
+    "suburb": "Church End",
+    "city_district": "London Borough of Barnet",
+    "ISO3166-2-lvl8": "GB-BNE",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "N3 1DT",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "pub",
+  "place": {
+   "osm_type": "node",
+   "osm_id": 12633147087,
+   "category": "amenity",
+   "type": "pub",
+   "name": "The Queens",
+   "lat": "51.5809825",
+   "lon": "-0.1219242",
+   "importance": 0.40647197265303264,
+   "extratags": {
+    "cuisine": "british;pub;roast",
+    "toilets": "yes",
+    "website": "https://www.thequeenscrouchend.co.uk/",
+    "real_ale": "yes",
+    "wikidata": "Q15979255",
+    "real_fire": "yes",
+    "wikipedia": "en:The Queens, Crouch End",
+    "opening_hours": "Mo-Th 12:00-23:00; Fr-Sa 12:00-24:00; Su 12:00-23:00",
+    "outdoor_seating": "yes"
+   },
+   "address": {
+    "amenity": "The Queens",
+    "house_number": "26",
+    "road": "Tottenham Lane",
+    "retail": "Topsfield Parade",
+    "suburb": "Crouch End",
+    "city_district": "London Borough of Haringey",
+    "ISO3166-2-lvl8": "GB-HRY",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "N8 9DE",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "pub",
+  "place": {
+   "osm_type": "node",
+   "osm_id": 2333320764,
+   "category": "amenity",
+   "type": "bar",
+   "name": "Langham Working Mens Club",
+   "lat": "51.5846317",
+   "lon": "-0.0997209",
+   "importance": 0.1773516541617975,
+   "extratags": {
+    "leisure": "social_club",
+    "website": "https://www.langhamclub.co.uk/",
+    "wikidata": "Q6486075",
+    "wikipedia": "en:Langham Working Men's Club",
+    "check_date": "2024-11-25",
+    "start_date": "1910",
+    "contact:email": "secretary@langhamclub.co.uk",
+    "contact:phone": "+44 20 8800 3057",
+    "opening_hours": "Mo-Th 16:30-32:00; Fr 13:00-24:00; Sa 12:00-24:00; Su 12:00-23:00",
+    "check_date:opening_hours": "2024-11-25"
+   },
+   "address": {
+    "amenity": "Langham Working Mens Club",
+    "house_number": "600",
+    "road": "Green Lanes",
+    "neighbourhood": "Duckett's Green",
+    "suburb": "Harringay",
+    "city_district": "London Borough of Haringey",
+    "ISO3166-2-lvl8": "GB-HRY",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "N8 0RY",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "pub",
+  "place": {
+   "osm_type": "way",
+   "osm_id": 441509845,
+   "category": "amenity",
+   "type": "pub",
+   "name": "The Mossy Well",
+   "lat": "51.5907196",
+   "lon": "-0.1417069",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "dog": "no",
+    "food": "yes",
+    "cuisine": "Usual Wetherspoons selection",
+    "fhrs:id": "834246",
+    "smoking": "outside",
+    "toilets": "yes",
+    "website": "https://www.jdwetherspoon.com/pubs/the-mossy-well-muswell-hill/",
+    "building": "yes",
+    "real_ale": "Usual Wetherspoons selection",
+    "wikidata": "Q88916769",
+    "real_fire": "yes",
+    "roof:shape": "hipped",
+    "wheelchair": "designated",
+    "microbrewery": "no",
+    "website:menu": "https://order.jdwetherspoon.com/venue/jdw/6524/menus",
+    "opening_hours": "Mo 08:00-23:30; Tu-We 08:00-24:00; Th-Su 08:00-01:00",
+    "brand:wikidata": "Q6109362",
+    "brand:wikipedia": "en:Wetherspoons",
+    "building:levels": "2",
+    "internet_access": "wlan",
+    "outdoor_seating": "yes",
+    "description:floor": "Rough wood",
+    "toilets:wheelchair": "designated",
+    "internet_access:fee": "no",
+    "internet_access:ssid": "_The Cloud"
+   },
+   "address": {
+    "amenity": "The Mossy Well",
+    "house_number": "258-260",
+    "road": "Muswell Hill Broadway",
+    "suburb": "Muswell Hill",
+    "city_district": "London Borough of Haringey",
+    "ISO3166-2-lvl8": "GB-HRY",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "N10 3SH",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "pub",
+  "place": {
+   "osm_type": "way",
+   "osm_id": 264128874,
+   "category": "amenity",
+   "type": "pub",
+   "name": "The Good Reader",
+   "lat": "51.5828294",
+   "lon": "-0.1275873",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "email": "enquiries@thegoodreader.co.uk",
+    "website": "https://thegoodreader.co.uk/",
+    "building": "yes",
+    "real_ale": "yes",
+    "opening_hours": "Mo off; Tu-We 15:00-23:00; Th 12:00-23:00; Fr-Sa 12:00-24:00; Su 12:00-22:00",
+    "disused:amenity": "pub"
+   },
+   "address": {
+    "amenity": "The Good Reader",
+    "house_number": "120",
+    "road": "Park Road",
+    "neighbourhood": "Crouch Hall Park",
+    "suburb": "Crouch End",
+    "city_district": "London Borough of Haringey",
+    "ISO3166-2-lvl8": "GB-HRY",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "N8 8JP",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "pub",
+  "place": {
+   "osm_type": "way",
+   "osm_id": 295706350,
+   "category": "amenity",
+   "type": "bar",
+   "name": "Ahir Lorenzo's",
+   "lat": "51.6017889",
+   "lon": "-0.1936147",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "email": "info@ahir.co.uk",
+    "phone": "+44 20 8371 0531",
+    "website": "https://ahir.co.uk",
+    "building": "yes",
+    "phone:mobile": "+44 7990 487509",
+    "opening_hours": "Mo-Th 11:00-24:00; Fr-Sa 11:00-02:00; Su 11:00-24:00"
+   },
+   "address": {
+    "amenity": "Ahir Lorenzo's",
+    "house_number": "298",
+    "road": "Nether Street",
+    "suburb": "Church End",
+    "city_district": "London Borough of Barnet",
+    "ISO3166-2-lvl8": "GB-BNE",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "N3 1RJ",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "pub",
+  "place": {
+   "osm_type": "way",
+   "osm_id": 501641166,
+   "category": "amenity",
+   "type": "pub",
+   "name": "The Maid of Muswell",
+   "lat": "51.5989115",
+   "lon": "-0.1379464",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "food": "yes",
+    "fhrs:id": "422449",
+    "smoking": "outside",
+    "website": "https://www.themaidofmuswell.co.uk/",
+    "building": "yes",
+    "live_sport": "yes",
+    "roof:shape": "many",
+    "wheelchair": "yes",
+    "opening_hours": "Mo-Su 12:00-23:00",
+    "building:levels": "2",
+    "outdoor_seating": "yes"
+   },
+   "address": {
+    "amenity": "The Maid of Muswell",
+    "house_number": "121",
+    "road": "Alexandra Park Road",
+    "suburb": "Muswell Hill",
+    "city_district": "London Borough of Haringey",
+    "ISO3166-2-lvl8": "GB-HRY",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "N10 2DP",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "pub",
+  "place": {
+   "osm_type": "node",
+   "osm_id": 12337813779,
+   "category": "amenity",
+   "type": "bar",
+   "name": "No5 Dining and Lounge",
+   "lat": "51.5858565",
+   "lon": "-0.1121009",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "email": "info@no5dining.co.uk",
+    "phone": "+4420 8341 2112",
+    "website": "https://no5dining.co.uk",
+    "opening_hours": "Mo-Th 17:00-25:00; Fr 17:00-25:30; Sa 14:00-25:30; Su 14:00-25:00",
+    "outdoor_seating": "no"
+   },
+   "address": {
+    "amenity": "No5 Dining and Lounge",
+    "house_number": "5",
+    "road": "Tottenham Lane",
+    "suburb": "Hornsey",
+    "city_district": "London Borough of Haringey",
+    "ISO3166-2-lvl8": "GB-HRY",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "N8 8SE",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ }
+]

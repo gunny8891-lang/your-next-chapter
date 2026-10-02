@@ -2,10 +2,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { computeAffinity, scoreActivity, type AffinityScores, type PreferenceSignalRow } from "@/lib/memory/scoring";
 import { filterByDistance } from "@/lib/geo/filterByDistance";
 import { isStillAvailable } from "@/lib/opportunities/availability";
+import { applyFoodVenueMode, type FoodVenueMode } from "@/lib/opportunities/kinds";
 
 export type OpportunityCandidate = {
   id: string;
   title: string;
+  /** What it is, in a sentence or two (may be null). */
+  description: string | null;
   category: string;
   address: string | null;
   price_estimate: number | null;
@@ -17,6 +20,10 @@ export type OpportunityCandidate = {
   booking_url: string | null;
   date_time: string | null;
   expires_at: string | null;
+  /** Weekly opening hours (OpenStreetMap syntax) for a standing venue; null if unknown. */
+  recurrence_rule: string | null;
+  /** Typical visit length in minutes, when known. */
+  duration_minutes: number | null;
 };
 
 export type FetchOpportunitiesOptions = {
@@ -24,6 +31,12 @@ export type FetchOpportunitiesOptions = {
   excludeActivityIds?: Set<string>;
   /** Restrict to a single category (e.g. swap alternatives within the same slot's category). */
   category?: string;
+  /**
+   * Cafés, pubs and restaurants. Left out by default so the weekly plan, Surprise
+   * Me, nudges and swaps never offer "a pub" as an activity; "I've got some time"
+   * asks for them.
+   */
+  foodVenues?: FoodVenueMode;
 };
 
 /**
@@ -76,7 +89,7 @@ export async function fetchRankedOpportunities(
   let query = supabase
     .from("activities")
     .select(
-      "id, title, category, address, price_estimate, tags, rating, accessibility_notes, location_lat, location_lng, booking_url, date_time, expires_at"
+      "id, title, description, category, address, price_estimate, tags, rating, accessibility_notes, location_lat, location_lng, booking_url, date_time, expires_at, recurrence_rule, duration_minutes"
     )
     .eq("status", "active");
   if (options.category) query = query.eq("category", options.category);
@@ -91,7 +104,10 @@ export async function fetchRankedOpportunities(
   // changing status, because members can't read non-active activities — that
   // would make finished items vanish from their own week view and history.
   const now = new Date();
-  const allActive = ((activities ?? []) as OpportunityCandidate[]).filter((a) => isStillAvailable(a, now));
+  const allActive = applyFoodVenueMode(
+    ((activities ?? []) as OpportunityCandidate[]).filter((a) => isStillAvailable(a, now)),
+    options.foodVenues ?? "exclude"
+  );
 
   const inRange = filterByDistance(
     allActive,

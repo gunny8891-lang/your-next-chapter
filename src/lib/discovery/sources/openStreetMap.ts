@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CategoryName } from "@/lib/categories";
 import type { DiscoverySource, RawActivityCandidate } from "@/lib/discovery/types";
 import { sleep, type Coordinates } from "@/lib/geo/geocode";
+import { FOOD_VENUE_TAG } from "@/lib/opportunities/kinds";
 
 /**
  * Free base layer of real, standing places — leisure centres, pools, parks,
@@ -24,6 +25,12 @@ import { sleep, type Coordinates } from "@/lib/geo/geocode";
  */
 
 export const OSM_NOTE_PREFIX = "Place data from OpenStreetMap";
+/** Notes of the general places layer start with this, so each layer's coverage can be checked on its own. */
+export const OSM_PLACES_NOTE_PREFIX = `${OSM_NOTE_PREFIX} (©`;
+/** Notes of the food & drink layer (cafés, pubs, restaurants, tea rooms) start with this. */
+export const OSM_FOOD_NOTE_PREFIX = `${OSM_NOTE_PREFIX} (food`;
+
+export type OsmLayer = "places" | "food";
 
 const NOMINATIM_SEARCH = "https://nominatim.openstreetmap.org/search";
 const MIN_REQUEST_GAP_MS = 1100;
@@ -37,7 +44,8 @@ type PlaceType =
   | "sports_centre" | "swimming_pool" | "park" | "yoga"
   | "museum" | "castle" | "nature_reserve" | "garden"
   | "library" | "arts_centre" | "community_centre"
-  | "theatre" | "cinema" | "playground";
+  | "theatre" | "cinema" | "playground"
+  | "restaurant" | "cafe" | "pub" | "tea_room";
 
 type TypeConfig = {
   category: CategoryName;
@@ -45,25 +53,38 @@ type TypeConfig = {
   /** How many of this type to keep per region. */
   keep: number;
   tags: string[];
+  /** Typical length of a visit, in minutes — what lets "I've got an hour" be answered honestly. */
+  minutes: number;
+  layer: OsmLayer;
   /** Free to enter by default (still overridden by an explicit fee=yes). */
   freeByDefault?: boolean;
 };
 
+// Food and drink places are catalogued as "Joy" (the database allows only seven
+// categories) and told apart by the food-venue tag; see opportunities/kinds.ts.
+const FOOD = FOOD_VENUE_TAG;
+
 const TYPES: Record<PlaceType, TypeConfig> = {
-  sports_centre: { category: "Move", label: "Sports and leisure centre", keep: 4, tags: ["fitness", "indoor"] },
-  swimming_pool: { category: "Move", label: "Swimming pool", keep: 3, tags: ["swimming", "gentle exercise"] },
-  park: { category: "Move", label: "Public park — good for a walk", keep: 4, tags: ["walking", "outdoors", "grandchildren"], freeByDefault: true },
-  yoga: { category: "Wellness", label: "Yoga, pilates or tai chi studio", keep: 4, tags: ["yoga", "relaxation"] },
-  museum: { category: "Explore", label: "Museum", keep: 4, tags: ["museum", "history"] },
-  castle: { category: "Explore", label: "Historic castle", keep: 2, tags: ["history", "heritage"] },
-  nature_reserve: { category: "Explore", label: "Nature reserve", keep: 3, tags: ["walking", "nature", "outdoors", "grandchildren"], freeByDefault: true },
-  garden: { category: "Joy", label: "Public garden", keep: 2, tags: ["gardens", "outdoors", "grandchildren"] },
-  library: { category: "Learn", label: "Public library", keep: 3, tags: ["books", "quiet", "indoor"], freeByDefault: true },
-  arts_centre: { category: "Learn", label: "Arts centre", keep: 3, tags: ["arts", "classes"] },
-  community_centre: { category: "Connect", label: "Community centre", keep: 4, tags: ["community", "social"] },
-  theatre: { category: "Joy", label: "Theatre", keep: 3, tags: ["theatre"] },
-  cinema: { category: "Joy", label: "Cinema", keep: 2, tags: ["cinema"] },
-  playground: { category: "Joy", label: "Children's playground", keep: 2, tags: ["playground", "grandchildren"], freeByDefault: true },
+  sports_centre: { category: "Move", label: "Sports and leisure centre", keep: 4, minutes: 60, layer: "places", tags: ["fitness", "indoor"] },
+  swimming_pool: { category: "Move", label: "Swimming pool", keep: 3, minutes: 45, layer: "places", tags: ["swimming", "gentle exercise"] },
+  park: { category: "Move", label: "Public park — good for a walk", keep: 4, minutes: 60, layer: "places", tags: ["walking", "outdoors", "grandchildren"], freeByDefault: true },
+  yoga: { category: "Wellness", label: "Yoga, pilates or tai chi studio", keep: 4, minutes: 60, layer: "places", tags: ["yoga", "relaxation"] },
+  museum: { category: "Explore", label: "Museum", keep: 4, minutes: 90, layer: "places", tags: ["museum", "history"] },
+  castle: { category: "Explore", label: "Historic castle", keep: 2, minutes: 120, layer: "places", tags: ["history", "heritage"] },
+  nature_reserve: { category: "Explore", label: "Nature reserve", keep: 3, minutes: 90, layer: "places", tags: ["walking", "nature", "outdoors", "grandchildren"], freeByDefault: true },
+  garden: { category: "Joy", label: "Public garden", keep: 2, minutes: 45, layer: "places", tags: ["gardens", "outdoors", "grandchildren"] },
+  library: { category: "Learn", label: "Public library", keep: 3, minutes: 45, layer: "places", tags: ["books", "quiet", "indoor"], freeByDefault: true },
+  arts_centre: { category: "Learn", label: "Arts centre", keep: 3, minutes: 90, layer: "places", tags: ["arts", "classes"] },
+  community_centre: { category: "Connect", label: "Community centre", keep: 4, minutes: 60, layer: "places", tags: ["community", "social"] },
+  theatre: { category: "Joy", label: "Theatre", keep: 3, minutes: 150, layer: "places", tags: ["theatre"] },
+  cinema: { category: "Joy", label: "Cinema", keep: 2, minutes: 150, layer: "places", tags: ["cinema"] },
+  playground: { category: "Joy", label: "Children's playground", keep: 2, minutes: 60, layer: "places", tags: ["playground", "grandchildren"], freeByDefault: true },
+  // Food & drink. Many more are kept than for other types: what matters is having
+  // one near wherever the member is going, not just the best few across a region.
+  restaurant: { category: "Joy", label: "Restaurant", keep: 24, minutes: 75, layer: "food", tags: [FOOD, "restaurant", "lunch", "dinner"] },
+  cafe: { category: "Joy", label: "Café", keep: 24, minutes: 45, layer: "food", tags: [FOOD, "cafe", "coffee", "brunch", "lunch"] },
+  pub: { category: "Joy", label: "Pub", keep: 18, minutes: 60, layer: "food", tags: [FOOD, "pub", "lunch", "dinner", "drinks"] },
+  tea_room: { category: "Joy", label: "Tea room", keep: 8, minutes: 90, layer: "food", tags: [FOOD, "cafe", "afternoon-tea"] },
 };
 
 /**
@@ -85,15 +106,25 @@ const OSM_KIND_TO_TYPE: Record<string, PlaceType> = {
   "amenity=community_centre": "community_centre",
   "amenity=theatre": "theatre",
   "amenity=cinema": "cinema",
+  "amenity=restaurant": "restaurant",
+  "amenity=cafe": "cafe",
+  // Only pubs, not amenity=bar: that is cocktail bars and members' clubs.
+  "amenity=pub": "pub",
 };
 
-/** What to ask Nominatim for. The yoga term goes first so a studio is classed as one, not as a generic gym. */
-const SEARCH_TERMS = [
-  "yoga", "sports centre", "swimming pool", "park",
-  "museum", "castle", "nature reserve", "garden",
-  "library", "arts centre", "community centre",
-  "theatre", "cinema", "playground",
-];
+/**
+ * What to ask Nominatim for, per layer. The yoga term goes first so a studio is
+ * classed as one, not as a generic gym; likewise "tea room" before "cafe".
+ */
+const SEARCH_TERMS: Record<OsmLayer, string[]> = {
+  places: [
+    "yoga", "sports centre", "swimming pool", "park",
+    "museum", "castle", "nature reserve", "garden",
+    "library", "arts centre", "community centre",
+    "theatre", "cinema", "playground",
+  ],
+  food: ["tea room", "restaurant", "cafe", "pub"],
+};
 
 export type NominatimPlace = {
   osm_type?: string;
@@ -127,11 +158,28 @@ export function viewboxAround(centre: Coordinates, radiusKm: number): string {
   return [centre.lng - dLng, centre.lat + dLat, centre.lng + dLng, centre.lat - dLat].map((n) => n.toFixed(4)).join(",");
 }
 
+/**
+ * The same area as viewboxAround, cut into four quadrants. Nominatim returns at
+ * most 40 results per search and there are hundreds of cafés and pubs in a city,
+ * so four searches find far more of what is near any given point than one.
+ */
+export function viewboxQuadrants(centre: Coordinates, radiusKm: number): string[] {
+  const dLat = radiusKm / 111;
+  const dLng = radiusKm / (111 * Math.cos((centre.lat * Math.PI) / 180));
+  const fmt = (west: number, north: number, east: number, south: number) =>
+    [west, north, east, south].map((n) => n.toFixed(4)).join(",");
+  const [w, c, e] = [centre.lng - dLng, centre.lng, centre.lng + dLng];
+  const [n, m, s] = [centre.lat + dLat, centre.lat, centre.lat - dLat];
+  return [fmt(w, n, c, m), fmt(c, n, e, m), fmt(w, m, c, s), fmt(c, m, e, s)];
+}
+
 // Names that say what a place is but not which one — useless on a card.
-const GENERIC_NAME = /^(the |a )?(main |kids |childrens |children's |learner |competition |training |outdoor |indoor |sports? |leisure |community |public )*(swimming pool|pool|sports? ?centre|leisure ?centre|community ?centre|park|garden|gym|library|theatre|cinema|playground|museum|hall)$/i;
+const GENERIC_NAME = /^(the |a )?(main |kids |childrens |children's |learner |competition |training |outdoor |indoor |sports? |leisure |community |public |local )*(swimming pool|pool|sports? ?centre|leisure ?centre|community ?centre|park|garden|gym|library|theatre|cinema|playground|museum|hall|cafe|café|restaurant|pub|coffee shop|tea ?room|bar)$/i;
 // A community centre run for one age group isn't a place to send a retiree.
 const NOT_FOR_RETIREES = /\b(youth|young|children|child|nursery|scout|guide|cadet|acf|atc|detachment|barracks|school|college|academy)\b/i;
 const PRIVATE_CLUB_NAME = /\b(club|ground|grounds|memorial|rugby|cricket|football|fc|hockey|boxing|mma)\b/i;
+// Outdoor pitches and courts are tagged as sports centres but are not somewhere to send a retiree.
+const PITCH_NAME = /\b(muga|multi[- ]?use|games? area|pitch|pitches|astro|turf|courts?|playing field)\b/i;
 const LEISURE_FACILITY_NAME = /(centre|center|leisure|lido|pool|swim|sport|athletic|tennis|squash|badminton|aquatic|baths|arena|complex|stadium)/i;
 const NOT_RETIREE_SPORTS = new Set([
   "boxing", "kickboxing", "martial_arts", "mma", "judo", "karate", "taekwondo", "wrestling", "crossfit",
@@ -139,6 +187,12 @@ const NOT_RETIREE_SPORTS = new Set([
   "soccer", "football", "field_hockey", "hockey", "basketball", "netball",
 ]);
 const YOGA_LIKE = /\b(yoga|pilates|tai ?chi|qi ?gong)\b/i;
+const TEA_ROOM_NAME = /\b(tea ?rooms?|tea ?house|tea ?shop|afternoon tea|tea (?:&|and) (?:\w+ )?rooms?)\b/i;
+// Takeaways and fast food are listed as restaurants but aren't somewhere to spend an hour.
+const TAKEAWAY_NAME = /\b(takeaway|take away|kebab|fish (?:and|&) chips|chippy|chicken shop|pizza hut|domino'?s|mcdonald'?s|burger king|kfc|subway|papa john'?s|wimpy)\b/i;
+// Chains are fine for a quick coffee but not what makes "a great way to spend a few hours", so they rank lower.
+const CHAIN_NAME = /\b(costa|starbucks|caff[eèé] nero|pret|greggs|nando'?s|wagamama|pizza ?express|zizzi|prezzo|ask italian|franco manca|harvester|toby carvery|beefeater|wetherspoon|brewers fayre|giraffe|itsu|leon|gail'?s|joe (?:and|&) the juice)\b/i;
+const FOOD_TYPES: PlaceType[] = ["restaurant", "cafe", "pub", "tea_room"];
 
 function normalizeName(name: string): string {
   return name.toLowerCase().replace(/&/g, " and ").replace(/[^a-z0-9]+/g, " ").replace(/\b(the|and)\b/g, " ").replace(/\s+/g, " ").trim();
@@ -157,7 +211,24 @@ export function classifyPlace(place: NominatimPlace, term: string): PlaceType | 
   const access = place.extratags?.access;
   if (access === "private" || access === "no" || access === "customers" || access === "permit") return null;
 
-  let type = OSM_KIND_TO_TYPE[`${place.category}=${place.type}`];
+  let type: PlaceType | undefined = OSM_KIND_TO_TYPE[`${place.category}=${place.type}`];
+
+  // A tea room is a café or restaurant that says so; only the "tea room" search can class one.
+  if (term === "tea room") {
+    const e = place.extratags ?? {};
+    const looksTea = TEA_ROOM_NAME.test(name) || /\btea\b/.test(e.cuisine ?? "");
+    type = (type === "cafe" || type === "restaurant") && looksTea ? "tea_room" : undefined;
+  } else if (type === "cafe" && TEA_ROOM_NAME.test(name)) {
+    type = "tea_room";
+  }
+  if (type && FOOD_TYPES.includes(type)) {
+    const e = place.extratags ?? {};
+    if (e.takeaway === "only" || TAKEAWAY_NAME.test(name)) return null;
+    // Members' clubs and club bars, school and college canteens, children's venues.
+    if (PRIVATE_CLUB_NAME.test(name) || NOT_FOR_RETIREES.test(name)) return null;
+    return type;
+  }
+
   // A fitness centre or sports hall that is a yoga/pilates/tai chi studio is wellness, not a gym.
   if (term === "yoga") {
     const looksYoga = YOGA_LIKE.test(name) || sportIsYoga(place.extratags);
@@ -172,7 +243,7 @@ export function classifyPlace(place: NominatimPlace, term: string): PlaceType | 
   // gyms. Keep only what reads as a public leisure facility.
   if (type === "sports_centre" || type === "swimming_pool") {
     const e = place.extratags ?? {};
-    if (e.club || PRIVATE_CLUB_NAME.test(name)) return null;
+    if (e.club || PRIVATE_CLUB_NAME.test(name) || PITCH_NAME.test(name)) return null;
     const sports = (e.sport ?? "").split(";").map((s) => s.trim()).filter(Boolean);
     if (sports.length > 0 && sports.every((s) => NOT_RETIREE_SPORTS.has(s))) return null;
     if (!LEISURE_FACILITY_NAME.test(name) && !e.opening_hours && !e.fee) return null;
@@ -204,20 +275,60 @@ function osmUrl(place: NominatimPlace): string {
   return `https://www.openstreetmap.org/${place.osm_type ?? "node"}/${place.osm_id}`;
 }
 
-function qualityScore(place: NominatimPlace, distanceKm: number): number {
+function isChain(place: NominatimPlace): boolean {
+  return Boolean(place.extratags?.brand) || CHAIN_NAME.test(place.name ?? "");
+}
+
+function qualityScore(place: NominatimPlace, distanceKm: number, type: PlaceType): number {
   const e = place.extratags ?? {};
-  const quality =
+  let quality =
     (e.wikidata ? 2 : 0) + (e.wikipedia ? 1 : 0) + (websiteOf(place) ? 1.5 : 0) + (e.opening_hours ? 1 : 0) + (place.importance ?? 0) * 4;
+  if (TYPES[type].layer === "food") {
+    // Independents with something said about them beat anonymous entries and chains.
+    // A chain's website is the brand's, not evidence about this branch, so it
+    // earns no website credit on top of the penalty.
+    quality += (e.cuisine ? 0.5 : 0) + (e.outdoor_seating === "yes" ? 0.3 : 0);
+    if (isChain(place)) quality -= 1.5 + (websiteOf(place) ? 1.5 : 0);
+  }
   return quality - distanceKm * 0.25;
+}
+
+/** Opening hours worth keeping: something with times in it, short enough to be a real rule. */
+function openingHoursOf(place: NominatimPlace): string | null {
+  const hours = place.extratags?.opening_hours?.trim();
+  return hours && /\d/.test(hours) && hours.length <= 200 ? hours : null;
+}
+
+function cuisineLabel(place: NominatimPlace): string | null {
+  const first = (place.extratags?.cuisine ?? "").split(";")[0]?.trim().replace(/_/g, " ");
+  if (!first || /^(pub|local|regional|restaurant|cafe|coffee shop)$/i.test(first) || first.length > 24) return null;
+  return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
 }
 
 function describe(type: PlaceType, place: NominatimPlace, area: string): string {
   const cfg = TYPES[type];
   const hours = place.extratags?.opening_hours;
-  const parts = [`${cfg.label}${area ? ` in ${area}` : ""}.`];
-  if (hours && hours.length <= 120) parts.push(`Opening hours: ${hours}.`);
+  const cuisine = TYPES[type].layer === "food" && type !== "pub" && type !== "tea_room" ? cuisineLabel(place) : null;
+  const label = cuisine && type === "restaurant" ? `${cuisine} restaurant` : cfg.label;
+  const parts = [`${label}${area ? ` in ${area}` : ""}.`];
+  if (hours && hours.length <= 200) parts.push(`Opening hours: ${hours}.`);
   parts.push("A place to visit rather than a scheduled event — check opening times and any charges before you go.");
   return parts.join(" ");
+}
+
+/** Tags describing what kind of food and drink a place is, for matching mealtimes, diets and the weather. */
+function foodTags(place: NominatimPlace): string[] {
+  const e = place.extratags ?? {};
+  const tags: string[] = [];
+  for (const raw of (e.cuisine ?? "").split(";").slice(0, 2)) {
+    const cuisine = raw.trim().toLowerCase().replace(/[^a-z ]+/g, " ").trim().replace(/ +/g, "-");
+    if (cuisine && cuisine.length <= 20 && !["pub", "local", "regional", "restaurant", "cafe"].includes(cuisine)) tags.push(cuisine);
+  }
+  if (e["diet:vegetarian"] === "yes" || e["diet:vegetarian"] === "only") tags.push("vegetarian-options");
+  if (e["diet:vegan"] === "yes" || e["diet:vegan"] === "only") tags.push("vegan-options");
+  if (e.outdoor_seating === "yes") tags.push("outdoor-seating");
+  if (isChain(place)) tags.push("chain");
+  return tags;
 }
 
 function areaOf(place: NominatimPlace, fallback: string): string {
@@ -256,7 +367,8 @@ export function selectPlaces(
   centre: Coordinates,
   radiusKm: number,
   existing: ExistingPlace[],
-  regionLabel: string
+  regionLabel: string,
+  layer: OsmLayer = "places"
 ): RawActivityCandidate[] {
   type Scored = { place: NominatimPlace; type: PlaceType; coords: Coordinates; score: number };
   const seen = new Set<string>();
@@ -267,14 +379,15 @@ export function selectPlaces(
       const key = `${place.osm_type}/${place.osm_id}`;
       if (seen.has(key)) continue;
       const type = classifyPlace(place, term);
-      if (!type) continue;
+      // A "park" search can return "Oakwood Park Cafe"; it belongs to the food layer's run, not this one.
+      if (!type || TYPES[type].layer !== layer) continue;
       const coords = { lat: parseFloat(place.lat!), lng: parseFloat(place.lon!) };
       if (Number.isNaN(coords.lat) || Number.isNaN(coords.lng)) continue;
       const distance = haversineKm(centre, coords);
       if (distance > radiusKm) continue;
       if (isDuplicate(place.name!, coords, existing)) continue;
       seen.add(key);
-      all.push({ place, type, coords, score: qualityScore(place, distance) });
+      all.push({ place, type, coords, score: qualityScore(place, distance, type) });
     }
   }
 
@@ -306,9 +419,11 @@ export function selectPlaces(
     const cfg = TYPES[type];
     const site = websiteOf(place);
     const useSite = site && websiteCounts.get(site) === 1;
+    const isFood = cfg.layer === "food";
     const fee = place.extratags?.fee;
-    const free = fee === "no" || (cfg.freeByDefault && fee !== "yes");
-    const tags = [...cfg.tags];
+    // A place to eat is never "free" however it is tagged: the price is the meal.
+    const free = !isFood && (fee === "no" || (cfg.freeByDefault && fee !== "yes"));
+    const tags = [...cfg.tags, ...(isFood ? foodTags(place) : [])];
     if (place.extratags?.wheelchair === "yes") tags.push("wheelchair-accessible");
     const area = areaOf(place, regionLabel);
     return {
@@ -320,11 +435,15 @@ export function selectPlaces(
       locationLng: coords.lng,
       dateTime: null,
       priceEstimate: free ? 0 : null,
+      openingHours: openingHoursOf(place),
+      durationMinutes: cfg.minutes,
       bookingUrl: useSite ? site : osmUrl(place),
       bookingUrlVerified: true,
       tags,
       status: "active",
-      adminNotes: `${OSM_NOTE_PREFIX} (© OpenStreetMap contributors, ODbL) — a venue listing, not a scheduled event.`,
+      adminNotes: isFood
+        ? `${OSM_FOOD_NOTE_PREFIX} & drink; © OpenStreetMap contributors, ODbL) — a venue listing, not a scheduled event.`
+        : `${OSM_PLACES_NOTE_PREFIX} OpenStreetMap contributors, ODbL) — a venue listing, not a scheduled event.`,
     };
   });
 }
@@ -363,26 +482,27 @@ export function createOpenStreetMapSource(
   supabase: SupabaseClient,
   centre: Coordinates,
   regionLabel: string,
-  deps: OpenStreetMapDeps = {}
+  deps: OpenStreetMapDeps = {},
+  layer: OsmLayer = "places"
 ): DiscoverySource {
   const fetchJson = deps.fetchJson ?? defaultFetchJson;
   const wait = deps.sleep ?? sleep;
 
   return {
-    name: "openstreetmap",
+    name: layer === "food" ? "openstreetmap-food" : "openstreetmap",
     async fetchCandidates(): Promise<RawActivityCandidate[]> {
       let lastRequestAt = 0;
       let requests = 0;
       let failures = 0;
 
-      const search = async (term: string, radiusKm: number): Promise<NominatimPlace[]> => {
+      const searchBox = async (term: string, viewbox: string): Promise<NominatimPlace[]> => {
         const gap = MIN_REQUEST_GAP_MS - (Date.now() - lastRequestAt);
         if (gap > 0) await wait(gap);
         lastRequestAt = Date.now();
         requests += 1;
         const url = new URL(NOMINATIM_SEARCH);
         url.searchParams.set("q", term);
-        url.searchParams.set("viewbox", viewboxAround(centre, radiusKm));
+        url.searchParams.set("viewbox", viewbox);
         url.searchParams.set("bounded", "1");
         url.searchParams.set("countrycodes", "gb");
         url.searchParams.set("format", "jsonv2");
@@ -402,15 +522,26 @@ export function createOpenStreetMapSource(
         }
       };
 
+      // Food places are dense, so each area is searched in four quadrants; other
+      // types are sparse enough that one box finds the best few.
+      const search = async (term: string, radiusKm: number): Promise<NominatimPlace[]> => {
+        if (layer !== "food") return searchBox(term, viewboxAround(centre, radiusKm));
+        const found: NominatimPlace[] = [];
+        for (const quadrant of viewboxQuadrants(centre, radiusKm)) found.push(...(await searchBox(term, quadrant)));
+        return found;
+      };
+
       const existing = await loadExisting(supabase, centre);
       const results: { term: string; places: NominatimPlace[] }[] = [];
 
-      for (const term of SEARCH_TERMS) {
+      for (const term of SEARCH_TERMS[layer]) {
         let places = await search(term, NEAR_RADIUS_KM);
         const usable = places.filter((p) => classifyPlace(p, term) !== null).length;
         // A tight box finds the nearest places in a city, but would find nothing
-        // in a village — so widen only when it came back thin.
-        if (usable < SPARSE_THRESHOLD) places = [...places, ...(await search(term, FAR_RADIUS_KM))];
+        // in a village — so widen only when it came back thin. (Tea rooms are rare
+        // everywhere, so two is already a good result.)
+        const sparse = term === "tea room" ? 2 : SPARSE_THRESHOLD;
+        if (usable < sparse) places = [...places, ...(await search(term, FAR_RADIUS_KM))];
         results.push({ term, places });
       }
 
@@ -419,7 +550,7 @@ export function createOpenStreetMapSource(
       if (requests > 0 && failures === requests) {
         throw new Error(`OpenStreetMap place search failed for "${regionLabel}" (all ${requests} requests failed)`);
       }
-      return selectPlaces(results, centre, FAR_RADIUS_KM, existing, regionLabel);
+      return selectPlaces(results, centre, FAR_RADIUS_KM, existing, regionLabel, layer);
     },
   };
 }
