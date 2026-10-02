@@ -133,13 +133,21 @@ export function createClaudeWebSearchSource(regions: string[]): DiscoverySource 
       if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
 
       const results: RawActivityCandidate[] = [];
+      let lastError: unknown = null;
       for (const region of regions) {
         try {
           results.push(...(await findActivitiesForRegion(apiKey, region)));
-        } catch {
+        } catch (err) {
+          lastError = err;
           continue;
         }
       }
+
+      // One bad region among several shouldn't lose the rest, but if nothing
+      // came back and something failed, report the failure — "searched and
+      // found nothing" and "the search failed" must not look the same, since
+      // the throttle treats them very differently.
+      if (results.length === 0 && lastError) throw lastError;
       return results;
     },
   };

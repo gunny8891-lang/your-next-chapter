@@ -1,8 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { DiscoverySource } from "@/lib/discovery/types";
 import { geocodeLocation, sleep } from "@/lib/geo/geocode";
-import { createClaudeWebSearchSource } from "@/lib/discovery/sources/claudeWebSearch";
-import { generateAndSaveItinerary } from "@/lib/itinerary/generateAndSave";
 
 export type DiscoveryRunResult = {
   source: string;
@@ -118,27 +116,4 @@ export async function runDiscoveryAgent(
   }
 
   return results;
-}
-
-/**
- * Fire-and-forget single-region discovery run, meant to be called from
- * `after()` when a member sets or changes their location — rather than
- * leaving a brand-new region with zero candidates until the nightly cron
- * happens to cover it. Swallows its own errors since nothing awaits this.
- *
- * If the run auto-activated any candidates (see runDiscoveryAgent), the
- * member's itinerary is regenerated again so their week picks them up
- * without them needing to click "Generate my real week" themselves. Skipped
- * when nothing new went active, to avoid a wasted Itinerary Agent call.
- */
-export async function triggerDiscoveryForRegion(supabase: SupabaseClient, memberId: string, region: string): Promise<void> {
-  try {
-    const results = await runDiscoveryAgent(supabase, [createClaudeWebSearchSource([region])]);
-    const newlyActive = results.reduce((sum, r) => sum + r.insertedActive, 0);
-    if (newlyActive > 0) {
-      await generateAndSaveItinerary(supabase, memberId);
-    }
-  } catch {
-    // Best-effort — the nightly cron will retry this region regardless.
-  }
 }

@@ -6,7 +6,7 @@ import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { geocodeLocation } from "@/lib/geo/geocode";
 import { generateAndSaveItinerary } from "@/lib/itinerary/generateAndSave";
-import { triggerDiscoveryForRegion } from "@/lib/discovery/run";
+import { triggerDiscoveryForRegion } from "@/lib/discovery/regional";
 import type { OnboardingAnswers } from "@/components/OnboardingFlow";
 
 const RADIUS_KM: Record<string, number> = {

@@ -7,7 +7,7 @@ import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { geocodeLocation } from "@/lib/geo/geocode";
 import { generateAndSaveItinerary } from "@/lib/itinerary/generateAndSave";
-import { triggerDiscoveryForRegion } from "@/lib/discovery/run";
+import { triggerDiscoveryForRegion } from "@/lib/discovery/regional";
 
 function parseTagList(value: FormDataEntryValue | null): string[] {
   return String(value ?? "")
