@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { scoreActivity } from "@/lib/memory/scoring";
 import { fetchRankedOpportunities, type OpportunityCandidate } from "@/lib/opportunities/engine";
-import { PILOT_COORDINATES, getTodayWeather, isStrongOutdoorWeather } from "@/lib/nudges/weather";
+import { getTodayWeather, isStrongOutdoorWeather, weatherCoordinates } from "@/lib/nudges/weather";
 
 const GAP_DAYS = 5;
 const NUDGE_COOLDOWN_DAYS = 7;
@@ -75,8 +75,15 @@ export async function detectNudgeCandidate(admin: SupabaseClient, memberId: stri
   }
 
   // Condition B: strong outdoor-weather match on an unseen "outdoors" activity
-  // the member's affinity score doesn't already reject.
-  const weather = await getTodayWeather(PILOT_COORDINATES.latitude, PILOT_COORDINATES.longitude);
+  // the member's affinity score doesn't already reject. Judged on the weather
+  // where this member actually lives (this previously used Richmond's for everyone).
+  const { data: profile } = await admin
+    .from("member_profiles")
+    .select("location_lat, location_lng")
+    .eq("user_id", memberId)
+    .maybeSingle();
+  const { latitude, longitude } = weatherCoordinates(profile);
+  const weather = await getTodayWeather(latitude, longitude);
   if (isStrongOutdoorWeather(weather)) {
     const best = unseen.filter((a) => a.tags.includes("outdoors")).filter((a) => scoreActivity(a, affinity) >= 0)[0];
     if (best) return { reason: "weather_match", activity: best };

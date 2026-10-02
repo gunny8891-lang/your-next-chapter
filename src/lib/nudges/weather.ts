@@ -1,6 +1,13 @@
+import { londonToday } from "@/lib/opportunities/schedule";
+
 // Open-Meteo: free, keyless forecast API — no API key exists anywhere in this
 // project yet, and none is needed here.
 const FORECAST_URL = "https://api.open-meteo.com/v1/forecast";
+
+// A forecast changes slowly, and Today, Surprise Me and the nudge job all ask
+// for it. Caching it for half an hour (per location, below) means a member
+// opening Today twice, or five members in one town, cost one request.
+const FORECAST_CACHE_SECONDS = 30 * 60;
 
 const MIN_PLEASANT_TEMP_C = 10;
 const MAX_PLEASANT_TEMP_C = 27;
@@ -32,11 +39,34 @@ export function parseForecast(data: OpenMeteoDaily): DayForecast[] {
   return days;
 }
 
+/**
+ * Rounds a coordinate to 2 decimal places (~1 km). A forecast doesn't differ
+ * across a street, and sharing one URL per neighbourhood is what lets the cache
+ * serve neighbours from a single request.
+ */
+export function roundCoordinate(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+/**
+ * The coordinates to use for a member's weather: their own when known, the pilot
+ * area only for a profile with no resolved location yet.
+ */
+export function weatherCoordinates(profile: { location_lat: number | null; location_lng: number | null } | null | undefined): {
+  latitude: number;
+  longitude: number;
+} {
+  if (profile?.location_lat != null && profile?.location_lng != null) {
+    return { latitude: profile.location_lat, longitude: profile.location_lng };
+  }
+  return PILOT_COORDINATES;
+}
+
 /** Forecast for the next `days` days (dates are the location's local dates), or null if the service is unavailable. */
 export async function getDailyForecast(latitude: number, longitude: number, days = 7): Promise<DayForecast[] | null> {
-  const url = `${FORECAST_URL}?latitude=${latitude}&longitude=${longitude}&daily=precipitation_probability_max,temperature_2m_max&timezone=auto&forecast_days=${days}`;
+  const url = `${FORECAST_URL}?latitude=${roundCoordinate(latitude)}&longitude=${roundCoordinate(longitude)}&daily=precipitation_probability_max,temperature_2m_max&timezone=auto&forecast_days=${days}`;
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, { next: { revalidate: FORECAST_CACHE_SECONDS } });
     if (!res.ok) return null;
     return parseForecast((await res.json()) as OpenMeteoDaily);
   } catch {
@@ -45,7 +75,10 @@ export async function getDailyForecast(latitude: number, longitude: number, days
 }
 
 export async function getTodayWeather(latitude: number, longitude: number): Promise<TodayWeather> {
-  const [today] = (await getDailyForecast(latitude, longitude, 1)) ?? [];
+  // Same 7-day request as Surprise Me, so the two share one cached response. Pick
+  // today by date: a response cached just before midnight starts on yesterday.
+  const forecast = (await getDailyForecast(latitude, longitude, 7)) ?? [];
+  const today = forecast.find((d) => d.date === londonToday()) ?? forecast[0];
   return today ? { precipitationProbabilityMax: today.precipitationProbabilityMax, temperatureMax: today.temperatureMax } : null;
 }
 
