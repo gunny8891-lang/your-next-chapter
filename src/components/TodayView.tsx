@@ -33,12 +33,16 @@ function weatherLine(weather: TodayWeather): string | null {
 
 function OpenTimeSlot({
   slotLabel,
+  slot,
   onSurpriseMe,
   onAccept,
+  onDismiss,
 }: {
   slotLabel: string;
+  slot: string;
   onSurpriseMe: (who: SurpriseWho) => Promise<{ error: string | null; options: SurpriseOption[] }>;
-  onAccept: (activityId: string) => Promise<{ error: string | null }>;
+  onAccept: (activityId: string, slot?: string) => Promise<{ error: string | null }>;
+  onDismiss: (activityId: string) => Promise<{ error: string | null }>;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [who, setWho] = useState<SurpriseWho>("just_me");
@@ -58,6 +62,27 @@ function OpenTimeSlot({
         setOptions(result.options);
       }
     });
+  };
+
+  // Puts the choice into this slot. On success the page re-renders with it in
+  // place of this card; on failure (e.g. the slot was filled meanwhile) say why.
+  const handleAccept = (activityId: string) => {
+    setError(null);
+    setAcceptedId(activityId);
+    startTransition(async () => {
+      const result = await onAccept(activityId, slot);
+      if (result.error) {
+        setAcceptedId(null);
+        setError(result.error);
+      }
+    });
+  };
+
+  const handleDismiss = (activityId: string) => {
+    void onDismiss(activityId);
+    const remaining = (options ?? []).filter((o) => o.id !== activityId);
+    // Nothing left to look at: go back to the start so they can ask again.
+    setOptions(remaining.length ? remaining : null);
   };
 
   if (!expanded) {
@@ -142,26 +167,40 @@ function OpenTimeSlot({
             {[option.address, formatCost(option.priceEstimate)].filter(Boolean).join(" · ")}
           </p>
           <p style={{ fontSize: 13.5, color: T.ink, margin: "0 0 10px" }}>{option.why}</p>
-          <button
-            onClick={() => {
-              setAcceptedId(option.id);
-              startTransition(() => {
-                void onAccept(option.id);
-              });
-            }}
-            style={{
-              padding: "8px 16px",
-              borderRadius: 8,
-              border: "none",
-              background: acceptedId === option.id ? T.primarySoft : T.primary,
-              color: "#fff",
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            {acceptedId === option.id ? "Noted" : "I'll do this"}
-          </button>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button
+              onClick={() => handleAccept(option.id)}
+              disabled={isPending}
+              style={{
+                padding: "8px 16px",
+                borderRadius: 8,
+                border: "none",
+                background: acceptedId === option.id ? T.primarySoft : T.primary,
+                color: "#fff",
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: isPending ? "default" : "pointer",
+              }}
+            >
+              {acceptedId === option.id ? "Adding to your day…" : "I'll do this"}
+            </button>
+            <button
+              onClick={() => handleDismiss(option.id)}
+              disabled={isPending}
+              style={{
+                padding: "8px 16px",
+                borderRadius: 8,
+                border: `1.5px solid ${T.line}`,
+                background: "none",
+                color: T.inkSoft,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: isPending ? "default" : "pointer",
+              }}
+            >
+              Not for me
+            </button>
+          </div>
         </div>
       ))}
 
@@ -185,13 +224,15 @@ export function TodayView({
   onItemAction,
   onSurpriseMe,
   onAccept,
+  onDismiss,
 }: {
   dateLabel: string;
   weather: TodayWeather;
   slots: TodaySlot[];
   onItemAction: (itemId: string, action: "accepted" | "swapped" | "skipped") => Promise<void>;
   onSurpriseMe: (when: SurpriseWhen, who: SurpriseWho, slot?: string) => Promise<{ error: string | null; options: SurpriseOption[] }>;
-  onAccept: (activityId: string) => Promise<{ error: string | null }>;
+  onAccept: (activityId: string, slot?: string) => Promise<{ error: string | null }>;
+  onDismiss: (activityId: string) => Promise<{ error: string | null }>;
 }) {
   const [statuses, setStatuses] = useState<Record<string, string>>(() =>
     Object.fromEntries(slots.filter((s) => s.item).map((s) => [s.item!.id, s.item!.status]))
@@ -228,8 +269,10 @@ export function TodayView({
               <OpenTimeSlot
                 key={slot}
                 slotLabel={slotLabel}
+                slot={slot}
                 onSurpriseMe={(who) => onSurpriseMe("today", who, slot)}
                 onAccept={onAccept}
+                onDismiss={onDismiss}
               />
             );
           }

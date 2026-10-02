@@ -18,12 +18,15 @@ export type SlotName = (typeof SLOTS)[number];
 
 type Dated = { date_time: string | null; expires_at: string | null };
 
+/** Monday of the week containing `isoDate` (YYYY-MM-DD), matching itineraries.week_start_date. */
+export function weekStartFor(isoDate: string): string {
+  const diffToMonday = (new Date(`${isoDate}T00:00:00Z`).getUTCDay() + 6) % 7; // 0 = Monday
+  return addDays(isoDate, -diffToMonday);
+}
+
 /** Monday of the current week as YYYY-MM-DD (UTC), matching itineraries.week_start_date. */
 export function getCurrentWeekStart(now: Date = new Date()): string {
-  const diffToMonday = (now.getUTCDay() + 6) % 7; // 0 = Monday
-  const monday = new Date(now);
-  monday.setUTCDate(now.getUTCDate() - diffToMonday);
-  return monday.toISOString().slice(0, 10);
+  return weekStartFor(now.toISOString().slice(0, 10));
 }
 
 export function addDays(isoDate: string, days: number): string {

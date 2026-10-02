@@ -43,9 +43,11 @@ function pillButtonStyle(active: boolean) {
 export function ExploreView({
   onSurpriseMe,
   onAccept,
+  onDismiss,
 }: {
   onSurpriseMe: (when: SurpriseWhen, who: SurpriseWho) => Promise<{ error: string | null; options: SurpriseOption[] }>;
   onAccept: (activityId: string) => Promise<{ error: string | null }>;
+  onDismiss: (activityId: string) => Promise<{ error: string | null }>;
 }) {
   const [when, setWhen] = useState<SurpriseWhen>("today");
   const [who, setWho] = useState<SurpriseWho>("just_me");
@@ -66,6 +68,11 @@ export function ExploreView({
         setOptions(result.options);
       }
     });
+  };
+
+  const handleDismiss = (id: string) => {
+    void onDismiss(id);
+    setOptions((current) => (current ? current.filter((o) => o.id !== id) : current));
   };
 
   const handleAccept = (id: string) => {
@@ -193,6 +200,23 @@ export function ExploreView({
                 ) : (
                   "I'll do this"
                 )}
+              </button>
+              <button
+                onClick={() => handleDismiss(option.id)}
+                disabled={isPending}
+                style={{
+                  flex: 1,
+                  padding: "11px",
+                  borderRadius: 10,
+                  border: `1.5px solid ${T.line}`,
+                  background: "none",
+                  color: T.inkSoft,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: isPending ? "default" : "pointer",
+                }}
+              >
+                Not for me
               </button>
               {option.bookingUrl && (
                 <a

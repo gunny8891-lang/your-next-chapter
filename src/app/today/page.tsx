@@ -2,8 +2,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { TodayView, type TodaySlot } from "@/components/TodayView";
 import { updateItineraryItemAction } from "@/app/week/actions";
-import { getSurpriseOptionsAction, acceptSurpriseOptionAction } from "@/app/explore/actions";
-import { getTodayWeather, PILOT_COORDINATES } from "@/lib/nudges/weather";
+import { getSurpriseOptionsAction, acceptSurpriseOptionAction, dismissSurpriseOptionAction } from "@/app/explore/actions";
+import { getTodayWeather, weatherCoordinates } from "@/lib/nudges/weather";
 import { formatCost, formatTime } from "@/lib/itinerary/format";
 import type { CategoryName } from "@/lib/categories";
 import type { ItineraryItemView } from "@/lib/types";
@@ -74,9 +74,8 @@ export default async function TodayPage() {
   // Real per-member coordinates when we have them (a genuine improvement now
   // that onboarding/account settings geocode location) — the pilot coordinate
   // is only a fallback for a profile with no resolved location yet.
-  const lat = profile.location_lat ?? PILOT_COORDINATES.latitude;
-  const lng = profile.location_lng ?? PILOT_COORDINATES.longitude;
-  const weather = await getTodayWeather(lat, lng);
+  const { latitude, longitude } = weatherCoordinates(profile);
+  const weather = await getTodayWeather(latitude, longitude);
 
   const slots: TodaySlot[] = SLOT_ORDER.map((slot) => ({ slot, item: itemBySlot[slot] ?? null }));
 
@@ -88,6 +87,7 @@ export default async function TodayPage() {
       onItemAction={updateItineraryItemAction}
       onSurpriseMe={getSurpriseOptionsAction}
       onAccept={acceptSurpriseOptionAction}
+      onDismiss={dismissSurpriseOptionAction}
     />
   );
 }
