@@ -27,7 +27,8 @@ export async function placeOpenTimeChoice(
   memberId: string,
   activityId: string,
   slot: SlotName,
-  now: Date = new Date()
+  now: Date = new Date(),
+  rationale: string = CHOSEN_RATIONALE
 ): Promise<{ error: string | null }> {
   const { weekStart, day } = resolveToday(now);
 
@@ -69,7 +70,7 @@ export async function placeOpenTimeChoice(
     day_of_week: day,
     slot,
     member_action: "accepted",
-    rationale_text: CHOSEN_RATIONALE,
+    rationale_text: rationale,
   });
   if (insertError) return { error: insertError.message };
 

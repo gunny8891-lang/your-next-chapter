@@ -1,0 +1,308 @@
+import Anthropic from "@anthropic-ai/sdk";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { CategoryName } from "@/lib/categories";
+import { callClaude } from "@/lib/ai/client";
+import { AI_MODELS } from "@/lib/ai/models";
+import { summarizeAffinity, type AffinityScores } from "@/lib/memory/scoring";
+import { fetchRankedOpportunities, type OpportunityCandidate } from "@/lib/opportunities/engine";
+import { foodKindOf, isFoodVenue } from "@/lib/opportunities/kinds";
+import { eventDate, weekStartFor } from "@/lib/opportunities/schedule";
+import { getDailyForecast, isStrongOutdoorWeather, type DayForecast } from "@/lib/nudges/weather";
+import { applyOpenTimeContext } from "@/lib/surprise/context";
+import { loadRepetitionHistory } from "@/lib/someTime/history";
+import {
+  buildUserPrompt,
+  fallbackWhy,
+  MAX_OPTIONS,
+  parseChoices,
+  SYSTEM_PROMPT,
+  type PromptContext,
+  type ShortlistEntry,
+} from "@/lib/someTime/prompt";
+import type { TimeRequest } from "@/lib/someTime/request";
+import {
+  diversify,
+  evaluateCandidate,
+  findFoodStop,
+  type Evaluated,
+  type FoodStop,
+  type MemberContext,
+  type RepetitionHistory,
+  type ScoringInput,
+} from "@/lib/someTime/score";
+import type { FoodStopOption, TimeOption, TimeResult } from "@/lib/someTime/types";
+import { clockLabel, resolveWindow, type TimeWindow } from "@/lib/someTime/window";
+
+/** How many scored candidates the model sees. Enough for variety, small enough to keep the call cheap. */
+const SHORTLIST_SIZE = 8;
+// Three short explanations need well under 1,000 tokens, but one real reply
+// reached 1,200 and was cut off mid-JSON. Headroom costs nothing: it is only
+// ever paid for if used.
+const MAX_TOKENS = 2000;
+const MODEL = AI_MODELS.smart;
+
+const KIND_LABEL = { cafe: "café", pub: "pub", restaurant: "restaurant", tea_room: "tea room" } as const;
+
+/** Writes the choice given the shortlist; injectable so the rest can be tested without a model. */
+export type Ask = (system: string, user: string) => Promise<string>;
+
+export type RecommendInputs = {
+  request: TimeRequest;
+  window: TimeWindow;
+  /** Already narrowed for the day, the weather and who they are with (see applyOpenTimeContext). */
+  candidates: OpportunityCandidate[];
+  weatherNote: string | null;
+  pleasantWeather: boolean;
+  /** Today's sunrise and sunset, so nothing outdoors is offered in the dark. */
+  daylight?: ScoringInput["daylight"];
+  member: MemberContext;
+  affinity: AffinityScores;
+  history: RepetitionHistory;
+  profile: PromptContext["profile"];
+  aspirations: string[];
+  ask: Ask;
+};
+
+/**
+ * What can be the main suggestion. Cafés and pubs are normally only a way to end
+ * an outing, so they are offered on their own only when that is what was asked
+ * for (food mood), when there is barely time for anything else, or — for a café
+ * or tea room — when the mood is relaxed.
+ */
+function primaryPool(candidates: OpportunityCandidate[], request: TimeRequest, window: TimeWindow): OpportunityCandidate[] {
+  if (request.mood === "food") return candidates.filter(isFoodVenue);
+  return candidates.filter((c) => {
+    // A volunteering role is something you sign up to, not something to drop into
+    // for an hour. It belongs in the weekly plan, not in "I have some time now".
+    if (c.category === "Give Back" && eventDate(c) === null) return false;
+    if (!isFoodVenue(c)) return true;
+    const kind = foodKindOf(c.tags);
+    return window.availableMinutes <= 45 || (request.mood === "relaxed" && (kind === "cafe" || kind === "tea_room"));
+  });
+}
+
+function toFoodStopOption(stop: FoodStop): FoodStopOption {
+  const kind = foodKindOf(stop.candidate.tags);
+  return {
+    id: stop.candidate.id,
+    title: stop.candidate.title,
+    address: stop.candidate.address,
+    kind: kind ? KIND_LABEL[kind] : "place to eat",
+    meal: stop.meal,
+    walkMinutes: stop.walkMinutes,
+    distanceMeters: stop.distanceMeters,
+    openUntil: stop.openUntil != null ? clockLabel(stop.openUntil) : null,
+    bookingUrl: stop.candidate.booking_url,
+  };
+}
+
+function toTimeOption(entry: ShortlistEntry, why: string, includeFood: boolean): TimeOption {
+  const { evaluated: e, foodStop } = entry;
+  const c = e.candidate;
+  const stop = includeFood ? foodStop : null;
+  return {
+    id: c.id,
+    title: c.title,
+    category: c.category as CategoryName,
+    address: c.address,
+    priceEstimate: c.price_estimate,
+    bookingUrl: c.booking_url,
+    why,
+    facts: e.facts,
+    leaveBy: clockLabel(e.leaveMin),
+    arriveBy: clockLabel(e.arriveMin),
+    homeBy: clockLabel(stop ? stop.homeMin : e.homeMin),
+    durationMinutes: e.durationMinutes,
+    travelMinutes: e.travelMinutes,
+    isFood: isFoodVenue(c),
+    happeningToday: eventDate(c) !== null,
+    foodStop: stop ? toFoodStopOption(stop) : null,
+  };
+}
+
+/**
+ * The pure core: score everything, shortlist a varied handful, attach a food stop
+ * where one fits, and let the model choose and explain — falling back to the best
+ * scored candidates with an explanation built from real facts if it cannot.
+ */
+export async function buildRecommendations(inputs: RecommendInputs): Promise<{ options: TimeOption[]; notice: string | null }> {
+  const { request, window, member, affinity, history } = inputs;
+  const scoring: ScoringInput = { window, request, member, affinity, history, pleasantWeather: inputs.pleasantWeather, daylight: inputs.daylight };
+
+  const foodVenues = inputs.candidates.filter(isFoodVenue);
+  const evaluated = primaryPool(inputs.candidates, request, window)
+    .map((c) => evaluateCandidate(c, scoring))
+    .filter((e): e is Evaluated => e !== null);
+
+  const shortlist: ShortlistEntry[] = diversify(evaluated, SHORTLIST_SIZE).map((e) => ({
+    evaluated: e,
+    foodStop: request.mood === "food" ? null : findFoodStop(e, foodVenues, scoring),
+  }));
+
+  if (shortlist.length === 0) {
+    return {
+      options: [],
+      notice: "Nothing nearby fits that stretch of time right now. Try a little longer, or a different mood.",
+    };
+  }
+
+  const byId = new Map(shortlist.map((s) => [s.evaluated.candidate.id, s]));
+  const idsWithFood = new Set(shortlist.filter((s) => s.foodStop).map((s) => s.evaluated.candidate.id));
+
+  const promptContext: PromptContext = {
+    window,
+    weekdayLabel: new Date(`${window.date}T00:00:00Z`).toLocaleDateString("en-GB", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      timeZone: "UTC",
+    }),
+    request,
+    weatherNote: inputs.weatherNote,
+    profile: inputs.profile,
+    aspirations: inputs.aspirations,
+    affinitySummary: summarizeAffinity(affinity),
+  };
+
+  try {
+    const reply = await inputs.ask(SYSTEM_PROMPT, buildUserPrompt(promptContext, shortlist));
+    const choices = parseChoices(reply, new Set(byId.keys()), idsWithFood);
+    if (choices.length > 0) {
+      return { options: choices.map((ch) => toTimeOption(byId.get(ch.id)!, ch.why, ch.withFood)), notice: null };
+    }
+    console.warn("some_time: the model's reply had no usable options; using the scored fallback");
+  } catch (err) {
+    // A model hiccup should still leave the member with good suggestions — but
+    // never silently: this is what would otherwise hide a degraded experience.
+    console.warn("some_time: model call failed; using the scored fallback:", err instanceof Error ? err.message : err);
+  }
+
+  const options = shortlist
+    .slice(0, MAX_OPTIONS)
+    .map((s) => toTimeOption(s, fallbackWhy(s.evaluated), s.foodStop !== null && window.availableMinutes >= 90));
+  return { options, notice: null };
+}
+
+// ---------------------------------------------------------------------------
+
+function weekdayDateLabel(window: TimeWindow): string {
+  const date = new Date(`${window.date}T00:00:00Z`).toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  });
+  return `${date}, ${clockLabel(window.startMin)} – ${clockLabel(window.endMin)}`;
+}
+
+function defaultAsk(supabase: SupabaseClient, memberId: string): Ask {
+  return async (system, user) => {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
+    const response = await callClaude(new Anthropic({ apiKey }), supabase, { userId: memberId, feature: "some_time" }, {
+      model: MODEL,
+      max_tokens: MAX_TOKENS,
+      system,
+      messages: [{ role: "user", content: user }],
+    });
+    // A reply cut off mid-JSON is a failure, not an answer: say so, so it shows up
+    // in logs instead of silently becoming the fallback text.
+    if (response.stop_reason === "max_tokens") throw new Error("some_time reply was truncated at max_tokens");
+    return response.content.find((block) => block.type === "text")?.text ?? "";
+  };
+}
+
+/**
+ * "I've got some time": loads what we know about the member and the day, then
+ * hands it to buildRecommendations. Everything the member's profile already
+ * says is used rather than asked again.
+ */
+export async function getTimeOptions(
+  supabase: SupabaseClient,
+  memberId: string,
+  request: TimeRequest,
+  now: Date = new Date(),
+  ask: Ask = defaultAsk(supabase, memberId)
+): Promise<TimeResult> {
+  const resolved = resolveWindow(request, now);
+  if (!resolved.ok) return { error: null, notice: resolved.reason, options: [], windowLabel: null };
+  const { window } = resolved;
+
+  const { data: profile } = await supabase
+    .from("member_profiles")
+    .select(
+      "location_lat, location_lng, budget_band, interests, goals, dietary_preferences, mobility_notes, drives, uses_public_transport, personality"
+    )
+    .eq("user_id", memberId)
+    .maybeSingle();
+
+  // Don't suggest something already on this week's plan, or already shown this sitting.
+  const { data: plan } = await supabase
+    .from("itineraries")
+    .select("itinerary_items(activity_id)")
+    .eq("member_id", memberId)
+    .eq("week_start_date", weekStartFor(window.date))
+    .maybeSingle();
+  const exclude = new Set<string>([
+    ...((plan?.itinerary_items ?? []) as { activity_id: string }[]).map((i) => i.activity_id),
+    ...request.exclude,
+  ]);
+
+  const hasHome = profile?.location_lat != null && profile?.location_lng != null;
+  const [{ candidates: ranked, affinity }, forecast, history, goalRows] = await Promise.all([
+    fetchRankedOpportunities(supabase, memberId, { excludeActivityIds: exclude, foodVenues: "include" }),
+    hasHome ? getDailyForecast(profile!.location_lat, profile!.location_lng, 2) : Promise.resolve(null as DayForecast[] | null),
+    loadRepetitionHistory(supabase, memberId, window.date),
+    supabase.from("goals").select("text").eq("member_id", memberId).eq("status", "active"),
+  ]);
+
+  const { candidates, weatherNote } = applyOpenTimeContext(ranked, {
+    when: "today",
+    who: request.who,
+    slot: null,
+    today: window.date,
+    forecast,
+  });
+  const todayForecast = forecast?.find((d) => d.date === window.date) ?? null;
+
+  const member: MemberContext = {
+    budget_band: profile?.budget_band ?? null,
+    interests: profile?.interests ?? [],
+    goals: profile?.goals ?? [],
+    dietary: profile?.dietary_preferences ?? null,
+    mobility_notes: profile?.mobility_notes ?? null,
+    travel: {
+      drives: profile?.drives ?? null,
+      uses_public_transport: profile?.uses_public_transport ?? null,
+      mobility_notes: profile?.mobility_notes ?? null,
+    },
+    home: hasHome ? { lat: profile!.location_lat, lng: profile!.location_lng } : null,
+  };
+
+  const { options, notice } = await buildRecommendations({
+    request,
+    window,
+    candidates,
+    weatherNote,
+    pleasantWeather: todayForecast ? isStrongOutdoorWeather(todayForecast) : false,
+    daylight:
+      todayForecast?.sunriseMin != null && todayForecast?.sunsetMin != null
+        ? { sunriseMin: todayForecast.sunriseMin, sunsetMin: todayForecast.sunsetMin }
+        : null,
+    member,
+    affinity,
+    history,
+    profile: {
+      goals: member.goals,
+      interests: member.interests,
+      budget_band: member.budget_band,
+      dietary: member.dietary,
+      mobility_notes: member.mobility_notes,
+      personality: (profile?.personality as { free_time_pref?: string } | null)?.free_time_pref ?? null,
+    },
+    aspirations: ((goalRows.data ?? []) as { text: string }[]).map((g) => g.text),
+    ask,
+  });
+
+  return { error: null, notice, options, windowLabel: weekdayDateLabel(window) };
+}

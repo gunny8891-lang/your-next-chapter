@@ -17,7 +17,7 @@ export default async function AccountPage({
 
   const { data: profile } = await supabase
     .from("member_profiles")
-    .select("location_text, travel_radius_km, budget_band, dietary_preferences, mobility_notes, interests, goals")
+    .select("location_text, travel_radius_km, budget_band, dietary_preferences, mobility_notes, drives, uses_public_transport, interests, goals")
     .eq("user_id", user.id)
     .maybeSingle();
   if (!profile) redirect("/onboarding");

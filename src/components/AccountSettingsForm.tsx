@@ -11,6 +11,8 @@ type Profile = {
   budget_band: string | null;
   dietary_preferences: string | null;
   mobility_notes: string | null;
+  drives: boolean | null;
+  uses_public_transport: boolean | null;
   interests: string[];
   goals: string[];
 };
@@ -120,6 +122,18 @@ export function AccountSettingsForm({
 
             <Field label="Dietary preferences">
               <input name="dietary_preferences" defaultValue={profile.dietary_preferences ?? ""} style={inputStyle} />
+            </Field>
+
+            <Field label="How you usually get about">
+              <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 15, color: T.ink, minHeight: 36 }}>
+                <input type="checkbox" name="drives" defaultChecked={profile.drives === true} style={{ width: 18, height: 18 }} /> I drive
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 15, color: T.ink, minHeight: 36 }}>
+                <input type="checkbox" name="uses_public_transport" defaultChecked={profile.uses_public_transport === true} style={{ width: 18, height: 18 }} /> I use buses or trains
+              </label>
+              <p style={{ fontSize: 12.5, color: T.inkSoft, margin: "6px 0 0" }}>
+                Helps us work out how long it will take you to get somewhere.
+              </p>
             </Field>
 
             <Field label="Mobility notes">

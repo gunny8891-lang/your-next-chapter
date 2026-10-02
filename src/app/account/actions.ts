@@ -55,6 +55,8 @@ export async function updateProfileAction(formData: FormData) {
       budget_band: ["low", "medium", "high"].includes(budgetRaw) ? budgetRaw : null,
       dietary_preferences: String(formData.get("dietary_preferences") ?? "").trim() || null,
       mobility_notes: String(formData.get("mobility_notes") ?? "").trim() || null,
+      drives: formData.get("drives") === "on",
+      uses_public_transport: formData.get("uses_public_transport") === "on",
       interests: parseTagList(formData.get("interests")),
       goals: parseTagList(formData.get("goals")),
     })
