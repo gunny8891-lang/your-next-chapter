@@ -4,7 +4,9 @@ import type { CategoryName } from "@/lib/categories";
 import type { SurpriseOption } from "@/lib/types";
 import { summarizeAffinity } from "@/lib/memory/scoring";
 import { fetchRankedOpportunities } from "@/lib/opportunities/engine";
-import { getCurrentWeekStart } from "@/lib/itinerary/generateAndSave";
+import { describeWhen, getCurrentWeekStart, londonToday, type SlotName } from "@/lib/opportunities/schedule";
+import { getDailyForecast } from "@/lib/nudges/weather";
+import { applyOpenTimeContext, describeWindow, type SurpriseWhen, type SurpriseWho } from "@/lib/surprise/context";
 import { callClaude } from "@/lib/ai/client";
 import { AI_MODELS } from "@/lib/ai/models";
 
@@ -15,8 +17,8 @@ const MAX_CANDIDATES = 20;
 const NOVELTY_SLOTS = 5;
 const MAX_OPTIONS = 3;
 
-export type SurpriseWhen = "today" | "tomorrow" | "weekend";
-export type SurpriseWho = "just_me" | "partner" | "friends" | "family";
+// Defined in context.ts (pure, testable); re-exported so existing imports keep working.
+export type { SurpriseWhen, SurpriseWho };
 
 const WHO_LABEL: Record<SurpriseWho, string> = {
   just_me: "just themself",
@@ -31,10 +33,18 @@ const WHEN_LABEL: Record<SurpriseWhen, string> = {
   weekend: "this coming weekend",
 };
 
+const SLOT_LABEL: Record<SlotName, string> = {
+  morning: "this morning",
+  afternoon: "this afternoon",
+  evening: "this evening",
+};
+
 /**
  * On-demand Surprise Me (project brief section 16) — deterministic filtering
  * and affinity scoring happen in plain code first (distance, already-scheduled
- * exclusion, recency-weighted ranking), then a small shortlist goes to Claude
+ * exclusion, recency-weighted ranking, then the request's own context: which
+ * day, which part of it, the weather, who's coming — see context.ts), then a
+ * small shortlist goes to Claude
  * to pick up to 3 genuinely varied options with a short rationale. Never
  * invents an activity — every option must come from the real candidate list.
  */
@@ -42,11 +52,12 @@ export async function getSurpriseOptions(
   supabase: SupabaseClient,
   memberId: string,
   when: SurpriseWhen,
-  who: SurpriseWho
+  who: SurpriseWho,
+  slot: SlotName | null = null
 ): Promise<SurpriseOption[]> {
   const { data: profile } = await supabase
     .from("member_profiles")
-    .select("budget_band, interests")
+    .select("budget_band, interests, location_lat, location_lng")
     .eq("user_id", memberId)
     .maybeSingle();
 
@@ -62,8 +73,20 @@ export async function getSurpriseOptions(
     ((itinerary?.itinerary_items ?? []) as { activity_id: string }[]).map((i) => i.activity_id)
   );
 
-  const { candidates: ranked, affinity } = await fetchRankedOpportunities(supabase, memberId, {
-    excludeActivityIds: scheduledIds,
+  // The forecast is a free, independent call — fetch it alongside the ranking.
+  const [{ candidates: allRanked, affinity }, forecast] = await Promise.all([
+    fetchRankedOpportunities(supabase, memberId, { excludeActivityIds: scheduledIds }),
+    profile?.location_lat != null && profile?.location_lng != null
+      ? getDailyForecast(profile.location_lat, profile.location_lng, 7)
+      : Promise.resolve(null),
+  ]);
+
+  const { candidates: ranked, dates, weatherNote } = applyOpenTimeContext(allRanked, {
+    when,
+    who,
+    slot,
+    today: londonToday(),
+    forecast,
   });
   if (ranked.length === 0) return [];
 
@@ -76,22 +99,27 @@ export async function getSurpriseOptions(
   const candidates = [...topMatches, ...noveltyPool];
 
   const candidateList = candidates
-    .map(
-      (a) =>
-        `- id=${a.id} | ${a.title} | category=${a.category} | tags=[${a.tags.join(", ")}] | price=${a.price_estimate ?? "unknown"} | ${a.address ?? ""}`
-    )
+    .map((a) => {
+      const timing = describeWhen(a);
+      const whenText = timing ? (a.expires_at ? ` | ${timing}` : ` | WHEN: ${timing} (fixed)`) : "";
+      return `- id=${a.id} | ${a.title} | category=${a.category}${whenText} | tags=[${a.tags.join(", ")}] | price=${a.price_estimate ?? "unknown"} | ${a.address ?? ""}`;
+    })
     .join("\n");
 
+  const whenPhrase = slot && when === "today" ? SLOT_LABEL[slot] : (WHEN_LABEL[when] ?? "today");
+
   const system = `You are the Surprise Me feature for "Your Next Chapter", an AI life concierge. A member wants \
-something genuinely appealing to do ${WHEN_LABEL[when]}, choosing only from the candidates provided — never invent \
-anything. They'll likely be with ${WHO_LABEL[who]}. Pick up to ${MAX_OPTIONS} options that offer real variety from \
+something genuinely appealing to do ${whenPhrase}, choosing only from the candidates provided — never invent \
+anything. A candidate marked "WHEN" is a one-off event at exactly that date and time and is only listed because it \
+falls in the requested window; "available until" means it is on throughout. Take the weather into account. They'll likely be with ${WHO_LABEL[who]}. Pick up to ${MAX_OPTIONS} options that offer real variety from \
 each other (not three similar things), weighing their affinity summary but deliberately including at least one \
 option that's a bit of a stretch from their usual pattern — that is the point of "surprise". If fewer than \
 ${MAX_OPTIONS} candidates are genuinely suitable, return fewer rather than padding with a bad fit. Respond with \
 ONLY valid JSON, no prose, no markdown fences: {"options": [{"id": "<id from candidates>", "why": "<one warm, \
 second-person sentence, no exclamation marks>"}]}`;
 
-  const user = `${summarizeAffinity(affinity)}
+  const user = `Requested for: ${describeWindow(dates)}${slot && when === "today" ? ` (${slot})` : ""}
+${weatherNote ? `Weather: ${weatherNote}\n` : ""}${summarizeAffinity(affinity)}
 Budget band: ${profile?.budget_band ?? "unknown"}
 Interests: ${(profile?.interests ?? []).join(", ") || "none recorded"}
 

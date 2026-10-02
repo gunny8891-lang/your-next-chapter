@@ -6,29 +6,53 @@ const MIN_PLEASANT_TEMP_C = 10;
 const MAX_PLEASANT_TEMP_C = 27;
 const MAX_PRECIP_PROBABILITY = 20;
 
-// This MVP pilot serves a single area (Richmond upon Thames) — every activity
-// in the catalog is already scoped there (see the Discovery Agent and seed
-// data), and member-entered location_text is free text too unreliable to
-// geocode (e.g. "Richmond, London" resolves to zero results via Open-Meteo's
-// geocoder, and at least one real profile has literally "Somewhere else").
-// Checking one fixed pilot coordinate is simpler and no less accurate today.
+// Only a fallback now: members' own coordinates are geocoded when they set their
+// location (see account/onboarding actions), so callers should pass those and
+// use this just for a profile that has none yet.
 export const PILOT_COORDINATES = { latitude: 51.461, longitude: -0.303 };
 
 export type TodayWeather = { precipitationProbabilityMax: number; temperatureMax: number } | null;
 
+export type DayForecast = { date: string; precipitationProbabilityMax: number; temperatureMax: number };
+
+type OpenMeteoDaily = {
+  daily?: { time?: string[]; precipitation_probability_max?: (number | null)[]; temperature_2m_max?: (number | null)[] };
+};
+
+/** Pure: turns an Open-Meteo daily response into per-date forecasts, skipping any day with missing data. */
+export function parseForecast(data: OpenMeteoDaily): DayForecast[] {
+  const { time = [], precipitation_probability_max: precip = [], temperature_2m_max: temp = [] } = data.daily ?? {};
+  const days: DayForecast[] = [];
+  time.forEach((date, i) => {
+    const rain = precip[i];
+    const max = temp[i];
+    if (rain == null || max == null) return;
+    days.push({ date, precipitationProbabilityMax: rain, temperatureMax: max });
+  });
+  return days;
+}
+
+/** Forecast for the next `days` days (dates are the location's local dates), or null if the service is unavailable. */
+export async function getDailyForecast(latitude: number, longitude: number, days = 7): Promise<DayForecast[] | null> {
+  const url = `${FORECAST_URL}?latitude=${latitude}&longitude=${longitude}&daily=precipitation_probability_max,temperature_2m_max&timezone=auto&forecast_days=${days}`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    return parseForecast((await res.json()) as OpenMeteoDaily);
+  } catch {
+    return null;
+  }
+}
+
 export async function getTodayWeather(latitude: number, longitude: number): Promise<TodayWeather> {
-  const url = `${FORECAST_URL}?latitude=${latitude}&longitude=${longitude}&daily=precipitation_probability_max,temperature_2m_max&timezone=auto&forecast_days=1`;
-  const res = await fetch(url);
-  if (!res.ok) return null;
+  const [today] = (await getDailyForecast(latitude, longitude, 1)) ?? [];
+  return today ? { precipitationProbabilityMax: today.precipitationProbabilityMax, temperatureMax: today.temperatureMax } : null;
+}
 
-  const data = (await res.json()) as {
-    daily?: { precipitation_probability_max?: number[]; temperature_2m_max?: number[] };
-  };
-  const precip = data.daily?.precipitation_probability_max?.[0];
-  const tempMax = data.daily?.temperature_2m_max?.[0];
-  if (precip === undefined || tempMax === undefined) return null;
-
-  return { precipitationProbabilityMax: precip, temperatureMax: tempMax };
+/** Rain likely enough that an outdoor plan is a poor suggestion. */
+export const WET_DAY_PRECIP_PROBABILITY = 60;
+export function isWetDay(day: { precipitationProbabilityMax: number }): boolean {
+  return day.precipitationProbabilityMax >= WET_DAY_PRECIP_PROBABILITY;
 }
 
 /** "Strong match" per the reviewed trigger spec: low rain chance, mild-to-warm temperature. */

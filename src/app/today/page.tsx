@@ -35,8 +35,10 @@ export default async function TodayPage() {
   if (!profile) redirect("/onboarding");
 
   // "Mon".."Sun" — matches itinerary_items.day_of_week exactly.
-  const todayName = new Date().toLocaleDateString("en-GB", { weekday: "short" });
-  const dateLabel = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+  // London's calendar, not the server's (UTC on Vercel) — otherwise the evening
+  // of a BST day, or the hour after midnight, shows the wrong day's plan.
+  const todayName = new Date().toLocaleDateString("en-GB", { weekday: "short", timeZone: "Europe/London" });
+  const dateLabel = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/London" });
 
   const { data: itinerary } = await supabase
     .from("itineraries")

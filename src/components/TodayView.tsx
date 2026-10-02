@@ -190,7 +190,7 @@ export function TodayView({
   weather: TodayWeather;
   slots: TodaySlot[];
   onItemAction: (itemId: string, action: "accepted" | "swapped" | "skipped") => Promise<void>;
-  onSurpriseMe: (when: SurpriseWhen, who: SurpriseWho) => Promise<{ error: string | null; options: SurpriseOption[] }>;
+  onSurpriseMe: (when: SurpriseWhen, who: SurpriseWho, slot?: string) => Promise<{ error: string | null; options: SurpriseOption[] }>;
   onAccept: (activityId: string) => Promise<{ error: string | null }>;
 }) {
   const [statuses, setStatuses] = useState<Record<string, string>>(() =>
@@ -228,7 +228,7 @@ export function TodayView({
               <OpenTimeSlot
                 key={slot}
                 slotLabel={slotLabel}
-                onSurpriseMe={(who) => onSurpriseMe("today", who)}
+                onSurpriseMe={(who) => onSurpriseMe("today", who, slot)}
                 onAccept={onAccept}
               />
             );
