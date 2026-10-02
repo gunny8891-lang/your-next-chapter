@@ -128,6 +128,11 @@ export function ThisWeekView({
                   Review Queue
                 </Link>
               )}
+              {isAdmin && (
+                <Link href="/admin/ai-costs" style={{ color: "#EAE3D0", fontSize: 12.5, textDecoration: "none" }}>
+                  AI Costs
+                </Link>
+              )}
               <Link href="/today" style={{ color: "#EAE3D0", fontSize: 12.5, textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
                 <CalendarDays size={13} /> Today
               </Link>
