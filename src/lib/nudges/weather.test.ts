@@ -3,6 +3,7 @@ import {
   getDailyForecast,
   getTodayWeather,
   isStrongOutdoorWeather,
+  parseForecast,
   PILOT_COORDINATES,
   roundCoordinate,
   weatherCoordinates,
@@ -100,5 +101,34 @@ describe("isStrongOutdoorWeather", () => {
     expect(isStrongOutdoorWeather({ precipitationProbabilityMax: 60, temperatureMax: 18 })).toBe(false);
     expect(isStrongOutdoorWeather({ precipitationProbabilityMax: 10, temperatureMax: 3 })).toBe(false);
     expect(isStrongOutdoorWeather(null)).toBe(false);
+  });
+});
+
+describe("parseForecast — daylight", () => {
+  it("reads sunrise and sunset as local minutes after midnight", () => {
+    const [day] = parseForecast({
+      daily: {
+        time: ["2026-10-02"],
+        precipitation_probability_max: [2],
+        temperature_2m_max: [19],
+        sunrise: ["2026-10-02T06:52"],
+        sunset: ["2026-10-02T18:36"],
+      },
+    });
+    expect(day.sunriseMin).toBe(6 * 60 + 52);
+    expect(day.sunsetMin).toBe(18 * 60 + 36);
+  });
+
+  it("leaves daylight undefined when the service does not supply it", () => {
+    const [day] = parseForecast({ daily: { time: ["2026-10-02"], precipitation_probability_max: [2], temperature_2m_max: [19] } });
+    expect(day.sunsetMin).toBeUndefined();
+  });
+
+  it("asks for sunrise and sunset in the same cached request", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) } as Response);
+    vi.stubGlobal("fetch", fetchMock);
+    await getDailyForecast(51.65, -0.2);
+    vi.unstubAllGlobals();
+    expect(fetchMock.mock.calls[0][0]).toContain("sunrise,sunset");
   });
 });

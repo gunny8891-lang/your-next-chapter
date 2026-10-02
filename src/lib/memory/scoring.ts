@@ -49,7 +49,12 @@ export function computeAffinity(signals: PreferenceSignalRow[]): AffinityScores 
   for (const signal of signals) {
     const weight = signalWeight(signal.signal_type) * recencyMultiplier(signal.created_at);
 
-    if (signal.activities) {
+    // "Too far" and "too expensive" are about this one thing's logistics, not about
+    // whether the member likes that kind of thing — so they must not turn a
+    // category or tag against them (a pricey concert is not a dislike of music).
+    const logisticsOnly = signal.signal_type === "too_far" || signal.signal_type === "too_expensive";
+
+    if (signal.activities && !logisticsOnly) {
       const category = signal.activities.category;
       categoryScores[category] = (categoryScores[category] ?? 0) + weight;
       recentCategoryCounts[category] = (recentCategoryCounts[category] ?? 0) + 1;

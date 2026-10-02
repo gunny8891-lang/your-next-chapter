@@ -20,21 +20,46 @@ export const PILOT_COORDINATES = { latitude: 51.461, longitude: -0.303 };
 
 export type TodayWeather = { precipitationProbabilityMax: number; temperatureMax: number } | null;
 
-export type DayForecast = { date: string; precipitationProbabilityMax: number; temperatureMax: number };
+export type DayForecast = {
+  date: string;
+  precipitationProbabilityMax: number;
+  temperatureMax: number;
+  /** Local sunrise and sunset, in minutes after midnight, when the service gave them. */
+  sunriseMin?: number;
+  sunsetMin?: number;
+};
 
 type OpenMeteoDaily = {
-  daily?: { time?: string[]; precipitation_probability_max?: (number | null)[]; temperature_2m_max?: (number | null)[] };
+  daily?: {
+    time?: string[];
+    precipitation_probability_max?: (number | null)[];
+    temperature_2m_max?: (number | null)[];
+    sunrise?: (string | null)[];
+    sunset?: (string | null)[];
+  };
 };
+
+/** "2026-10-02T18:36" (a local time) → minutes after midnight. */
+function localMinutes(value: string | null | undefined): number | undefined {
+  const m = value?.match(/T(\d{2}):(\d{2})/);
+  return m ? Number(m[1]) * 60 + Number(m[2]) : undefined;
+}
 
 /** Pure: turns an Open-Meteo daily response into per-date forecasts, skipping any day with missing data. */
 export function parseForecast(data: OpenMeteoDaily): DayForecast[] {
-  const { time = [], precipitation_probability_max: precip = [], temperature_2m_max: temp = [] } = data.daily ?? {};
+  const { time = [], precipitation_probability_max: precip = [], temperature_2m_max: temp = [], sunrise = [], sunset = [] } = data.daily ?? {};
   const days: DayForecast[] = [];
   time.forEach((date, i) => {
     const rain = precip[i];
     const max = temp[i];
     if (rain == null || max == null) return;
-    days.push({ date, precipitationProbabilityMax: rain, temperatureMax: max });
+    days.push({
+      date,
+      precipitationProbabilityMax: rain,
+      temperatureMax: max,
+      sunriseMin: localMinutes(sunrise[i]),
+      sunsetMin: localMinutes(sunset[i]),
+    });
   });
   return days;
 }
@@ -64,7 +89,7 @@ export function weatherCoordinates(profile: { location_lat: number | null; locat
 
 /** Forecast for the next `days` days (dates are the location's local dates), or null if the service is unavailable. */
 export async function getDailyForecast(latitude: number, longitude: number, days = 7): Promise<DayForecast[] | null> {
-  const url = `${FORECAST_URL}?latitude=${roundCoordinate(latitude)}&longitude=${roundCoordinate(longitude)}&daily=precipitation_probability_max,temperature_2m_max&timezone=auto&forecast_days=${days}`;
+  const url = `${FORECAST_URL}?latitude=${roundCoordinate(latitude)}&longitude=${roundCoordinate(longitude)}&daily=precipitation_probability_max,temperature_2m_max,sunrise,sunset&timezone=auto&forecast_days=${days}`;
   try {
     const res = await fetch(url, { next: { revalidate: FORECAST_CACHE_SECONDS } });
     if (!res.ok) return null;

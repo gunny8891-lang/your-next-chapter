@@ -49,3 +49,27 @@ describe("summarizeAffinity", () => {
     // signals every category counts as a gap, so the summary is never empty.
   });
 });
+
+describe("computeAffinity — feedback reasons", () => {
+  it("counts too far and too expensive against that activity only, not its category or tags", () => {
+    const a = computeAffinity([
+      signal("too_far", "a1", "Move", ["walking"], daysAgo(0)),
+      signal("too_expensive", "a2", "Joy", ["theatre"], daysAgo(0)),
+    ]);
+    expect(a.activityScores.a1).toBeLessThan(0);
+    expect(a.activityScores.a2).toBeLessThan(0);
+    expect(a.categoryScores.Move).toBeUndefined();
+    expect(a.categoryScores.Joy).toBeUndefined();
+    expect(a.tagScores.walking).toBeUndefined();
+    expect(a.recentCategoryCounts.Move).toBeUndefined();
+  });
+
+  it("still lets a plain dislike or an already-seen-it count against the category", () => {
+    const a = computeAffinity([
+      signal("disliked", "a1", "Learn", ["talks"], daysAgo(0)),
+      signal("too_similar", "a2", "Learn", ["talks"], daysAgo(0)),
+    ]);
+    expect(a.categoryScores.Learn).toBeLessThan(0);
+    expect(a.tagScores.talks).toBeLessThan(0);
+  });
+});
