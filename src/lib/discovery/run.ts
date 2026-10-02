@@ -114,6 +114,7 @@ export async function persistDiscovery(
         location_lat: c.locationLat,
         location_lng: c.locationLng,
         date_time: c.dateTime,
+        expires_at: c.availableUntil ?? null,
         price_estimate: c.priceEstimate,
         booking_url: c.bookingUrl,
         source: "discovery_agent" as const,

@@ -7,7 +7,10 @@ export type RawActivityCandidate = {
   address: string | null;
   locationLat: number | null;
   locationLng: number | null;
+  /** Start of a single one-off event only. Null for anything that runs on many dates. */
   dateTime: string | null;
+  /** Last date a multi-date item (ongoing exhibition, seasonal series) is available, when the source states one. */
+  availableUntil?: string | null;
   priceEstimate: number | null;
   bookingUrl: string;
   /** True only when bookingUrl is a genuine per-event/per-listing URL the source

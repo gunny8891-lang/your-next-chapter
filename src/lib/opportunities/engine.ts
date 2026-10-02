@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { computeAffinity, scoreActivity, type AffinityScores, type PreferenceSignalRow } from "@/lib/memory/scoring";
 import { filterByDistance } from "@/lib/geo/filterByDistance";
+import { isStillAvailable } from "@/lib/opportunities/availability";
 
 export type OpportunityCandidate = {
   id: string;
@@ -15,6 +16,7 @@ export type OpportunityCandidate = {
   location_lng: number | null;
   booking_url: string | null;
   date_time: string | null;
+  expires_at: string | null;
 };
 
 export type FetchOpportunitiesOptions = {
@@ -53,13 +55,22 @@ export async function fetchRankedOpportunities(
   let query = supabase
     .from("activities")
     .select(
-      "id, title, category, address, price_estimate, tags, rating, accessibility_notes, location_lat, location_lng, booking_url, date_time"
+      "id, title, category, address, price_estimate, tags, rating, accessibility_notes, location_lat, location_lng, booking_url, date_time, expires_at"
     )
     .eq("status", "active");
   if (options.category) query = query.eq("category", options.category);
 
-  const { data: activities } = await query;
-  const allActive = (activities ?? []) as OpportunityCandidate[];
+  const { data: activities, error: activitiesError } = await query;
+  // A failed read must not look like "nothing nearby" — that would silently
+  // empty every recommendation surface at once.
+  if (activitiesError) throw new Error(`Couldn't load activities: ${activitiesError.message}`);
+
+  // Never recommend something that's already over: a one-off event whose date
+  // has passed, or an exhibition/series past its end. Done here rather than by
+  // changing status, because members can't read non-active activities — that
+  // would make finished items vanish from their own week view and history.
+  const now = new Date();
+  const allActive = ((activities ?? []) as OpportunityCandidate[]).filter((a) => isStillAvailable(a, now));
 
   const inRange = filterByDistance(
     allActive,

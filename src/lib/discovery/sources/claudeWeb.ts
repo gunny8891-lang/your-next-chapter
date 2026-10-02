@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { CategoryName } from "@/lib/categories";
 import type { DiscoverySource, RawActivityCandidate } from "@/lib/discovery/types";
 import { createAdminClient } from "@/utils/supabase/admin";
+import { DATE_FIELD_PROMPT, isValidIso, parseAvailableUntil } from "@/lib/discovery/dateFields";
 import { callClaude } from "@/lib/ai/client";
 import { AI_MODELS } from "@/lib/ai/models";
 
@@ -40,6 +41,7 @@ type ExtractedItem = {
   category?: string;
   address?: string;
   dateTime?: string;
+  availableUntil?: string;
   priceEstimate?: number;
   tags?: string[];
 };
@@ -54,8 +56,7 @@ volunteering, social groups, visits) from a web page belonging to "${orgName}". 
 actually described on the page — never invent one. If the page lists no genuine activities, return {"items": []}. \
 Map each activity to exactly one of these categories: ${CATEGORIES.join(", ")}. Respond with ONLY valid JSON, no \
 prose, no markdown fences: {"items": [{"title": string, "description": string, "category": string, "address": \
-string|null, "dateTime": string|null (ISO 8601 only if a specific date/time is genuinely given), "priceEstimate": \
-number|null, "tags": string[]}]}`;
+string|null, ${DATE_FIELD_PROMPT}, "priceEstimate": number|null, "tags": string[]}]}`;
 
   const admin = createAdminClient();
   const response = await callClaude(client, admin, { userId: null, feature: "discovery_claude_web" }, {
@@ -79,7 +80,9 @@ number|null, "tags": string[]}]}`;
       address: item.address ?? null,
       locationLat: null,
       locationLng: null,
-      dateTime: item.dateTime ?? null,
+      // A date the database can't parse would reject the whole batch insert.
+      dateTime: isValidIso(item.dateTime) ? item.dateTime : null,
+      availableUntil: parseAvailableUntil(item.availableUntil),
       priceEstimate: item.priceEstimate ?? null,
       // No per-event URL is reliably extractable from these pages, so a synthetic
       // per-title key on the source page keeps dedup working across daily runs.

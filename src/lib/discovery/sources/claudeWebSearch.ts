@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { CategoryName } from "@/lib/categories";
 import type { DiscoverySource, RawActivityCandidate } from "@/lib/discovery/types";
 import { createAdminClient } from "@/utils/supabase/admin";
+import { DATE_FIELD_PROMPT, isValidIso, parseAvailableUntil } from "@/lib/discovery/dateFields";
 import { callClaude } from "@/lib/ai/client";
 import { AI_MODELS } from "@/lib/ai/models";
 
@@ -27,6 +28,7 @@ type ExtractedItem = {
   category?: string;
   address?: string;
   dateTime?: string;
+  availableUntil?: string;
   priceEstimate?: number;
   tags?: string[];
   sourceUrl?: string;
@@ -54,9 +56,8 @@ farms — and tag every one of those with "grandchildren" in its tags array so t
 want them. Fetch the most promising pages and extract only activities that are genuinely described on them — never \
 invent one. Map each to exactly one category: ${CATEGORIES.join(", ")}. When you're done searching and fetching, \
 respond with ONLY valid JSON, no prose, no markdown fences: {"items": [{"title": string, "description": string, \
-"category": string, "address": string|null, "dateTime": string|null (ISO 8601 only if a specific date/time is \
-genuinely given), "priceEstimate": number|null, "tags": string[], "sourceUrl": string}]}. If you find nothing \
-genuine, return {"items": []}.`;
+"category": string, "address": string|null, ${DATE_FIELD_PROMPT}, "priceEstimate": number|null, \
+"tags": string[], "sourceUrl": string}]}. If you find nothing genuine, return {"items": []}.`;
 
   const user = `Find current local activities suitable for retirees near ${regionLabel}, including places they \
 could take a grandchild for a family-friendly outing (soft play, parks, playgrounds).`;
@@ -114,7 +115,9 @@ could take a grandchild for a family-friendly outing (soft play, parks, playgrou
         address: item.address ?? null,
         locationLat: null,
         locationLng: null,
-        dateTime: item.dateTime ?? null,
+        // A date the database can't parse would reject the whole batch insert.
+        dateTime: isValidIso(item.dateTime) ? item.dateTime : null,
+        availableUntil: parseAvailableUntil(item.availableUntil),
         priceEstimate: item.priceEstimate ?? null,
         bookingUrl,
         bookingUrlVerified: Boolean(item.sourceUrl),
