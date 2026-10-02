@@ -7,6 +7,8 @@ import {
 } from "@/lib/discovery/run";
 import { createClaudeWebSearchSource } from "@/lib/discovery/sources/claudeWebSearch";
 import { ensureOpenStreetMapPlaces } from "@/lib/discovery/osmPlaces";
+import { memberAreas } from "@/lib/discovery/areas";
+import { createTicketmasterSource } from "@/lib/discovery/sources/ticketmaster";
 import { generateAndSaveItinerary } from "@/lib/itinerary/generateAndSave";
 import { decideSearch, normalizeRegionKey, type RegionState, type SearchDecision } from "@/lib/discovery/throttle";
 import type { Coordinates } from "@/lib/geo/geocode";
@@ -184,6 +186,24 @@ export async function searchRegionsThrottled(
 }
 
 /**
+ * Events near one member, fetched right away when they set their location so a
+ * new area doesn't wait for the nightly run. Returns how many went live; a
+ * missing key or any failure just means none — the nightly job will try again.
+ */
+async function fetchTicketmasterNear(supabase: SupabaseClient, memberId: string): Promise<number> {
+  if (!process.env.TICKETMASTER_API_KEY) return 0;
+  const { data: profile } = await supabase
+    .from("member_profiles")
+    .select("location_lat, location_lng, travel_radius_km")
+    .eq("user_id", memberId)
+    .maybeSingle();
+  const [area] = memberAreas(profile ? [profile] : []);
+  if (!area) return 0;
+  const { results } = await persistDiscovery(supabase, [createTicketmasterSource(area)]);
+  return results.reduce((sum, r) => sum + r.insertedActive, 0);
+}
+
+/**
  * Fire-and-forget regional discovery, meant to be called from `after()` when a
  * member sets or changes their location. Goes through the same throttle as the
  * nightly job, so five members in one town cost one search, not five.
@@ -201,11 +221,12 @@ export async function triggerDiscoveryForRegion(
     // The free place layer runs alongside the paid search, not after it: a
     // regional search can take ~4.5 of the 5 minutes available, so queueing
     // this behind it could get both cut off.
-    const [summary, places] = await Promise.all([
+    const [summary, places, events] = await Promise.all([
       searchRegionsThrottled(supabase, [region], { maxSearches: 1 }),
       ensureOpenStreetMapPlaces(supabase, region),
+      fetchTicketmasterNear(supabase, memberId).catch(() => 0),
     ]);
-    const newlyActive = summary.searched.reduce((sum, o) => sum + o.insertedActive, 0) + places.inserted;
+    const newlyActive = summary.searched.reduce((sum, o) => sum + o.insertedActive, 0) + places.inserted + events;
     if (newlyActive > 0) await generateAndSaveItinerary(supabase, memberId);
   } catch {
     // Best-effort — the nightly job will pick this region up when it's due.

@@ -3,7 +3,8 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { runDiscoveryAgent } from "@/lib/discovery/run";
 import { searchRegionsThrottled } from "@/lib/discovery/regional";
 import { ensureOpenStreetMapPlacesForRegions } from "@/lib/discovery/osmPlaces";
-import { createTicketmasterSource } from "@/lib/discovery/sources/ticketmaster";
+import { createTicketmasterSource, RICHMOND_AREA } from "@/lib/discovery/sources/ticketmaster";
+import { memberAreas } from "@/lib/discovery/areas";
 import { createClaudeWebSource } from "@/lib/discovery/sources/claudeWeb";
 
 // A regional web search has been observed taking ~4.5 minutes, so one
@@ -29,7 +30,9 @@ export async function GET(request: Request) {
 
   // Drives the location-dynamic search from wherever members actually are,
   // rather than a hardcoded region list.
-  const { data: profiles } = await admin.from("member_profiles").select("location_text");
+  const { data: profiles } = await admin
+    .from("member_profiles")
+    .select("location_text, location_lat, location_lng, travel_radius_km");
   const regions = Array.from(
     new Set(
       (profiles ?? [])
@@ -40,9 +43,19 @@ export async function GET(request: Request) {
     )
   );
 
-  // The cheap, fixed sources run every night as before; the expensive regional
-  // web search goes through the throttle.
-  const results = await runDiscoveryAgent(admin, [createTicketmasterSource(), createClaudeWebSource()]);
+  // Events come from where members actually live, not one fixed town (Richmond is
+  // only the fallback when nobody has a resolved location). The key is checked
+  // once here so a missing one is reported once, not once per area.
+  const hasTicketmasterKey = Boolean(process.env.TICKETMASTER_API_KEY);
+  const areas = memberAreas(profiles ?? []);
+  const ticketmasterSources = hasTicketmasterKey
+    ? (areas.length ? areas : [RICHMOND_AREA]).map((area) => createTicketmasterSource(area))
+    : [];
+  const ticketmasterSkipped = hasTicketmasterKey ? null : "TICKETMASTER_API_KEY is not set — Ticketmaster skipped";
+
+  // The cheap sources run every night as before; the expensive regional web
+  // search goes through the throttle.
+  const results = await runDiscoveryAgent(admin, [...ticketmasterSources, createClaudeWebSource()]);
 
   let regional = null;
   let regionalError: string | null = null;
@@ -59,5 +72,5 @@ export async function GET(request: Request) {
   regional = regionalSettled.summary;
   regionalError = regionalSettled.error;
 
-  return NextResponse.json({ results, regional, regionalError, places });
+  return NextResponse.json({ results, regional, regionalError, places, ticketmasterSkipped });
 }
