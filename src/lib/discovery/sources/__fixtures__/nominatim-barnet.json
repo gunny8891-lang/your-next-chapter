@@ -1,0 +1,632 @@
+[
+ {
+  "term": "sports centre",
+  "place": {
+   "osm_type": "way",
+   "osm_id": 127316422,
+   "category": "leisure",
+   "type": "sports_centre",
+   "name": "Finchley Lido",
+   "lat": "51.6046238",
+   "lon": "-0.1723569",
+   "importance": 0.3095991533582804,
+   "extratags": {
+    "sport": "swimming",
+    "website": "https://www.better.org.uk/leisure-centre/london/barnet/finchley-lido-leisure-centre",
+    "building": "yes",
+    "wikidata": "Q15217697",
+    "wikipedia": "en:Finchley Lido",
+    "opening_hours": "Mo-Fr 06:45-22:00; Sa,Su 08:00-17:30"
+   },
+   "address": {
+    "leisure": "Finchley Lido",
+    "road": "Chaplin Square",
+    "suburb": "Fallow Corner",
+    "city_district": "London Borough of Barnet",
+    "ISO3166-2-lvl8": "GB-BNE",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "N12 0GL",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "sports centre",
+  "place": {
+   "osm_type": "way",
+   "osm_id": 228979996,
+   "category": "amenity",
+   "type": "parking",
+   "name": "Sports Centre",
+   "lat": "51.5595541",
+   "lon": "-0.3172356",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "access": "permissive"
+   },
+   "address": {
+    "amenity": "Sports Centre",
+    "road": "Watford Road",
+    "suburb": "Sudbury",
+    "city_district": "London Borough of Brent",
+    "ISO3166-2-lvl8": "GB-BEN",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "HA0 3HF",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "sports centre",
+  "place": {
+   "osm_type": "way",
+   "osm_id": 30140235,
+   "category": "leisure",
+   "type": "sports_centre",
+   "name": "Sports Centre",
+   "lat": "51.5730459",
+   "lon": "-0.3333256",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "sport": "swimming",
+    "building": "yes",
+    "operator": "Harrow School"
+   },
+   "address": {
+    "leisure": "Sports Centre",
+    "road": "Football Lane",
+    "neighbourhood": "Harrow on the Hill",
+    "suburb": "Sudbury Hill",
+    "city_district": "London Borough of Harrow",
+    "ISO3166-2-lvl8": "GB-HRW",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "HA1 3EA",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "sports centre",
+  "place": {
+   "osm_type": "way",
+   "osm_id": 4421342,
+   "category": "leisure",
+   "type": "sports_centre",
+   "name": "Southbury Leisure Centre",
+   "lat": "51.6522607",
+   "lon": "-0.0622150",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "fee": "yes",
+    "website": "https://www.better.org.uk/leisure-centre/london/enfield/southbury-leisure-centre",
+    "building": "yes",
+    "operator": "Greenwich Leisure Limited",
+    "ref:GB:uprn": "207195579",
+    "opening_hours": "Mo 08:00-19:30; Tu-Fr 05:30-22:00; Sa-Su 08:00-17:00",
+    "operator:type": "cooperative",
+    "brand:wikidata": "Q109721926",
+    "operator:wikidata": "Q5604859"
+   },
+   "address": {
+    "leisure": "Southbury Leisure Centre",
+    "house_number": "192",
+    "road": "Southbury Road",
+    "suburb": "Southbury",
+    "town": "Enfield",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "EN1 1YP",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "sports centre",
+  "place": {
+   "osm_type": "way",
+   "osm_id": 1430217916,
+   "category": "leisure",
+   "type": "sports_centre",
+   "name": "Hazelwood Sports Club",
+   "lat": "51.6376784",
+   "lon": "-0.0873018",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "club": "sport",
+    "email": "info@hazelwoodsportsclub.co.uk",
+    "phone": "+44 20 8360 1384",
+    "website": "https://hazelwoodsportsclub.co.uk/",
+    "opening_hours": "Mo-Su 08:00-23:00",
+    "internet_access": "wlan",
+    "contact:instagram": "hazelwood_sports_club"
+   },
+   "address": {}
+  }
+ },
+ {
+  "term": "swimming pool",
+  "place": {
+   "osm_type": "way",
+   "osm_id": 514629959,
+   "category": "building",
+   "type": "school",
+   "name": "Swimming Pool",
+   "lat": "51.5742376",
+   "lon": "-0.1555125",
+   "importance": 0.00009307927061870783,
+   "extratags": {},
+   "address": {
+    "building": "Swimming Pool",
+    "road": "Bishopswood Road",
+    "suburb": "Muswell Hill",
+    "city_district": "London Borough of Haringey",
+    "ISO3166-2-lvl8": "GB-HRY",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "N6 4PP",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "swimming pool",
+  "place": {
+   "osm_type": "way",
+   "osm_id": 48976187,
+   "category": "leisure",
+   "type": "swimming_pool",
+   "name": "Park Road Lido",
+   "lat": "51.5828360",
+   "lon": "-0.1298728",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "fax": "+44 20 8340 3588",
+    "fee": "yes",
+    "lit": "yes",
+    "email": "active@haringey.gov.uk",
+    "phone": "+44 20 8341 3567",
+    "sport": "swimming",
+    "access": "yes",
+    "heated": "yes",
+    "length": "50",
+    "website": "https://www.haringey.gov.uk/leisure-parks-culture/leisure-centres/park-road-leisure-centre-lido",
+    "location": "outdoor",
+    "maxdepth": "1.4",
+    "mindepth": "0.9",
+    "operator": "Haringey Council",
+    "swimming": "customers",
+    "water_park": "lido",
+    "opening_hours": "Mo-Fr 07:00-19:15; Sa-Su 07:45-16:15",
+    "operator:type": "government",
+    "swimming_pool": "swimming"
+   },
+   "address": {}
+  }
+ },
+ {
+  "term": "swimming pool",
+  "place": {
+   "osm_type": "node",
+   "osm_id": 1409601945,
+   "category": "leisure",
+   "type": "swimming_pool",
+   "name": "Finchley Lido",
+   "lat": "51.6046208",
+   "lon": "-0.1722994",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "lit": "yes",
+    "length": "25",
+    "location": "indoor",
+    "operator": "GLL",
+    "swimming_pool": "swimming"
+   },
+   "address": {}
+  }
+ },
+ {
+  "term": "sports centre",
+  "place": {
+   "osm_type": "node",
+   "osm_id": 502536016,
+   "category": "highway",
+   "type": "bus_stop",
+   "name": "Leisure Centre",
+   "lat": "51.6557030",
+   "lon": "-0.3711824",
+   "importance": 0.00005496223392076016,
+   "extratags": {
+    "bench": "no",
+    "shelter": "no",
+    "public_transport": "platform"
+   },
+   "address": {
+    "highway": "Leisure Centre",
+    "road": "Aldenham Road",
+    "hamlet": "Connaught Park",
+    "town": "Bushey",
+    "city": "Hertsmere",
+    "county": "Hertfordshire",
+    "ISO3166-2-lvl6": "GB-HRT",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "WD23 2GT",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "sports centre",
+  "place": {
+   "osm_type": "node",
+   "osm_id": 502536112,
+   "category": "highway",
+   "type": "bus_stop",
+   "name": "Leisure Centre",
+   "lat": "51.6561449",
+   "lon": "-0.3706281",
+   "importance": 0.00005496223392076016,
+   "extratags": {
+    "bench": "no",
+    "shelter": "no",
+    "public_transport": "platform"
+   },
+   "address": {
+    "highway": "Leisure Centre",
+    "road": "Aldenham Road",
+    "hamlet": "Winfield Park",
+    "town": "Bushey",
+    "city": "Hertsmere",
+    "county": "Hertfordshire",
+    "ISO3166-2-lvl6": "GB-HRT",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "WD23 2TZ",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "sports centre",
+  "place": {
+   "osm_type": "node",
+   "osm_id": 502547062,
+   "category": "highway",
+   "type": "bus_stop",
+   "name": "Leisure Centre",
+   "lat": "51.7288616",
+   "lon": "-0.3008371",
+   "importance": 0.000052450598916563934,
+   "extratags": {
+    "bin": "yes",
+    "bus": "yes",
+    "lit": "yes",
+    "bench": "yes",
+    "shelter": "yes",
+    "tactile_paving": "yes",
+    "public_transport": "platform"
+   },
+   "address": {
+    "highway": "Leisure Centre",
+    "road": "High Street",
+    "neighbourhood": "Cotlandswick",
+    "hamlet": "Napsbury Park",
+    "village": "London Colney",
+    "city": "St Albans",
+    "county": "Hertfordshire",
+    "ISO3166-2-lvl6": "GB-HRT",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "AL2 1EB",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "yoga",
+  "place": {
+   "osm_type": "way",
+   "osm_id": 851695091,
+   "category": "leisure",
+   "type": "fitness_centre",
+   "name": "Yoga Junction",
+   "lat": "51.5804253",
+   "lon": "-0.1152683",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "sport": "yoga",
+    "website": "https://www.yogajunction.co.uk",
+    "building": "yes",
+    "building:levels": "1"
+   },
+   "address": {
+    "leisure": "Yoga Junction",
+    "house_number": "93A",
+    "road": "Weston Park",
+    "neighbourhood": "Ferme Park",
+    "suburb": "Crouch End",
+    "city_district": "London Borough of Haringey",
+    "ISO3166-2-lvl8": "GB-HRY",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "N8 9PR",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "yoga",
+  "place": {
+   "osm_type": "node",
+   "osm_id": 11517497767,
+   "category": "leisure",
+   "type": "fitness_centre",
+   "name": "More Yoga",
+   "lat": "51.5597138",
+   "lon": "-0.2805074",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "sport": "yoga",
+    "branch": "Wembley Park",
+    "website": "https://www.moreyoga.co.uk/"
+   },
+   "address": {
+    "leisure": "More Yoga",
+    "road": "Weaver Walk",
+    "suburb": "Preston",
+    "city_district": "London Borough of Brent",
+    "ISO3166-2-lvl8": "GB-BEN",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "HA9 0LE",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "yoga",
+  "place": {
+   "osm_type": "node",
+   "osm_id": 5860802293,
+   "category": "leisure",
+   "type": "fitness_centre",
+   "name": "More Yoga",
+   "lat": "51.5486582",
+   "lon": "-0.1177970",
+   "importance": 0.00009307927061870783,
+   "extratags": {},
+   "address": {
+    "leisure": "More Yoga",
+    "road": "Caledonian Road",
+    "suburb": "Holloway",
+    "city_district": "London Borough of Islington",
+    "ISO3166-2-lvl8": "GB-ISL",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "N7 9BA",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "yoga",
+  "place": {
+   "osm_type": "node",
+   "osm_id": 6953676900,
+   "category": "leisure",
+   "type": "sports_centre",
+   "name": "More Yoga",
+   "lat": "51.6135223",
+   "lon": "-0.1772377",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "sport": "yoga",
+    "website": "https://www.moreyoga.co.uk/north-finchley"
+   },
+   "address": {
+    "leisure": "More Yoga",
+    "house_number": "331",
+    "road": "Ballards Lane",
+    "suburb": "North Finchley",
+    "city_district": "London Borough of Barnet",
+    "ISO3166-2-lvl8": "GB-BNE",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "N12 8LT",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "library",
+  "place": {
+   "osm_type": "way",
+   "osm_id": 87095829,
+   "category": "amenity",
+   "type": "library",
+   "name": "East Finchley Library",
+   "lat": "51.5939338",
+   "lon": "-0.1675546",
+   "importance": 0.2844781372993679,
+   "extratags": {
+    "website": "https://www.barnet.gov.uk/libraries/find-your-local-library/east-finchley-library",
+    "building": "civic",
+    "operator": "Barnet Council",
+    "wikidata": "Q27087017",
+    "start_date": "1938",
+    "wheelchair": "yes",
+    "listed_status": "Grade II",
+    "opening_hours": "Mo-Fr 08:00-20:00; Sa 08:00-17:00",
+    "heritage:website": "https://historicengland.org.uk/listing/the-list/list-entry/1390575",
+    "heritage:operator": "Historic England",
+    "operator:wikidata": "Q4861611"
+   },
+   "address": {
+    "amenity": "East Finchley Library",
+    "road": "High Road",
+    "suburb": "Finchley",
+    "city_district": "London Borough of Barnet",
+    "ISO3166-2-lvl8": "GB-BNE",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "N2 9BB",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "museum",
+  "place": {
+   "osm_type": "way",
+   "osm_id": 118906069,
+   "category": "tourism",
+   "type": "museum",
+   "name": "RAF Museum",
+   "lat": "51.5980125",
+   "lon": "-0.2389297",
+   "importance": 0.4540735774087027,
+   "extratags": {
+    "fee": "no",
+    "museum": "aerospace",
+    "website": "https://www.rafmuseum.org.uk/london",
+    "wikidata": "Q1890450",
+    "wikipedia": "en:Royal Air Force Museum London",
+    "wheelchair": "yes",
+    "opening_hours": "Mo-Su 10:00-17:00",
+    "wikimedia_commons": "File:Junkers_Ju_88_RAF_Hendon.jpg",
+    "toilets:wheelchair": "yes",
+    "wheelchair:description": "Accessible toilets in each display area. Some exhibits have steps to cockpit viewing platform. Cafe has high counter. No Loop provision. No Loop/subtitles on Audiovisual displays/film clips."
+   },
+   "address": {
+    "tourism": "RAF Museum",
+    "road": "Runway Close",
+    "quarter": "Grahame Park",
+    "suburb": "Colindale",
+    "city_district": "London Borough of Barnet",
+    "ISO3166-2-lvl8": "GB-BNE",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "NW9 5FA",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "community centre",
+  "place": {
+   "osm_type": "way",
+   "osm_id": 1012796797,
+   "category": "amenity",
+   "type": "community_centre",
+   "name": "Triangle Children, Young People & Community Centre",
+   "lat": "51.5779101",
+   "lon": "-0.0777464",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "building": "yes"
+   },
+   "address": {
+    "amenity": "Triangle Children, Young People & Community Centre",
+    "road": "St Ann's Road",
+    "neighbourhood": "Seven Sisters",
+    "quarter": "South Tottenham",
+    "suburb": "West Green",
+    "city_district": "London Borough of Haringey",
+    "ISO3166-2-lvl8": "GB-HRY",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "N15 6NW",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "community centre",
+  "place": {
+   "osm_type": "way",
+   "osm_id": 187809294,
+   "category": "amenity",
+   "type": "community_centre",
+   "name": "Freehold Community Centre",
+   "lat": "51.6079854",
+   "lon": "-0.1429830",
+   "importance": 0.00009307927061870783,
+   "extratags": {
+    "website": "http://www.freeholdcommunity.org/",
+    "building": "yes"
+   },
+   "address": {
+    "amenity": "Freehold Community Centre",
+    "house_number": "9",
+    "road": "Alexandra Road",
+    "suburb": "Colney Hatch",
+    "city_district": "London Borough of Haringey",
+    "ISO3166-2-lvl8": "GB-HRY",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "postcode": "N10 2EY",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ },
+ {
+  "term": "park",
+  "place": {
+   "osm_type": "way",
+   "osm_id": 1030729521,
+   "category": "leisure",
+   "type": "park",
+   "name": "Trent Park",
+   "lat": "51.6582105",
+   "lon": "-0.1458720",
+   "importance": 0.44621612618968404,
+   "extratags": {
+    "wikidata": "Q181044",
+    "wikipedia": "en:Trent Park"
+   },
+   "address": {
+    "park": "Trent Park",
+    "suburb": "Cockfosters",
+    "city_district": "London Borough of Enfield",
+    "ISO3166-2-lvl8": "GB-ENF",
+    "city": "Greater London",
+    "state": "England",
+    "ISO3166-2-lvl4": "GB-ENG",
+    "country": "United Kingdom",
+    "country_code": "gb"
+   }
+  }
+ }
+]
