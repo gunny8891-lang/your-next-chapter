@@ -1,11 +1,21 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { runDiscoveryAgent, type DiscoveryRunResult } from "@/lib/discovery/run";
+import {
+  persistDiscovery,
+  geocodePending,
+  type DiscoveryRunResult,
+  type PendingGeocode,
+} from "@/lib/discovery/run";
 import { createClaudeWebSearchSource } from "@/lib/discovery/sources/claudeWebSearch";
 import { generateAndSaveItinerary } from "@/lib/itinerary/generateAndSave";
 import { decideSearch, normalizeRegionKey, type RegionState, type SearchDecision } from "@/lib/discovery/throttle";
+import type { Coordinates } from "@/lib/geo/geocode";
 
-/** Runs the real search for one region. Injectable so the orchestration can be tested without spending tokens. */
-export type RunSearch = (region: string) => Promise<DiscoveryRunResult[]>;
+/**
+ * Runs the real search for one region and saves what it found (phase 1 only —
+ * see persistDiscovery). Injectable so the orchestration can be tested without
+ * spending tokens.
+ */
+export type RunSearch = (region: string) => Promise<{ results: DiscoveryRunResult[]; pending: PendingGeocode[] }>;
 
 export type RegionOutcome = {
   region: string;
@@ -30,6 +40,8 @@ type Options = {
   force?: boolean;
   now?: Date;
   runSearch?: RunSearch;
+  /** Injectable for the same reason as runSearch. */
+  geocode?: (address: string) => Promise<Coordinates | null>;
 };
 
 function lastSuccessMs(state: RegionState | undefined): number {
@@ -53,7 +65,7 @@ export async function searchRegionsThrottled(
   const maxSearches = options.maxSearches ?? 1;
   const nowIso = () => (options.now ?? new Date()).toISOString();
   const runSearch: RunSearch =
-    options.runSearch ?? ((region) => runDiscoveryAgent(supabase, [createClaudeWebSearchSource([region])]));
+    options.runSearch ?? ((region) => persistDiscovery(supabase, [createClaudeWebSearchSource([region])]));
 
   const labelByKey = new Map<string, string>();
   for (const label of regions) {
@@ -113,8 +125,10 @@ export async function searchRegionsThrottled(
     }
 
     let outcome: RegionOutcome;
+    let results: DiscoveryRunResult[] = [];
+    let pending: PendingGeocode[] = [];
     try {
-      const results = await runSearch(label);
+      ({ results, pending } = await runSearch(label));
       const errors = results.flatMap((r) => r.errors);
       outcome = {
         region: label,
@@ -149,6 +163,20 @@ export async function searchRegionsThrottled(
         : { last_error: (outcome.error ?? "Unknown error").slice(0, 500) };
     const { error: recordError } = await supabase.from("discovery_regions").update(update).eq("region_key", key);
     if (recordError) console.error(`Failed to record discovery outcome for "${label}":`, recordError.message);
+
+    // Only now give the saved activities their coordinates and promote the
+    // qualifying ones. This is the slow, rate-limited part, so it comes after
+    // both the results are saved and the success is recorded: if the function
+    // is cut off here, the search is neither lost nor retried at full cost
+    // tomorrow — whatever wasn't reached just stays in the review queue.
+    if (outcome.status === "searched" && pending.length > 0) {
+      try {
+        await geocodePending(supabase, pending, options.geocode);
+        outcome.insertedActive = results.reduce((s, r) => s + r.insertedActive, 0);
+      } catch (err) {
+        console.error(`Geocoding pass failed for "${label}":`, err instanceof Error ? err.message : err);
+      }
+    }
   }
 
   return summary;
