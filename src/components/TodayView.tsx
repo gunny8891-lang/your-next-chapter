@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Check, ChevronRight, Coffee, Hourglass } from "lucide-react";
 import { CATEGORY_COLOR } from "@/lib/theme";
-import { Button, Card, Cover, WeatherLine } from "@/components/ui";
-import { SomeTimeFlow, type SomeTimeInitial } from "@/components/SomeTimeFlow";
+import { Button, Card, Cover, Sheet, WeatherLine } from "@/components/ui";
+import { TimeSheet, type TimeSheetInitial } from "@/components/TimeSheet";
+import { nextCommitment, type Commitment } from "@/lib/someTime/choices";
 import { doorToDoorMinutes, friendlyDuration, placeLabel, priceBand } from "@/lib/someTime/format";
 import type { ItineraryItemView } from "@/lib/types";
 import type { TodayWeather } from "@/lib/nudges/weather";
@@ -16,16 +17,16 @@ export type TodaySlot = { slot: string; item: ItineraryItemView | null };
 const SLOT_LABEL: Record<string, string> = { morning: "Morning", afternoon: "Afternoon", evening: "Evening" };
 
 /** Where "I've got some time" starts when it is opened from a free part of the day. */
-const SLOT_START: Record<string, SomeTimeInitial> = {
+const SLOT_START: Record<string, TimeSheetInitial> = {
   morning: { start: "now", duration: "1-2h" },
   afternoon: { start: "afternoon", duration: "1-2h" },
   evening: { start: "evening", duration: "1-2h" },
 };
 
 type FlowActions = {
-  onFind: React.ComponentProps<typeof SomeTimeFlow>["onFind"];
-  onAccept: React.ComponentProps<typeof SomeTimeFlow>["onAccept"];
-  onFeedback: React.ComponentProps<typeof SomeTimeFlow>["onFeedback"];
+  onFind: React.ComponentProps<typeof TimeSheet>["onFind"];
+  onAccept: React.ComponentProps<typeof TimeSheet>["onAccept"];
+  onFeedback: React.ComponentProps<typeof TimeSheet>["onFeedback"];
 };
 
 const SETTING_LABEL = { outdoors: "Mostly outdoors", indoors: "Indoors" } as const;
@@ -128,19 +129,21 @@ export function TodayView({
   const [statuses, setStatuses] = useState<Record<string, string>>(() =>
     Object.fromEntries(slots.filter((s) => s.item).map((s) => [s.item!.id, s.item!.status]))
   );
-  // Which "I've got some time" flow is open, and where it should start.
-  const [flow, setFlow] = useState<{ initial?: SomeTimeInitial; key: number } | null>(null);
-  const flowRef = useRef<HTMLDivElement>(null);
+  // The "I've got some time" sheet, when open: where it starts, and what is next in the member's day.
+  const [sheet, setSheet] = useState<{ initial?: TimeSheetInitial; commitment: Commitment | null; nowMin: number } | null>(null);
 
   const flowActions: FlowActions = { onFind: onFindTime, onAccept: onAcceptTime, onFeedback: onFeedbackTime };
 
-  const openFlow = (initial?: SomeTimeInitial) => {
-    setFlow((prev) => ({ initial, key: (prev?.key ?? 0) + 1 }));
-    // Bring it into view, gently — and not at all for anyone who prefers less motion.
-    requestAnimationFrame(() => {
-      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      flowRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
-    });
+  const openFlow = (initial?: TimeSheetInitial) => {
+    // Read the clock when it is opened (not during render), and look for something
+    // already planned later today: that lets the sheet offer "Until Tennis".
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    const commitment = nextCommitment(
+      slots.flatMap(({ item }) => (item ? [{ title: item.title, time: item.time, skipped: (statuses[item.id] ?? item.status) === "skipped" }] : [])),
+      nowMin
+    );
+    setSheet({ initial, commitment, nowMin });
   };
 
   const handleAction = (itemId: string, action: "accepted" | "skipped") => {
@@ -221,17 +224,16 @@ export function TodayView({
           </Button>
         </div>
 
-        {flow && (
-          <div ref={flowRef} className={`${styles.flow} ync-appear`}>
-            <Card padding="lg">
-              <SomeTimeFlow key={flow.key} initial={flow.initial} {...flowActions} />
-              <div className={styles.flowClose}>
-                <Button variant="quiet" size="sm" onClick={() => setFlow(null)}>
-                  Close
-                </Button>
-              </div>
-            </Card>
-          </div>
+        {sheet && (
+          <Sheet label="I've got some time" onClose={() => setSheet(null)}>
+            <TimeSheet
+              initial={sheet.initial}
+              commitment={sheet.commitment}
+              nowMin={sheet.nowMin}
+              onClose={() => setSheet(null)}
+              {...flowActions}
+            />
+          </Sheet>
         )}
       </section>
 

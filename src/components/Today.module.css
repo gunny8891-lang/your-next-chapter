@@ -154,15 +154,6 @@
   margin-top: var(--space-6);
 }
 
-.flow {
-  margin-top: var(--space-4);
-  scroll-margin-top: calc(var(--topbar-height) + var(--space-4));
-}
-
-.flowClose {
-  margin-top: var(--space-3);
-}
-
 /* ---- for you today -------------------------------------------------- */
 
 .heroBody {

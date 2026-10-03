@@ -158,3 +158,8 @@ button {
     scroll-behavior: auto !important;
   }
 }
+
+/* While a sheet is open the page behind it does not scroll. */
+html.ync-locked {
+  overflow: hidden;
+}

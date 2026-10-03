@@ -1,0 +1,106 @@
+/*
+ * A modal sheet: slides up from the bottom on a phone, a centred dialog from
+ * tablet width. Built on the native <dialog>, which traps focus, closes on
+ * Escape and makes everything behind it inert.
+ */
+
+.sheet {
+  position: fixed;
+  inset: auto 0 0 0;
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-ink);
+}
+
+.sheet::backdrop {
+  background: rgba(43, 47, 42, 0.45);
+  animation: ync-backdrop var(--duration-base) var(--ease-out) both;
+}
+
+.panel {
+  position: relative;
+  max-height: 92dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-3) var(--space-5) calc(var(--space-6) + env(safe-area-inset-bottom));
+  border-radius: 20px 20px 0 0;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sheet);
+  animation: ync-sheet-up var(--duration-base) var(--ease-out) both;
+}
+
+/* The little bar that says "this slides". Decorative. */
+.grab {
+  width: 40px;
+  height: 4px;
+  margin: 0 auto var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--color-line);
+}
+
+.close {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-ink-soft);
+  cursor: pointer;
+  transition: background var(--duration-quick) var(--ease-out);
+}
+
+.close:hover {
+  background: var(--color-sage-soft);
+  color: var(--color-ink);
+}
+
+@keyframes ync-sheet-up {
+  from {
+    transform: translateY(32px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes ync-backdrop {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (min-width: 768px) {
+  .sheet {
+    inset: 0;
+    width: min(580px, calc(100% - 48px));
+    height: fit-content;
+    max-height: calc(100dvh - 48px);
+    margin: auto;
+  }
+
+  .panel {
+    max-height: calc(100dvh - 48px);
+    padding: var(--space-8) var(--space-8) var(--space-8);
+    border-radius: 18px;
+  }
+
+  .grab {
+    display: none;
+  }
+}

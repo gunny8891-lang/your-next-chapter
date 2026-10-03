@@ -1,0 +1,243 @@
+/* "I've got some time": one question at a time. */
+
+.step {
+  animation: ync-fade-up var(--duration-base) var(--ease-out) both;
+}
+
+.heading {
+  margin: var(--space-2) var(--space-10) var(--space-1) 0;
+  font-size: 27px;
+  line-height: 1.2;
+  color: var(--color-ink);
+}
+
+.heading:focus {
+  outline: none;
+}
+
+.sub {
+  font-size: var(--text-small);
+  color: var(--color-ink-soft);
+}
+
+/* A quiet line that opens a refinement: "Starting now · Change". */
+.refine {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: var(--text-small);
+  color: var(--color-ink-soft);
+  cursor: pointer;
+}
+
+.refine strong {
+  font-weight: 600;
+  color: var(--color-sage);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+/* ---- how much time -------------------------------------------------- */
+
+.options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  min-height: 84px;
+  padding: var(--space-4);
+  border: 1.5px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--duration-quick) var(--ease-out),
+    background var(--duration-quick) var(--ease-out);
+}
+
+.option:hover {
+  border-color: var(--color-primary-soft);
+}
+
+/* What they chose last time, so the usual answer is easy to spot. */
+.optionRemembered {
+  border-color: var(--color-primary);
+  background: var(--color-sage-soft);
+}
+
+.optionLabel {
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.optionHint {
+  font-size: var(--text-small);
+  color: var(--color-ink-soft);
+}
+
+/* Something we worked out from their day, offered first and given the room it deserves. */
+.optionUntil {
+  grid-column: 1 / -1;
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+/* ---- what do you feel like ------------------------------------------ */
+
+.feelTop {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 44px;
+  padding: 0 var(--space-2) 0 0;
+  border: none;
+  background: none;
+  font-size: var(--text-small);
+  font-weight: 600;
+  color: var(--color-ink-soft);
+  cursor: pointer;
+}
+
+.feelBody {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+}
+
+.who {
+  margin-top: var(--space-1);
+}
+
+/* ---- results -------------------------------------------------------- */
+
+.results {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.windowLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-small);
+  color: var(--color-ink-soft);
+}
+
+.cardTitle {
+  margin-top: var(--space-2);
+  font-size: 22px;
+  color: var(--color-ink);
+}
+
+.cardMeta {
+  margin-top: var(--space-1);
+  font-size: var(--text-small);
+  color: var(--color-ink-soft);
+}
+
+.cardWhy {
+  margin-top: var(--space-3);
+  font-size: var(--text-body);
+  line-height: 1.55;
+}
+
+.cardPlan {
+  margin-top: var(--space-3);
+  font-size: var(--text-small);
+  color: var(--color-ink-soft);
+}
+
+.then {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-control);
+  background: var(--color-sage-soft);
+  font-size: var(--text-small);
+  line-height: 1.45;
+  color: var(--color-ink);
+}
+
+.then svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--color-sage);
+}
+
+.cardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.cardActions > * {
+  flex: 1 1 120px;
+}
+
+.reasons {
+  margin-top: var(--space-4);
+}
+
+.reasonsLabel {
+  margin-bottom: var(--space-2);
+  font-size: var(--text-small);
+  color: var(--color-ink-soft);
+}
+
+.added {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  font-weight: 600;
+  color: var(--color-sage);
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+}
+
+.footer > * {
+  flex: 1 1 160px;
+}
+
+@media (min-width: 768px) {
+  .heading {
+    font-size: 30px;
+  }
+}

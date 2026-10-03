@@ -6,3 +6,4 @@ export { EmptyState } from "@/components/ui/EmptyState";
 export { ErrorNote } from "@/components/ui/ErrorNote";
 export { WeatherLine } from "@/components/ui/WeatherLine";
 export { Cover, type CoverImage } from "@/components/ui/Cover";
+export { Sheet } from "@/components/ui/Sheet";
