@@ -61,6 +61,9 @@ export async function loadRepetitionHistory(supabase: SupabaseClient, memberId: 
       .select("activity_id")
       .eq("member_id", memberId)
       .eq("signal_type", "liked")
+      // A saved idea is a "liked" signal from explicit feedback. Saving is "I would like
+      // this, some time", not "I have done this", so it must not count as repetition.
+      .neq("source", "explicit_feedback")
       .gte("created_at", `${addDays(today, -ACTIVITY_MEMORY_DAYS)}T00:00:00Z`),
   ]);
 

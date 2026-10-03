@@ -1,5 +1,6 @@
 import { foodKindOf } from "@/lib/opportunities/kinds";
 import { humanReason } from "@/lib/someTime/copy";
+import { cleanTitle } from "@/lib/someTime/experience";
 import { MOOD_LABEL, type TimeRequest } from "@/lib/someTime/request";
 import type { Evaluated, FoodStop } from "@/lib/someTime/score";
 import { clockLabel, durationLabel, type TimeWindow } from "@/lib/someTime/window";
@@ -51,6 +52,11 @@ genuinely different ways to spend the time — never three similar things. Put t
 - Respect their mood, who they are with, and anything in their profile (mobility, diet, budget).
 - If fewer than ${MAX_OPTIONS} are genuinely good, return fewer rather than padding.
 
+How to name each outing: give it a short, plain "title" of three to eight words that sounds like a good plan for the \
+time ("A slow afternoon in Barnet", "A walk and a late lunch", "An hour with local history"). Use only places and \
+words from the candidate's own line; no exclamation marks. Only mention a meal or a drink in the title if you set \
+"with_food" to true for that candidate.
+
 How to write each "why": one or two warm sentences (under 45 words) in the second person, no exclamation marks. Say why it suits THEM \
 using the supplied reasons, profile and context, and mention one practical detail (for example when it closes, or that \
 it is a short walk). Do not state anything about a place that is not in its line below.
@@ -59,7 +65,7 @@ Food: a candidate may list "then nearby" — a café, pub, restaurant or tea roo
 "with_food" to true only for a candidate that lists one AND where finishing there makes sense for the time and mood; \
 otherwise false. Never set it true without a "then nearby" entry.
 
-Respond with ONLY valid JSON, no prose, no markdown fences: {"options": [{"id": "<id from candidates>", "why": "<text>", "with_food": true|false}]}`;
+Respond with ONLY valid JSON, no prose, no markdown fences: {"options": [{"id": "<id from candidates>", "title": "<outing title>", "why": "<text>", "with_food": true|false}]}`;
 
 function candidateLine({ evaluated: e, foodStop }: ShortlistEntry): string {
   const c = e.candidate;
@@ -102,7 +108,7 @@ export function buildUserPrompt(ctx: PromptContext, shortlist: ShortlistEntry[])
   return lines.filter((l): l is string => l !== null).join("\n");
 }
 
-export type Choice = { id: string; why: string; withFood: boolean };
+export type Choice = { id: string; why: string; withFood: boolean; /** A usable outing title, or null if none was given or it could not be trusted. */ title: string | null };
 
 /**
  * Reads the model's reply. Strict about what it keeps: only ids that were really
@@ -125,11 +131,16 @@ export function parseChoices(text: string, validIds: Set<string>, idsWithFood: S
   const choices: Choice[] = [];
   for (const raw of options) {
     if (typeof raw !== "object" || raw === null) continue;
-    const { id, why, with_food } = raw as { id?: unknown; why?: unknown; with_food?: unknown };
+    const { id, why, with_food, title } = raw as { id?: unknown; why?: unknown; with_food?: unknown; title?: unknown };
     if (typeof id !== "string" || !validIds.has(id) || seen.has(id)) continue;
     if (typeof why !== "string" || !why.trim()) continue;
     seen.add(id);
-    choices.push({ id, why: why.trim().slice(0, MAX_WHY_CHARS), withFood: with_food === true && idsWithFood.has(id) });
+    choices.push({
+      id,
+      why: why.trim().slice(0, MAX_WHY_CHARS),
+      withFood: with_food === true && idsWithFood.has(id),
+      title: cleanTitle(title),
+    });
     if (choices.length >= MAX_OPTIONS) break;
   }
   return choices;

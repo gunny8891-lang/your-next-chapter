@@ -15,10 +15,31 @@ export type FoodStopOption = {
   bookingUrl: string | null;
 };
 
+/** One stop in an outing: when, where, and a line about it. */
+export type PlanStop = {
+  /** "HH:MM" — when to be there (for an event, when it starts). */
+  time: string;
+  title: string;
+  /** The neighbourhood, when we know it. */
+  subtitle: string | null;
+  /** A short line: how long, when it closes, what it is. */
+  note: string | null;
+  kind: "place" | "food";
+  category: CategoryName;
+  /** A link for more information, kept secondary. */
+  url: string | null;
+};
+
+/** The travel between one stop and the next. */
+export type PlanLeg = { minutes: number; mode: "walk" };
+
 /** One recommended way to spend the time. Plain data, safe to send to the browser. */
 export type TimeOption = {
   id: string;
+  /** The place itself, as named. */
   title: string;
+  /** A name for the whole outing: "A walk, then coffee and cake in High Barnet". */
+  experienceTitle: string;
   category: CategoryName;
   address: string | null;
   priceEstimate: number | null;
@@ -42,6 +63,11 @@ export type TimeOption = {
   /** A one-off event actually on today, as opposed to a place or an ongoing thing. */
   happeningToday: boolean;
   foodStop: FoodStopOption | null;
+  /** Roughly what it costs per person, from what we know; null when we know nothing about price. */
+  estimatedCost: number | null;
+  /** The stops in order, and the travel between them (legs.length === stops.length - 1). */
+  stops: PlanStop[];
+  legs: PlanLeg[];
 };
 
 export type TimeResult = {

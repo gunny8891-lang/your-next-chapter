@@ -77,8 +77,8 @@ describe("parseChoices", () => {
   it("keeps real ids with a real explanation, and reads food only where it was offered", () => {
     const text = JSON.stringify({ options: [{ id: "a", why: "Nice.", with_food: true }, { id: "b", why: "Good.", with_food: true }] });
     expect(parseChoices(text, valid, withFood)).toEqual([
-      { id: "a", why: "Nice.", withFood: true },
-      { id: "b", why: "Good.", withFood: false }, // b has no food stop, so the model cannot add one
+      { id: "a", why: "Nice.", withFood: true, title: null },
+      { id: "b", why: "Good.", withFood: false, title: null }, // b has no food stop, so the model cannot add one
     ]);
   });
 

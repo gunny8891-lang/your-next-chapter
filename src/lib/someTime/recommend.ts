@@ -8,6 +8,7 @@ import { fetchRankedOpportunities, type OpportunityCandidate } from "@/lib/oppor
 import { foodKindOf, isFoodVenue } from "@/lib/opportunities/kinds";
 import { humanReason } from "@/lib/someTime/copy";
 import { settingOf } from "@/lib/someTime/format";
+import { buildPlan, estimateCost, fallbackExperienceTitle, titleFitsPlan } from "@/lib/someTime/experience";
 import { eventDate, weekStartFor } from "@/lib/opportunities/schedule";
 import { getDailyForecast, isStrongOutdoorWeather, type DayForecast } from "@/lib/nudges/weather";
 import { applyOpenTimeContext } from "@/lib/surprise/context";
@@ -99,13 +100,21 @@ function toFoodStopOption(stop: FoodStop): FoodStopOption {
   };
 }
 
-function toTimeOption(entry: ShortlistEntry, why: string, includeFood: boolean): TimeOption {
+function toTimeOption(entry: ShortlistEntry, why: string, includeFood: boolean, modelTitle: string | null = null): TimeOption {
   const { evaluated: e, foodStop } = entry;
   const c = e.candidate;
   const stop = includeFood ? foodStop : null;
+  const plan = buildPlan(e, stop);
+  // The model's name for the outing, if it is honest about the plan; otherwise one built from the facts.
+  const experienceTitle =
+    modelTitle && titleFitsPlan(modelTitle, stop !== null, isFoodVenue(c)) ? modelTitle : fallbackExperienceTitle(e, stop);
   return {
     id: c.id,
     title: c.title,
+    experienceTitle,
+    estimatedCost: estimateCost(e, stop),
+    stops: plan.stops,
+    legs: plan.legs,
     category: c.category as CategoryName,
     address: c.address,
     priceEstimate: c.price_estimate,
@@ -173,7 +182,7 @@ export async function buildRecommendations(inputs: RecommendInputs): Promise<{ o
     const reply = await inputs.ask(SYSTEM_PROMPT, buildUserPrompt(promptContext, shortlist));
     const choices = parseChoices(reply, new Set(byId.keys()), idsWithFood);
     if (choices.length > 0) {
-      return { options: choices.map((ch) => toTimeOption(byId.get(ch.id)!, ch.why, ch.withFood)), notice: null };
+      return { options: choices.map((ch) => toTimeOption(byId.get(ch.id)!, ch.why, ch.withFood, ch.title)), notice: null };
     }
     console.warn("some_time: the model's reply had no usable options; using the scored fallback");
   } catch (err) {

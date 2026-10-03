@@ -118,3 +118,25 @@ export async function feedbackTimeOptionAction(activityId: string, reason: strin
   });
   return { error: error?.message ?? null };
 }
+
+/**
+ * "Save" on an idea: "I would like this, not necessarily now". It is recorded as a
+ * positive signal (explicit feedback, so it is never mistaken for something the
+ * member has already done — see loadRepetitionHistory), which is what makes ideas
+ * like it come back. There is no saved list yet; the card says only what is true.
+ */
+export async function saveIdeaAction(activityId: string): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Please sign in again." };
+
+  const { error } = await supabase.from("preference_signals").insert({
+    member_id: user.id,
+    source: "explicit_feedback",
+    activity_id: activityId,
+    signal_type: "liked",
+  });
+  return { error: error?.message ?? null };
+}

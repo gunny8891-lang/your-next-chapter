@@ -67,6 +67,15 @@ export function friendlyDuration(minutes: number): string {
   return `${text} ${hours <= 1 ? "hour" : "hours"}`;
 }
 
+/** "Plan this morning" / "…afternoon" / "…evening", for the time the outing starts ("HH:MM"). */
+export function planLabelFor(startTime: string): string {
+  const minutes = clockToMinutes(startTime);
+  if (minutes === null) return "Plan this";
+  if (minutes < 12 * 60) return "Plan this morning";
+  if (minutes < 17 * 60) return "Plan this afternoon";
+  return "Plan this evening";
+}
+
 /** "Good morning" / "Good afternoon" / "Good evening" for a London hour (0-23). */
 export function greetingFor(hour: number): string {
   if (hour < 12) return "Good morning";

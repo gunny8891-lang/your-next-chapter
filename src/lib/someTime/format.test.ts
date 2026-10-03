@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { humanReason } from "@/lib/someTime/copy";
-import { cleanFirstName, clockToMinutes, doorToDoorMinutes, friendlyDuration, greetingFor, placeLabel, priceBand, settingOf } from "@/lib/someTime/format";
+import { cleanFirstName, clockToMinutes, doorToDoorMinutes, friendlyDuration, greetingFor, placeLabel, planLabelFor, priceBand, settingOf } from "@/lib/someTime/format";
 
 describe("priceBand", () => {
   it("shows a band, not a false precision", () => {
@@ -133,5 +133,19 @@ describe("friendlyDuration", () => {
   it("never says nought hours", () => {
     expect(friendlyDuration(51)).toBe("1 hour");
     expect(friendlyDuration(55)).toBe("1 hour");
+  });
+});
+
+describe("planLabelFor", () => {
+  it("names the part of the day the outing starts in", () => {
+    expect(planLabelFor("09:30")).toBe("Plan this morning");
+    expect(planLabelFor("11:59")).toBe("Plan this morning");
+    expect(planLabelFor("12:00")).toBe("Plan this afternoon");
+    expect(planLabelFor("16:59")).toBe("Plan this afternoon");
+    expect(planLabelFor("17:00")).toBe("Plan this evening");
+  });
+
+  it("says just 'Plan this' if the time is not a clock time", () => {
+    expect(planLabelFor("Afternoon")).toBe("Plan this");
   });
 });

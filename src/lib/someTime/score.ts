@@ -62,6 +62,8 @@ export type Evaluated = {
   homeMin: number;
   /** Closing time in minutes after midnight, when known. */
   openUntil: number | null;
+  /** For a one-off event, when it actually starts (minutes after midnight); null for anything else. */
+  eventStartMin: number | null;
   /** Short factual lines for the card. */
   facts: string[];
   /** Why it scored well — the truthful basis for the explanation. */
@@ -240,9 +242,11 @@ export function evaluateCandidate(c: OpportunityCandidate, input: ScoringInput):
   // --- when would it happen? ---
   let arriveMin: number;
   let endMin: number;
+  let eventStartMin: number | null = null;
   if (event) {
     if (event.date !== window.date) return null;
     const startsAt = new Date(c.date_time!).getUTCHours() * 60 + new Date(c.date_time!).getUTCMinutes();
+    eventStartMin = startsAt;
     // They must be able to get there from the start of their free time.
     if (window.startMin + travel.minutes > startsAt) return null;
     arriveMin = startsAt - Math.min(EVENT_EARLY_ARRIVAL_MIN, startsAt - (window.startMin + travel.minutes));
@@ -356,6 +360,7 @@ export function evaluateCandidate(c: OpportunityCandidate, input: ScoringInput):
     endMin,
     homeMin,
     openUntil,
+    eventStartMin,
     facts,
     reasons,
   };
