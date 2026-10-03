@@ -6,6 +6,8 @@ import { AI_MODELS } from "@/lib/ai/models";
 import { summarizeAffinity, type AffinityScores } from "@/lib/memory/scoring";
 import { fetchRankedOpportunities, type OpportunityCandidate } from "@/lib/opportunities/engine";
 import { foodKindOf, isFoodVenue } from "@/lib/opportunities/kinds";
+import { humanReason } from "@/lib/someTime/copy";
+import { settingOf } from "@/lib/someTime/format";
 import { eventDate, weekStartFor } from "@/lib/opportunities/schedule";
 import { getDailyForecast, isStrongOutdoorWeather, type DayForecast } from "@/lib/nudges/weather";
 import { applyOpenTimeContext } from "@/lib/surprise/context";
@@ -60,7 +62,8 @@ export type RecommendInputs = {
   history: RepetitionHistory;
   profile: PromptContext["profile"];
   aspirations: string[];
-  ask: Ask;
+  /** null = no model: use the scored fallback directly (instant, free — for the Today hero). */
+  ask: Ask | null;
 };
 
 /**
@@ -108,6 +111,8 @@ function toTimeOption(entry: ShortlistEntry, why: string, includeFood: boolean):
     priceEstimate: c.price_estimate,
     bookingUrl: c.booking_url,
     why,
+    reason: humanReason(e.reasons),
+    setting: settingOf(c.tags),
     facts: e.facts,
     leaveBy: clockLabel(e.leaveMin),
     arriveBy: clockLabel(e.arriveMin),
@@ -164,7 +169,7 @@ export async function buildRecommendations(inputs: RecommendInputs): Promise<{ o
     affinitySummary: summarizeAffinity(affinity),
   };
 
-  try {
+  if (inputs.ask) try {
     const reply = await inputs.ask(SYSTEM_PROMPT, buildUserPrompt(promptContext, shortlist));
     const choices = parseChoices(reply, new Set(byId.keys()), idsWithFood);
     if (choices.length > 0) {
@@ -222,7 +227,7 @@ export async function getTimeOptions(
   memberId: string,
   request: TimeRequest,
   now: Date = new Date(),
-  ask: Ask = defaultAsk(supabase, memberId)
+  ask: Ask | null = defaultAsk(supabase, memberId)
 ): Promise<TimeResult> {
   const resolved = resolveWindow(request, now);
   if (!resolved.ok) return { error: null, notice: resolved.reason, options: [], windowLabel: null };
@@ -305,4 +310,23 @@ export async function getTimeOptions(
   });
 
   return { error: null, notice, options, windowLabel: weekdayDateLabel(window) };
+}
+
+/**
+ * The single best idea for the rest of today, for the top of the Today screen.
+ *
+ * It runs the same scoring and filtering as "I've got some time" but never calls
+ * the model: Today has to load instantly and cost nothing every time it is
+ * opened, so the explanation comes from facts we already hold. Null when nothing
+ * fits (late in the evening, or nothing nearby).
+ */
+export async function getFeaturedOption(supabase: SupabaseClient, memberId: string, now: Date = new Date()): Promise<TimeOption | null> {
+  const result = await getTimeOptions(
+    supabase,
+    memberId,
+    { start: "now", duration: "half_day", who: "just_me", mood: null, exclude: [] },
+    now,
+    null
+  );
+  return result.options[0] ?? null;
 }

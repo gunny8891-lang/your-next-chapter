@@ -45,7 +45,7 @@ const cafeNear = (main: OpportunityCandidate, overrides: Partial<OpportunityCand
     ...overrides,
   });
 
-const inputs = (candidates: OpportunityCandidate[], ask: Ask, overrides: Partial<RecommendInputs> = {}): RecommendInputs => ({
+const inputs = (candidates: OpportunityCandidate[], ask: Ask | null, overrides: Partial<RecommendInputs> = {}): RecommendInputs => ({
   request: { start: "now", duration: "1-2h", who: "just_me", mood: null, exclude: [] },
   window: WINDOW,
   candidates,
@@ -151,7 +151,7 @@ describe("prompt", () => {
       pleasantWeather: false,
     })!;
     const why = fallbackWhy(e);
-    expect(why).toMatch(/^It supports a goal you set\. It is /);
+    expect(why).toMatch(/^It supports your goal of staying active\. It is /);
     expect(why).toMatch(/takes about 45 min\.$/);
   });
 });
@@ -310,5 +310,35 @@ describe("what is and is not offered as 'some time right now'", () => {
     await buildRecommendations(inputs([place({ title: "A" })], async () => '{"options": [{"id": "x", "why": "cut off mid-'));
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("fallback"));
     warn.mockRestore();
+  });
+});
+
+describe("without a model (the Today hero)", () => {
+  it("builds options from the scoring alone, and never calls a model", async () => {
+    const a = place({ title: "A", category: "Move", tags: ["walking"] });
+    const b = place({ title: "B", category: "Explore", tags: ["museum"] });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { options } = await buildRecommendations(inputs([a, b], null));
+    expect(options.length).toBe(2);
+    for (const o of options) expect(o.why).toMatch(/takes about 45 min\.$/);
+    // Choosing not to use a model is not a failure, so nothing is logged as one.
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it("gives each option a short natural reason and an indoor or outdoor setting", async () => {
+    const park = place({ title: "Park", category: "Move", tags: ["walking", "outdoors"] });
+    const museum = place({ title: "Museum", category: "Explore", tags: ["museum"] });
+    const base = inputs([park, museum], null);
+    const { options } = await buildRecommendations({
+      ...base,
+      pleasantWeather: true,
+      member: { ...base.member, goals: ["fitness"] },
+    });
+    const byTitle = Object.fromEntries(options.map((o) => [o.title, o]));
+    expect(byTitle.Park.setting).toBe("outdoors");
+    expect(byTitle.Park.reason).toBe("It supports your goal of staying active, and it is perfect weather for it today.");
+    expect(byTitle.Museum.setting).toBe("indoors");
+    expect(byTitle.Museum.reason).toBe("");
   });
 });

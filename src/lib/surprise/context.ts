@@ -10,7 +10,7 @@ export function parseSlot(value: unknown): SlotName | null {
   return SLOTS.includes(value as SlotName) ? (value as SlotName) : null;
 }
 
-type ContextCandidate = { tags: string[]; date_time: string | null; expires_at: string | null };
+type ContextCandidate = { title?: string; tags: string[]; date_time: string | null; expires_at: string | null };
 
 export type OpenTimeContext = {
   when: SurpriseWhen;
@@ -25,6 +25,9 @@ export type OpenTimeContext = {
 
 // Tags that mean being outside. Wet weather rules these out; it never adds to them.
 const OUTDOOR_TAGS = ["outdoors", "walking", "nature", "gardens", "playground"];
+// Places that are for children. The "grandchildren" tag is too broad to tell these apart (it is also
+// on parks and gardens), so they are caught by what they are called.
+const KIDS_VENUE_NAME = /\b(soft play|toddlers?|kids|children.?s|playground|nursery)\b/i;
 const MAX_DATED_PROMOTED = 5;
 const MAX_FAMILY_PROMOTED = 5;
 
@@ -82,7 +85,7 @@ export function applyOpenTimeContext<T extends ContextCandidate>(
     if (event && ctx.slot && slotForHour(event.hour) !== ctx.slot) return false;
 
     if (allWet && a.tags.some((t) => OUTDOOR_TAGS.includes(t))) return false;
-    if (ctx.who !== "family" && a.tags.includes("playground")) return false;
+    if (ctx.who !== "family" && (a.tags.includes("playground") || KIDS_VENUE_NAME.test(a.title ?? ""))) return false;
     return true;
   });
 

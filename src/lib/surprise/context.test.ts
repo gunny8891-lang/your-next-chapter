@@ -174,3 +174,25 @@ describe("weather parsing", () => {
     expect(isWetDay({ precipitationProbabilityMax: 60 })).toBe(true);
   });
 });
+
+describe("applyOpenTimeContext — venues for children", () => {
+  const withTitle = (title: string, tags: string[]) => ({ id: title, title, tags, date_time: null, expires_at: null });
+  const softPlay = withTitle("Toddlers World Soft Play - Barnet", ["grandchildren"]);
+  const park = withTitle("Arkley Lane Pastures", ["walking", "outdoors", "grandchildren"]);
+
+  it("does not offer a soft play centre to someone going alone, with a partner or with friends", () => {
+    for (const who of ["just_me", "partner", "friends"] as const) {
+      const titles = applyOpenTimeContext([softPlay, park], ctx({ who })).candidates.map((c) => c.id);
+      expect(titles).toEqual(["Arkley Lane Pastures"]);
+    }
+  });
+
+  it("does offer it for a family outing", () => {
+    const titles = applyOpenTimeContext([softPlay, park], ctx({ who: "family" })).candidates.map((c) => c.id);
+    expect(titles).toContain("Toddlers World Soft Play - Barnet");
+  });
+
+  it("keeps a park that merely carries the grandchildren tag", () => {
+    expect(applyOpenTimeContext([park], ctx({ who: "just_me" })).candidates).toHaveLength(1);
+  });
+});

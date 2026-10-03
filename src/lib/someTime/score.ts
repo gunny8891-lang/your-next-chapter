@@ -86,6 +86,25 @@ const GOAL_CATEGORIES: Record<string, string[]> = {
 };
 
 const OUTDOOR_TAGS = ["outdoors", "walking", "nature", "gardens", "playground"];
+
+/** How a goal reads in a sentence. Goals typed freely on the Account page are used as written. */
+const GOAL_LABEL: Record<string, string> = {
+  fitness: "staying active",
+  learn_something_new: "learning something new",
+  meet_people: "meeting new people",
+  give_back: "giving back locally",
+};
+
+/** How a category reads in "you have enjoyed ___ lately". */
+const CATEGORY_PHRASE: Record<string, string> = {
+  Move: "active outings",
+  Connect: "time with other people",
+  Learn: "learning",
+  Explore: "exploring",
+  "Give Back": "giving back",
+  Wellness: "looking after yourself",
+  Joy: "simple pleasures",
+};
 const CULTURE_NAME = /\b(museum|gallery|theatre|theater|heritage|historic|history|exhibition|arts|cinema|concert|castle|stately)\b/i;
 /** An outdoor visit needs at least this much daylight left after arriving (or the whole visit, if shorter). */
 const DAYLIGHT_MIN_VISIT = 40;
@@ -263,16 +282,16 @@ export function evaluateCandidate(c: OpportunityCandidate, input: ScoringInput):
 
   const affinityScore = Math.max(-8, Math.min(12, scoreActivity(c, affinity)));
   score += affinityScore;
-  if ((affinity.categoryScores[c.category] ?? 0) >= 2) reasons.push(`you have enjoyed ${c.category.toLowerCase()} lately`);
+  if ((affinity.categoryScores[c.category] ?? 0) >= 2) reasons.push(`you have enjoyed ${CATEGORY_PHRASE[c.category] ?? c.category.toLowerCase()} lately`);
 
   const mood = moodBonus(request.mood, c);
   score += mood;
   if (mood >= 3 && request.mood) reasons.push(`it suits a ${request.mood === "culture" ? "cultural" : request.mood} mood`);
 
-  const goalHit = member.goals.some((g) => GOAL_CATEGORIES[g]?.includes(c.category));
+  const goalHit = member.goals.find((g) => GOAL_CATEGORIES[g]?.includes(c.category));
   if (goalHit) {
     score += 1.5;
-    reasons.push("it supports a goal you set");
+    reasons.push(`it supports your goal of ${GOAL_LABEL[goalHit] ?? goalHit}`);
   }
 
   const interestHits = member.interests.filter((i) => {

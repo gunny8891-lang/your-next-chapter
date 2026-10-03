@@ -219,7 +219,9 @@ describe("evaluateCandidate — what suits them", () => {
   it("explains itself honestly: reasons only for what is actually true", () => {
     const i = input({ member: member({ goals: ["fitness"], interests: ["swimming"] }), pleasantWeather: true });
     const e = evaluateCandidate(place({ category: "Move", tags: ["swimming", "outdoors"] }), i)!;
-    expect(e.reasons).toEqual(expect.arrayContaining(["it supports a goal you set", "it matches your interest in swimming", "the weather suits being outdoors"]));
+    expect(e.reasons).toEqual(
+      expect.arrayContaining(["it supports your goal of staying active", "it matches your interest in swimming", "the weather suits being outdoors"])
+    );
     const plain = evaluateCandidate(place({ category: "Learn" }), input())!;
     expect(plain.reasons).toEqual([]);
   });
@@ -500,5 +502,27 @@ describe("daylight needs time to enjoy it", () => {
   it("offers it when there is enough light for a proper walk", () => {
     const window: TimeWindow = { date: "2026-10-02", startMin: 17 * 60, endMin: 20 * 60, availableMinutes: 180, minUsefulMinutes: 90 };
     expect(evaluateCandidate(park(), input({ window, daylight: dusk }))).not.toBeNull();
+  });
+});
+
+describe("reasons read like a person would say them", () => {
+  it("names the actual goal, using plain words for the usual ones", () => {
+    const reasonFor = (goal: string) =>
+      evaluateCandidate(place({ category: goal === "give_back" ? "Give Back" : "Move" }), input({ member: member({ goals: [goal] }) }))!.reasons;
+    expect(reasonFor("fitness")).toContain("it supports your goal of staying active");
+    expect(reasonFor("give_back")).toContain("it supports your goal of giving back locally");
+  });
+
+  it("names the goal that matches, even when the member has also typed one of their own", () => {
+    const e = evaluateCandidate(place({ category: "Move" }), input({ member: member({ goals: ["fitness", "walk the coast path"] }) }))!;
+    expect(e.reasons).toContain("it supports your goal of staying active");
+  });
+
+  it("describes a liked category in everyday words rather than by its internal name", () => {
+    const liked: AffinityScores = { ...NO_AFFINITY, categoryScores: { Move: 3, Learn: 3 } };
+    const move = evaluateCandidate(place({ category: "Move" }), input({ affinity: liked }))!;
+    const learn = evaluateCandidate(place({ category: "Learn" }), input({ affinity: liked }))!;
+    expect(move.reasons).toContain("you have enjoyed active outings lately");
+    expect(learn.reasons).toContain("you have enjoyed learning lately");
   });
 });

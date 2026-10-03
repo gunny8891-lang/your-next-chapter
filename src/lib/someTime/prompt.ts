@@ -1,4 +1,5 @@
 import { foodKindOf } from "@/lib/opportunities/kinds";
+import { humanReason } from "@/lib/someTime/copy";
 import { MOOD_LABEL, type TimeRequest } from "@/lib/someTime/request";
 import type { Evaluated, FoodStop } from "@/lib/someTime/score";
 import { clockLabel, durationLabel, type TimeWindow } from "@/lib/someTime/window";
@@ -136,8 +137,8 @@ export function parseChoices(text: string, validIds: Set<string>, idsWithFood: S
 
 /** An honest explanation built only from facts we hold, for when the model is unavailable. */
 export function fallbackWhy(e: Evaluated): string {
-  const reasons = e.reasons.slice(0, 2);
-  const lead = reasons.length ? `${reasons.join(" and ").replace(/^./, (c) => c.toUpperCase())}. ` : "";
+  const reason = humanReason(e.reasons);
+  const lead = reason ? `${reason} ` : "";
   const away = e.travelMode === "walk" ? `a ${e.travelMinutes}-minute walk` : `about ${e.travelMinutes} minutes away`;
   return `${lead}It is ${away} and takes about ${durationLabel(e.durationMinutes)}.`;
 }

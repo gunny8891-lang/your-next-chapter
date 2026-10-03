@@ -25,6 +25,10 @@ export type TimeOption = {
   bookingUrl: string | null;
   /** The explanation shown to the member. */
   why: string;
+  /** Just the personal reason in a natural sentence (empty if there is none), for cards that carry the practicalities separately. */
+  reason: string;
+  /** Whether it is mostly outdoors or indoors, when we can tell. */
+  setting: "outdoors" | "indoors" | null;
   /** Short checkable lines: travel, length, price, opening time. */
   facts: string[];
   /** "HH:MM" */
