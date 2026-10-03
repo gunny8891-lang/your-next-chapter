@@ -70,7 +70,7 @@ export function ExperienceCard({ option, reason, variant, state, error, onPlan, 
 
   return (
     <Card padding="none" className={`ync-appear ${variant === "hero" ? styles.hero : ""}`}>
-      <Cover category={option.category} ratio={variant === "hero" ? "wide" : "banner"} />
+      <Cover category={option.category} image={option.image} ratio={variant === "hero" ? "wide" : "banner"} />
       <div className={styles.body}>
         {option.happeningToday && <p className={styles.onToday}>On today</p>}
         <h3 className={styles.title}>{option.experienceTitle}</h3>

@@ -5,6 +5,7 @@ import { updateItineraryItemAction } from "@/app/week/actions";
 import { getTimeOptionsAction, acceptTimeOptionAction, feedbackTimeOptionAction, saveIdeaAction } from "@/app/today/timeActions";
 import { getTodayWeather, weatherCoordinates } from "@/lib/nudges/weather";
 import { formatCost, formatTime } from "@/lib/itinerary/format";
+import { scheduleImageLookups } from "@/lib/someTime/imageLookups";
 import { getFeaturedOption } from "@/lib/someTime/recommend";
 import { cleanFirstName, greetingFor } from "@/lib/someTime/format";
 import { londonClock } from "@/lib/someTime/window";
@@ -87,6 +88,8 @@ export default async function TodayPage() {
       return null;
     }),
   ]);
+
+  if (featured) scheduleImageLookups([featured]);
 
   const slots: TodaySlot[] = SLOT_ORDER.map((slot) => ({ slot, item: itemBySlot[slot] ?? null }));
 

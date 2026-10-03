@@ -3,7 +3,7 @@ import { CATEGORY, type CategoryName } from "@/lib/categories";
 import { CATEGORY_COLOR } from "@/lib/theme";
 import styles from "@/components/ui/Cover.module.css";
 
-export type CoverImage = { src: string; alt: string; credit?: string };
+export type CoverImage = { src: string; alt: string; credit?: string; /** Where the author and licence are recorded: the credit links to it. */ sourceUrl?: string };
 
 type CoverProps = {
   category: CategoryName;
@@ -26,7 +26,14 @@ export function Cover({ category, image, ratio = "wide" }: CoverProps) {
       {image ? (
         <>
           <Image src={image.src} alt={image.alt} fill sizes="(min-width: 768px) 640px, 100vw" className={styles.image} />
-          {image.credit && <span className={styles.credit}>{image.credit}</span>}
+          {image.credit &&
+            (image.sourceUrl ? (
+              <a className={styles.credit} href={image.sourceUrl} target="_blank" rel="noopener noreferrer" aria-label={`${image.credit} (opens Wikimedia Commons)`}>
+                {image.credit}
+              </a>
+            ) : (
+              <span className={styles.credit}>{image.credit}</span>
+            ))}
         </>
       ) : (
         <div className={styles.fallback} aria-hidden="true">

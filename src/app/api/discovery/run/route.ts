@@ -3,6 +3,7 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { runDiscoveryAgent } from "@/lib/discovery/run";
 import { searchRegionsThrottled } from "@/lib/discovery/regional";
 import { ensureOpenStreetMapPlacesForRegions } from "@/lib/discovery/osmPlaces";
+import { enrichDueImages } from "@/lib/imagery/store";
 import { createTicketmasterSource, RICHMOND_AREA } from "@/lib/discovery/sources/ticketmaster";
 import { memberAreas } from "@/lib/discovery/areas";
 import { createClaudeWebSource } from "@/lib/discovery/sources/claudeWeb";
@@ -15,6 +16,9 @@ const MAX_REGIONAL_SEARCHES_PER_RUN = 1;
 // The free place layer is quick (about 20 requests a region); this just stops a
 // long backlog of new regions turning into one very long run.
 const MAX_PLACE_FETCHES_PER_RUN = 2;
+// Photographs are looked for a few places a night (two quick requests each, spaced out),
+// newest places first, so the catalogue fills in over time without a long run.
+const MAX_IMAGE_LOOKUPS_PER_RUN = 12;
 
 // Triggered by Vercel Cron (see vercel.json) once deployed, or manually via
 // curl with the same bearer token in the meantime. `?force=1` searches a due-
@@ -61,16 +65,20 @@ export async function GET(request: Request) {
   let regionalError: string | null = null;
   // The free place layer runs alongside the paid search rather than after it,
   // since the search alone can take most of the function's time limit.
-  const [regionalSettled, places] = await Promise.all([
+  const [regionalSettled, places, images] = await Promise.all([
     searchRegionsThrottled(admin, regions, { maxSearches: MAX_REGIONAL_SEARCHES_PER_RUN, force }).then(
       (summary) => ({ summary, error: null as string | null }),
       // Fails closed — if the throttle can't be consulted, nothing is searched.
       (err: unknown) => ({ summary: null, error: err instanceof Error ? err.message : "Regional search failed" })
     ),
     ensureOpenStreetMapPlacesForRegions(admin, regions, { maxFetches: MAX_PLACE_FETCHES_PER_RUN }),
+    // A bonus: it never fails the run.
+    enrichDueImages(admin, MAX_IMAGE_LOOKUPS_PER_RUN, { budgetMs: 30_000 }).catch((err: unknown) => ({
+      error: err instanceof Error ? err.message : "Image lookups failed",
+    })),
   ]);
   regional = regionalSettled.summary;
   regionalError = regionalSettled.error;
 
-  return NextResponse.json({ results, regional, regionalError, places, ticketmasterSkipped });
+  return NextResponse.json({ results, regional, regionalError, places, images, ticketmasterSkipped });
 }

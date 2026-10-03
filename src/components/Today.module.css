@@ -154,6 +154,24 @@
   margin-top: var(--space-6);
 }
 
+/* ---- credits -------------------------------------------------------- */
+
+.credits {
+  margin-top: var(--space-10);
+  padding-bottom: var(--space-4);
+  font-size: var(--text-small);
+  line-height: 1.5;
+  color: var(--color-ink-soft);
+}
+
+.credits a {
+  display: inline-block;
+  padding: var(--space-2) 0;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 /* ---- wider screens -------------------------------------------------- */
 
 @media (min-width: 768px) {

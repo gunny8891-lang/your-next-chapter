@@ -214,6 +214,19 @@ export function TodayView({
           <FeaturedIdea option={featured} flow={flowActions} />
         </section>
       )}
+
+      {/* Place data is OpenStreetMap's, under a licence that asks for this credit; photographs carry their own. */}
+      <p className={styles.credits}>
+        Places from{" "}
+        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">
+          OpenStreetMap contributors
+        </a>
+        . Photographs from{" "}
+        <a href="https://commons.wikimedia.org" target="_blank" rel="noopener noreferrer">
+          Wikimedia Commons
+        </a>
+        .
+      </p>
     </div>
   );
 }

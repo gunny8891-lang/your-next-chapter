@@ -41,15 +41,30 @@
 
 .image {
   object-fit: cover;
+  /* Signs, rooflines and skies sit in the upper part of a photograph of a place. */
+  object-position: center 40%;
 }
 
+/* Over any photograph, so the backing is dark enough for white text on a bright sky. */
 .credit {
   position: absolute;
   right: var(--space-2);
   bottom: var(--space-2);
-  padding: 2px var(--space-2);
+  display: inline-flex;
+  align-items: center;
+  max-width: calc(100% - var(--space-4));
+  min-height: 28px;
+  padding: 0 var(--space-2);
   border-radius: 6px;
-  background: rgba(43, 47, 42, 0.55);
+  background: rgba(43, 47, 42, 0.78);
   color: #fff;
-  font-size: 11px;
+  font-size: 12px;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+a.credit:hover {
+  text-decoration: underline;
 }

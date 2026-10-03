@@ -1,4 +1,5 @@
 import type { CategoryName } from "@/lib/categories";
+import type { PlaceImage } from "@/lib/imagery/types";
 
 /** A café, pub, restaurant or tea room to finish at. */
 export type FoodStopOption = {
@@ -68,6 +69,8 @@ export type TimeOption = {
   /** The stops in order, and the travel between them (legs.length === stops.length - 1). */
   stops: PlanStop[];
   legs: PlanLeg[];
+  /** A photograph of the place (or the place to eat that ends the outing), when we have one. */
+  image: PlaceImage | null;
 };
 
 export type TimeResult = {

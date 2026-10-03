@@ -6,6 +6,7 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { eventDate } from "@/lib/opportunities/schedule";
 import { isFoodVenue } from "@/lib/opportunities/kinds";
 import { placeOpenTimeChoice } from "@/lib/surprise/placeInSlot";
+import { scheduleImageLookups } from "@/lib/someTime/imageLookups";
 import { getTimeOptions } from "@/lib/someTime/recommend";
 import { parseTimeRequest } from "@/lib/someTime/request";
 import { slotsForWindow } from "@/lib/someTime/slots";
@@ -24,7 +25,9 @@ export async function getTimeOptionsAction(raw: unknown): Promise<TimeResult> {
   if (!request) return { error: "That didn't look right — please try again.", notice: null, options: [], windowLabel: null };
 
   try {
-    return await getTimeOptions(supabase, user.id, request);
+    const result = await getTimeOptions(supabase, user.id, request);
+    scheduleImageLookups(result.options);
+    return result;
   } catch (err) {
     return {
       error: err instanceof Error ? err.message : "Couldn't find suggestions right now.",

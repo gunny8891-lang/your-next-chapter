@@ -22,6 +22,7 @@ import {
   type PromptContext,
   type ShortlistEntry,
 } from "@/lib/someTime/prompt";
+import { attachImages } from "@/lib/someTime/images";
 import type { TimeRequest } from "@/lib/someTime/request";
 import {
   diversify,
@@ -131,6 +132,7 @@ function toTimeOption(entry: ShortlistEntry, why: string, includeFood: boolean, 
     isFood: isFoodVenue(c),
     happeningToday: eventDate(c) !== null,
     foodStop: stop ? toFoodStopOption(stop) : null,
+    image: null, // attached afterwards, from a separate read (see attachImages)
   };
 }
 
@@ -318,7 +320,7 @@ export async function getTimeOptions(
     ask,
   });
 
-  return { error: null, notice, options, windowLabel: weekdayDateLabel(window) };
+  return { error: null, notice, options: await attachImages(supabase, options), windowLabel: weekdayDateLabel(window) };
 }
 
 /**
