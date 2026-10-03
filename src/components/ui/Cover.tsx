@@ -8,8 +8,8 @@ export type CoverImage = { src: string; alt: string; credit?: string };
 type CoverProps = {
   category: CategoryName;
   image?: CoverImage | null;
-  /** wide (16:9) for a hero, card (4:3) for a list. */
-  ratio?: "wide" | "card";
+  /** wide (16:9) for a hero, card (4:3) for a grid, banner (2.4:1) for a list in a narrow space. */
+  ratio?: "wide" | "card" | "banner";
 };
 
 /**
@@ -22,7 +22,7 @@ export function Cover({ category, image, ratio = "wide" }: CoverProps) {
   const colour = CATEGORY_COLOR[category] ?? CATEGORY_COLOR.Joy;
 
   return (
-    <div className={`${styles.cover} ${ratio === "wide" ? styles.wide : styles.card}`} style={{ ["--cover-color" as string]: colour }}>
+    <div className={`${styles.cover} ${styles[ratio]}`} style={{ ["--cover-color" as string]: colour }}>
       {image ? (
         <>
           <Image src={image.src} alt={image.alt} fill sizes="(min-width: 768px) 640px, 100vw" className={styles.image} />

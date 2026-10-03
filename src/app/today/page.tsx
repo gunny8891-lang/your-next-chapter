@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { TodayView, type TodaySlot } from "@/components/TodayView";
 import { updateItineraryItemAction } from "@/app/week/actions";
-import { getTimeOptionsAction, acceptTimeOptionAction, feedbackTimeOptionAction } from "@/app/today/timeActions";
+import { getTimeOptionsAction, acceptTimeOptionAction, feedbackTimeOptionAction, saveIdeaAction } from "@/app/today/timeActions";
 import { getTodayWeather, weatherCoordinates } from "@/lib/nudges/weather";
 import { formatCost, formatTime } from "@/lib/itinerary/format";
 import { getFeaturedOption } from "@/lib/someTime/recommend";
@@ -102,6 +102,7 @@ export default async function TodayPage() {
       onFindTime={getTimeOptionsAction}
       onAcceptTime={acceptTimeOptionAction}
       onFeedbackTime={feedbackTimeOptionAction}
+      onSaveTime={saveIdeaAction}
     />
   );
 }

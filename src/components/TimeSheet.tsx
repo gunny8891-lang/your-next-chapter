@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Check, ChevronLeft, Clock, Coffee } from "lucide-react";
+import { ChevronLeft, Clock } from "lucide-react";
 import { Button, Card, Chip, ErrorNote, Skeleton } from "@/components/ui";
-import { Pill } from "@/components/Pill";
-import { CATEGORY_COLOR, T } from "@/lib/theme";
+import { ExperienceCard, type FeedbackReason } from "@/components/ExperienceCard";
 import {
   availableStarts,
   DURATION_OPTIONS,
@@ -19,15 +18,6 @@ import type { DurationChoice, Mood, StartChoice } from "@/lib/someTime/request";
 import type { SurpriseWho } from "@/lib/surprise/context";
 import type { TimeOption, TimeResult } from "@/lib/someTime/types";
 import styles from "@/components/TimeSheet.module.css";
-
-type Reason = "not_my_thing" | "too_far" | "too_expensive" | "seen_it";
-
-const REASONS: { value: Reason; label: string }[] = [
-  { value: "not_my_thing", label: "Not my thing" },
-  { value: "too_far", label: "Too far" },
-  { value: "too_expensive", label: "Too expensive" },
-  { value: "seen_it", label: "Been there" },
-];
 
 export type TimeSheetInitial = { start?: StartChoice; duration?: DurationChoice };
 
@@ -52,7 +42,8 @@ type Props = {
     choice: { start: StartChoice; duration: DurationChoice; untilMin?: number | null },
     foodStopId?: string
   ) => Promise<{ error: string | null }>;
-  onFeedback: (activityId: string, reason: Reason) => Promise<{ error: string | null }>;
+  onFeedback: (activityId: string, reason: FeedbackReason) => Promise<{ error: string | null }>;
+  onSave: (activityId: string) => Promise<{ error: string | null }>;
   onClose: () => void;
 };
 
@@ -84,7 +75,7 @@ function writeSaved(saved: Saved) {
 const isDuration = (v: unknown): v is DurationChoice => DURATION_OPTIONS.some((d) => d.value === v);
 const isWho = (v: unknown): v is SurpriseWho => WHO_OPTIONS.some((w) => w.value === v);
 
-export function TimeSheet({ initial, commitment, nowMin, onFind, onAccept, onFeedback, onClose }: Props) {
+export function TimeSheet({ initial, commitment, nowMin, onFind, onAccept, onFeedback, onSave, onClose }: Props) {
   const [saved] = useState(readSaved);
   const [step, setStep] = useState<"time" | "feel" | "results">("time");
   const [start, setStart] = useState<StartChoice>(initial?.start ?? "now");
@@ -98,7 +89,6 @@ export function TimeSheet({ initial, commitment, nowMin, onFind, onAccept, onFee
   const [result, setResult] = useState<TimeResult | null>(null);
   const [shown, setShown] = useState<string[]>([]);
   const [acceptedId, setAcceptedId] = useState<string | null>(null);
-  const [feedbackFor, setFeedbackFor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -121,7 +111,6 @@ export function TimeSheet({ initial, commitment, nowMin, onFind, onAccept, onFee
 
   const run = (chosenMood: Mood | null, exclude: string[]) => {
     setError(null);
-    setFeedbackFor(null);
     setAcceptedId(null);
     setMood(chosenMood);
     setResult(null);
@@ -150,9 +139,8 @@ export function TimeSheet({ initial, commitment, nowMin, onFind, onAccept, onFee
     });
   };
 
-  const giveFeedback = (option: TimeOption, reason: Reason) => {
+  const giveFeedback = (option: TimeOption, reason: FeedbackReason) => {
     void onFeedback(option.id, reason);
-    setFeedbackFor(null);
     setResult((r) => (r ? { ...r, options: r.options.filter((o) => o.id !== option.id) } : r));
   };
 
@@ -278,61 +266,17 @@ export function TimeSheet({ initial, commitment, nowMin, onFind, onAccept, onFee
         {result && result.notice && result.options.length === 0 && <p>{result.notice}</p>}
 
         {result?.options.map((option) => (
-          <Card key={option.id} className="ync-appear">
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <Pill color={CATEGORY_COLOR[option.category] ?? CATEGORY_COLOR.Joy}>{option.isFood ? "Food & drink" : option.category}</Pill>
-              {option.happeningToday && <Pill color={T.accent}>On today</Pill>}
-            </div>
-            <h3 className={styles.cardTitle}>{option.title}</h3>
-            <p className={styles.cardMeta}>{option.facts.join(" · ")}</p>
-            <p className={styles.cardWhy}>{option.why}</p>
-            <p className={styles.cardPlan}>
-              Leave {option.leaveBy} · there by {option.arriveBy} · home about {option.homeBy}
-            </p>
-            {option.foodStop && (
-              <p className={styles.then}>
-                <Coffee size={16} strokeWidth={1.75} aria-hidden="true" />
-                <span>
-                  Then {option.foodStop.meal} at <strong>{option.foodStop.title}</strong>, {option.foodStop.walkMinutes} min walk
-                  {option.foodStop.openUntil ? ` · open until ${option.foodStop.openUntil}` : ""}
-                </span>
-              </p>
-            )}
-
-            {acceptedId === option.id && !error ? (
-              <p className={styles.added}>
-                <Check size={18} strokeWidth={2.25} aria-hidden="true" /> {isPending ? "Adding to your day…" : "Added to your day"}
-              </p>
-            ) : feedbackFor === option.id ? (
-              <div className={styles.reasons}>
-                <p className={styles.reasonsLabel}>What was it about this one?</p>
-                <div className={styles.chips}>
-                  {REASONS.map((r) => (
-                    <Chip key={r.value} selected={false} onClick={() => giveFeedback(option, r.value)}>
-                      {r.label}
-                    </Chip>
-                  ))}
-                  <Button variant="quiet" size="sm" onClick={() => setFeedbackFor(null)}>
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className={styles.cardActions}>
-                <Button onClick={() => accept(option)} disabled={isPending}>
-                  I&apos;ll do this
-                </Button>
-                {option.bookingUrl && (
-                  <Button variant="secondary" href={option.bookingUrl} target="_blank" rel="noopener noreferrer">
-                    Details
-                  </Button>
-                )}
-                <Button variant="quiet" onClick={() => setFeedbackFor(option.id)} disabled={isPending}>
-                  Not for me
-                </Button>
-              </div>
-            )}
-          </Card>
+          <ExperienceCard
+            key={option.id}
+            option={option}
+            reason={option.why}
+            variant="result"
+            state={acceptedId === option.id && !error ? (isPending ? "planning" : "planned") : "idle"}
+            error={acceptedId === option.id || !acceptedId ? error : null}
+            onPlan={() => accept(option)}
+            onSave={() => onSave(option.id)}
+            onNotForMe={(reason) => giveFeedback(option, reason)}
+          />
         ))}
       </div>
 

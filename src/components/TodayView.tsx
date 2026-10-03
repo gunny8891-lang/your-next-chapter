@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ChevronRight, Coffee, Hourglass } from "lucide-react";
+import { Check, ChevronRight, Hourglass } from "lucide-react";
 import { CATEGORY_COLOR } from "@/lib/theme";
-import { Button, Card, Cover, Sheet, WeatherLine } from "@/components/ui";
+import { Button, Sheet, WeatherLine } from "@/components/ui";
+import { ExperienceCard, type FeedbackReason } from "@/components/ExperienceCard";
 import { TimeSheet, type TimeSheetInitial } from "@/components/TimeSheet";
 import { nextCommitment, type Commitment } from "@/lib/someTime/choices";
-import { doorToDoorMinutes, friendlyDuration, placeLabel, priceBand } from "@/lib/someTime/format";
+import { placeLabel } from "@/lib/someTime/format";
 import type { ItineraryItemView } from "@/lib/types";
 import type { TodayWeather } from "@/lib/nudges/weather";
 import type { TimeOption } from "@/lib/someTime/types";
@@ -27,24 +28,15 @@ type FlowActions = {
   onFind: React.ComponentProps<typeof TimeSheet>["onFind"];
   onAccept: React.ComponentProps<typeof TimeSheet>["onAccept"];
   onFeedback: React.ComponentProps<typeof TimeSheet>["onFeedback"];
+  onSave: React.ComponentProps<typeof TimeSheet>["onSave"];
 };
 
-const SETTING_LABEL = { outdoors: "Mostly outdoors", indoors: "Indoors" } as const;
-
-/** The best idea for the rest of the day: a cover, a title, the essentials, why, and one action. */
+/** The best idea for the rest of the day, as the same card the "I've got some time" sheet uses. */
 function FeaturedIdea({ option, flow }: { option: TimeOption; flow: FlowActions }) {
   const [state, setState] = useState<"idle" | "planning" | "planned" | "hidden">("idle");
   const [error, setError] = useState<string | null>(null);
 
   if (state === "hidden") return null;
-
-  const total = doorToDoorMinutes(option.leaveBy, option.homeBy);
-  const meta = [
-    placeLabel(option.address),
-    total ? friendlyDuration(total) : null,
-    priceBand(option.priceEstimate),
-    option.setting ? SETTING_LABEL[option.setting] : null,
-  ].filter((m): m is string => Boolean(m));
 
   const plan = async () => {
     setError(null);
@@ -59,47 +51,22 @@ function FeaturedIdea({ option, flow }: { option: TimeOption; flow: FlowActions 
     }
   };
 
-  const dismiss = () => {
-    void flow.onFeedback(option.id, "not_my_thing");
+  const notForMe = (reason: FeedbackReason) => {
+    void flow.onFeedback(option.id, reason);
     setState("hidden");
   };
 
   return (
-    <Card padding="none" className="ync-appear">
-      <Cover category={option.category} />
-      <div className={styles.heroBody}>
-        <h3 className={styles.heroTitle}>{option.title}</h3>
-        {meta.length > 0 && <p className={styles.heroMeta}>{meta.join(" · ")}</p>}
-        <p className={styles.heroReason}>{option.reason || option.why}</p>
-        {option.foodStop && (
-          <p className={styles.heroThen}>
-            <Coffee size={16} strokeWidth={1.75} aria-hidden="true" />
-            <span>
-              Then {option.foodStop.meal} at {option.foodStop.title}, {option.foodStop.walkMinutes} min walk
-            </span>
-          </p>
-        )}
-
-        <div className={styles.heroActions} aria-live="polite">
-          {state === "planned" ? (
-            <p className={styles.planned}>
-              <Check size={18} strokeWidth={2.25} aria-hidden="true" /> Added to your day
-            </p>
-          ) : (
-            <>
-              <Button variant="primary" loading={state === "planning"} onClick={plan}>
-                {state === "planning" ? "Planning…" : "Plan this"}
-                {state !== "planning" && <ChevronRight size={18} aria-hidden="true" />}
-              </Button>
-              <Button variant="quiet" size="sm" onClick={dismiss} disabled={state === "planning"}>
-                Not for me
-              </Button>
-            </>
-          )}
-        </div>
-        {error && <p style={{ marginTop: 12, fontSize: 15, color: "var(--color-error)" }}>{error}</p>}
-      </div>
-    </Card>
+    <ExperienceCard
+      option={option}
+      reason={option.reason || option.why}
+      variant="hero"
+      state={state}
+      error={error}
+      onPlan={plan}
+      onSave={() => flow.onSave(option.id)}
+      onNotForMe={notForMe}
+    />
   );
 }
 
@@ -114,6 +81,7 @@ export function TodayView({
   onFindTime,
   onAcceptTime,
   onFeedbackTime,
+  onSaveTime,
 }: {
   greeting: string;
   firstName: string;
@@ -125,6 +93,7 @@ export function TodayView({
   onFindTime: FlowActions["onFind"];
   onAcceptTime: FlowActions["onAccept"];
   onFeedbackTime: FlowActions["onFeedback"];
+  onSaveTime: FlowActions["onSave"];
 }) {
   const [statuses, setStatuses] = useState<Record<string, string>>(() =>
     Object.fromEntries(slots.filter((s) => s.item).map((s) => [s.item!.id, s.item!.status]))
@@ -132,7 +101,7 @@ export function TodayView({
   // The "I've got some time" sheet, when open: where it starts, and what is next in the member's day.
   const [sheet, setSheet] = useState<{ initial?: TimeSheetInitial; commitment: Commitment | null; nowMin: number } | null>(null);
 
-  const flowActions: FlowActions = { onFind: onFindTime, onAccept: onAcceptTime, onFeedback: onFeedbackTime };
+  const flowActions: FlowActions = { onFind: onFindTime, onAccept: onAcceptTime, onFeedback: onFeedbackTime, onSave: onSaveTime };
 
   const openFlow = (initial?: TimeSheetInitial) => {
     // Read the clock when it is opened (not during render), and look for something

@@ -154,62 +154,6 @@
   margin-top: var(--space-6);
 }
 
-/* ---- for you today -------------------------------------------------- */
-
-.heroBody {
-  padding: var(--space-5) var(--space-5) var(--space-6);
-}
-
-.heroTitle {
-  font-size: 28px;
-  line-height: 1.18;
-  color: var(--color-ink);
-}
-
-.heroMeta {
-  margin-top: var(--space-2);
-  font-size: var(--text-small);
-  color: var(--color-ink-soft);
-}
-
-.heroReason {
-  margin-top: var(--space-4);
-  font-size: var(--text-body);
-  line-height: 1.55;
-  color: var(--color-ink);
-}
-
-.heroThen {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
-  font-size: var(--text-small);
-  line-height: 1.45;
-  color: var(--color-sage);
-}
-
-.heroThen svg {
-  flex: none;
-  margin-top: 2px;
-}
-
-.heroActions {
-  display: grid;
-  gap: var(--space-2);
-  margin-top: var(--space-5);
-}
-
-.planned {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: 48px;
-  font-size: var(--text-body);
-  font-weight: 600;
-  color: var(--color-sage);
-}
-
 /* ---- wider screens -------------------------------------------------- */
 
 @media (min-width: 768px) {
@@ -219,19 +163,5 @@
 
   .greeting {
     font-size: 42px;
-  }
-
-  .heroBody {
-    padding: var(--space-6) var(--space-8) var(--space-8);
-  }
-
-  .heroTitle {
-    font-size: 32px;
-  }
-
-  .heroActions {
-    grid-template-columns: auto auto;
-    justify-content: start;
-    align-items: center;
   }
 }
