@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { AccountSettingsForm } from "@/components/AccountSettingsForm";
+import { cleanFirstName } from "@/lib/someTime/format";
 import { updateProfileAction, deleteAccountAction } from "@/app/account/actions";
 
 export default async function AccountPage({
@@ -31,6 +32,7 @@ export default async function AccountPage({
   return (
     <AccountSettingsForm
       email={user.email ?? ""}
+      firstName={cleanFirstName(user.user_metadata?.first_name)}
       profile={profile}
       subscription={subscription}
       saved={saved === "1"}

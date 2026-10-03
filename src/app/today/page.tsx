@@ -5,6 +5,9 @@ import { updateItineraryItemAction } from "@/app/week/actions";
 import { getTimeOptionsAction, acceptTimeOptionAction, feedbackTimeOptionAction } from "@/app/today/timeActions";
 import { getTodayWeather, weatherCoordinates } from "@/lib/nudges/weather";
 import { formatCost, formatTime } from "@/lib/itinerary/format";
+import { getFeaturedOption } from "@/lib/someTime/recommend";
+import { cleanFirstName, greetingFor } from "@/lib/someTime/format";
+import { londonClock } from "@/lib/someTime/window";
 import type { CategoryName } from "@/lib/categories";
 import type { ItineraryItemView } from "@/lib/types";
 
@@ -75,12 +78,23 @@ export default async function TodayPage() {
   // that onboarding/account settings geocode location) — the pilot coordinate
   // is only a fallback for a profile with no resolved location yet.
   const { latitude, longitude } = weatherCoordinates(profile);
-  const weather = await getTodayWeather(latitude, longitude);
+  // The weather and the featured idea are independent, so fetch them together. The
+  // idea is a bonus: if anything about it fails, Today simply shows without it.
+  const [weather, featured] = await Promise.all([
+    getTodayWeather(latitude, longitude),
+    getFeaturedOption(supabase, user.id).catch((err) => {
+      console.warn("today: could not build the featured idea:", err instanceof Error ? err.message : err);
+      return null;
+    }),
+  ]);
 
   const slots: TodaySlot[] = SLOT_ORDER.map((slot) => ({ slot, item: itemBySlot[slot] ?? null }));
 
   return (
     <TodayView
+      greeting={greetingFor(Math.floor(londonClock(new Date()).minutes / 60))}
+      firstName={cleanFirstName(user.user_metadata?.first_name)}
+      featured={featured}
       dateLabel={dateLabel}
       weather={weather}
       slots={slots}

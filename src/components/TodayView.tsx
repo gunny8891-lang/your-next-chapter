@@ -1,18 +1,21 @@
 "use client";
 
-import { useState } from "react";
-import { Check, X, Hourglass } from "lucide-react";
-import { T, CATEGORY_COLOR } from "@/lib/theme";
+import { useRef, useState } from "react";
+import { Check, ChevronRight, Coffee, Hourglass } from "lucide-react";
+import { CATEGORY_COLOR } from "@/lib/theme";
+import { Button, Card, Cover, WeatherLine } from "@/components/ui";
 import { SomeTimeFlow, type SomeTimeInitial } from "@/components/SomeTimeFlow";
+import { doorToDoorMinutes, friendlyDuration, placeLabel, priceBand } from "@/lib/someTime/format";
 import type { ItineraryItemView } from "@/lib/types";
 import type { TodayWeather } from "@/lib/nudges/weather";
-import type { TimeResult } from "@/lib/someTime/types";
+import type { TimeOption } from "@/lib/someTime/types";
+import styles from "@/components/Today.module.css";
 
 export type TodaySlot = { slot: string; item: ItineraryItemView | null };
 
 const SLOT_LABEL: Record<string, string> = { morning: "Morning", afternoon: "Afternoon", evening: "Evening" };
 
-/** Where "I've got some time" starts when it is opened from an empty part of the day. */
+/** Where "I've got some time" starts when it is opened from a free part of the day. */
 const SLOT_START: Record<string, SomeTimeInitial> = {
   morning: { start: "now", duration: "1-2h" },
   afternoon: { start: "afternoon", duration: "1-2h" },
@@ -25,180 +28,221 @@ type FlowActions = {
   onFeedback: React.ComponentProps<typeof SomeTimeFlow>["onFeedback"];
 };
 
-function weatherLine(weather: TodayWeather): string | null {
-  if (!weather) return null;
-  return `${Math.round(weather.temperatureMax)}°C today · ${weather.precipitationProbabilityMax}% chance of rain`;
-}
+const SETTING_LABEL = { outdoors: "Mostly outdoors", indoors: "Indoors" } as const;
 
-/** The headline entry point: always available, whatever is or isn't planned. */
-function GotSomeTime({ flow }: { flow: FlowActions }) {
-  const [open, setOpen] = useState(false);
+/** The best idea for the rest of the day: a cover, a title, the essentials, why, and one action. */
+function FeaturedIdea({ option, flow }: { option: TimeOption; flow: FlowActions }) {
+  const [state, setState] = useState<"idle" | "planning" | "planned" | "hidden">("idle");
+  const [error, setError] = useState<string | null>(null);
+
+  if (state === "hidden") return null;
+
+  const total = doorToDoorMinutes(option.leaveBy, option.homeBy);
+  const meta = [
+    placeLabel(option.address),
+    total ? friendlyDuration(total) : null,
+    priceBand(option.priceEstimate),
+    option.setting ? SETTING_LABEL[option.setting] : null,
+  ].filter((m): m is string => Boolean(m));
+
+  const plan = async () => {
+    setError(null);
+    setState("planning");
+    // The same window the idea was chosen for, so it lands in the right part of the day.
+    const result = await flow.onAccept(option.id, { start: "now", duration: "half_day" }, option.foodStop?.id);
+    if (result.error) {
+      setError(result.error);
+      setState("idle");
+    } else {
+      setState("planned");
+    }
+  };
+
+  const dismiss = () => {
+    void flow.onFeedback(option.id, "not_my_thing");
+    setState("hidden");
+  };
 
   return (
-    <div style={{ background: T.surface, border: `1.5px solid ${T.accent}`, borderRadius: 16, padding: "18px 20px", marginBottom: 22 }}>
-      <p style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 19, color: T.ink, margin: "0 0 4px", display: "flex", alignItems: "center", gap: 8 }}>
-        <Hourglass size={18} color={T.accent} /> I&apos;ve got some time
-      </p>
-      {!open ? (
-        <>
-          <p style={{ fontSize: 14, color: T.inkSoft, margin: "0 0 14px", lineHeight: 1.5 }}>
-            Tell me how long you have and I&apos;ll suggest a few great ways to spend it.
+    <Card padding="none" className="ync-appear">
+      <Cover category={option.category} />
+      <div className={styles.heroBody}>
+        <h3 className={styles.heroTitle}>{option.title}</h3>
+        {meta.length > 0 && <p className={styles.heroMeta}>{meta.join(" · ")}</p>}
+        <p className={styles.heroReason}>{option.reason || option.why}</p>
+        {option.foodStop && (
+          <p className={styles.heroThen}>
+            <Coffee size={16} strokeWidth={1.75} aria-hidden="true" />
+            <span>
+              Then {option.foodStop.meal} at {option.foodStop.title}, {option.foodStop.walkMinutes} min walk
+            </span>
           </p>
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            style={{ minHeight: 46, padding: "10px 22px", borderRadius: 12, border: "none", background: T.accent, color: "#fff", fontSize: 15, fontWeight: 600, cursor: "pointer" }}
-          >
-            Let&apos;s find something
-          </button>
-        </>
-      ) : (
-        <div style={{ marginTop: 14 }}>
-          <SomeTimeFlow {...flow} />
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            style={{ background: "none", border: "none", color: T.inkSoft, fontSize: 13, marginTop: 14, cursor: "pointer", padding: 0 }}
-          >
-            Close
-          </button>
+        )}
+
+        <div className={styles.heroActions} aria-live="polite">
+          {state === "planned" ? (
+            <p className={styles.planned}>
+              <Check size={18} strokeWidth={2.25} aria-hidden="true" /> Added to your day
+            </p>
+          ) : (
+            <>
+              <Button variant="primary" loading={state === "planning"} onClick={plan}>
+                {state === "planning" ? "Planning…" : "Plan this"}
+                {state !== "planning" && <ChevronRight size={18} aria-hidden="true" />}
+              </Button>
+              <Button variant="quiet" size="sm" onClick={dismiss} disabled={state === "planning"}>
+                Not for me
+              </Button>
+            </>
+          )}
         </div>
-      )}
-    </div>
-  );
-}
-
-/** An empty part of today's plan, which opens the same flow already pointed at that time. */
-function OpenTimeSlot({ slotLabel, slot, flow }: { slotLabel: string; slot: string; flow: FlowActions }) {
-  const [expanded, setExpanded] = useState(false);
-
-  if (!expanded) {
-    return (
-      <div style={{ background: T.accentSoft, border: `1.5px dashed ${T.accent}`, borderRadius: 14, padding: "18px 20px", marginBottom: 14 }}>
-        <p style={{ fontSize: 12, fontWeight: 700, color: T.accent, letterSpacing: 0.3, margin: "0 0 4px" }}>{slotLabel.toUpperCase()}</p>
-        <p style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 17, color: T.ink, margin: "0 0 12px" }}>✨ Open Time</p>
-        <button
-          type="button"
-          onClick={() => setExpanded(true)}
-          style={{ minHeight: 44, padding: "10px 18px", borderRadius: 10, border: "none", background: T.primary, color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
-        >
-          Make something of it
-        </button>
+        {error && <p style={{ marginTop: 12, fontSize: 15, color: "var(--color-error)" }}>{error}</p>}
       </div>
-    );
-  }
-
-  return (
-    <div style={{ background: T.surface, border: `1px solid ${T.line}`, borderRadius: 14, padding: "18px 20px", marginBottom: 14 }}>
-      <p style={{ fontSize: 12, fontWeight: 700, color: T.accent, letterSpacing: 0.3, margin: "0 0 12px" }}>{slotLabel.toUpperCase()} · OPEN TIME</p>
-      <SomeTimeFlow {...flow} initial={SLOT_START[slot]} />
-      <button
-        type="button"
-        onClick={() => setExpanded(false)}
-        style={{ background: "none", border: "none", color: T.inkSoft, fontSize: 12.5, marginTop: 14, cursor: "pointer", padding: 0 }}
-      >
-        Never mind
-      </button>
-    </div>
+    </Card>
   );
 }
 
 export function TodayView({
+  greeting,
+  firstName,
   dateLabel,
   weather,
   slots,
+  featured,
   onItemAction,
   onFindTime,
   onAcceptTime,
   onFeedbackTime,
 }: {
+  greeting: string;
+  firstName: string;
   dateLabel: string;
   weather: TodayWeather;
   slots: TodaySlot[];
+  featured: TimeOption | null;
   onItemAction: (itemId: string, action: "accepted" | "swapped" | "skipped") => Promise<void>;
-  onFindTime: (request: { start: "now" | "afternoon" | "evening"; duration: "30m" | "1-2h" | "half_day" | "rest_of_day"; who: "just_me" | "partner" | "friends" | "family"; mood: "surprise" | "social" | "active" | "culture" | "relaxed" | "food" | null; exclude: string[] }) => Promise<TimeResult>;
+  onFindTime: FlowActions["onFind"];
   onAcceptTime: FlowActions["onAccept"];
   onFeedbackTime: FlowActions["onFeedback"];
 }) {
   const [statuses, setStatuses] = useState<Record<string, string>>(() =>
     Object.fromEntries(slots.filter((s) => s.item).map((s) => [s.item!.id, s.item!.status]))
   );
+  // Which "I've got some time" flow is open, and where it should start.
+  const [flow, setFlow] = useState<{ initial?: SomeTimeInitial; key: number } | null>(null);
+  const flowRef = useRef<HTMLDivElement>(null);
 
-  const flow: FlowActions = { onFind: onFindTime, onAccept: onAcceptTime, onFeedback: onFeedbackTime };
+  const flowActions: FlowActions = { onFind: onFindTime, onAccept: onAcceptTime, onFeedback: onFeedbackTime };
+
+  const openFlow = (initial?: SomeTimeInitial) => {
+    setFlow((prev) => ({ initial, key: (prev?.key ?? 0) + 1 }));
+    // Bring it into view, gently — and not at all for anyone who prefers less motion.
+    requestAnimationFrame(() => {
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      flowRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    });
+  };
 
   const handleAction = (itemId: string, action: "accepted" | "skipped") => {
     setStatuses((prev) => ({ ...prev, [itemId]: action }));
     void onItemAction(itemId, action);
   };
 
-  const line = weatherLine(weather);
-
   return (
-    <div style={{ minHeight: "100vh", background: T.bg }}>
-      <div style={{ background: T.primary, padding: "20px" }}>
-        <div style={{ maxWidth: 560, margin: "0 auto" }}>
-          <h1 style={{ fontFamily: "var(--font-display), Georgia, serif", color: "#fff", fontSize: 24, margin: "10px 0 0" }}>Today</h1>
-          <p style={{ color: "#EAE3D0", fontSize: 13.5, margin: "6px 0 0" }}>
-            {dateLabel}
-            {line ? ` · ${line}` : ""}
-          </p>
-        </div>
-      </div>
+    <div className={styles.page}>
+      <header>
+        <h1 className={styles.greeting}>{firstName ? `${greeting}, ${firstName}` : greeting}</h1>
+        <p className={styles.dateLine}>
+          <span>{dateLabel}</span>
+          <WeatherLine weather={weather} />
+        </p>
+      </header>
 
-      <div style={{ maxWidth: 560, margin: "0 auto", padding: "24px 20px 60px" }}>
-        <GotSomeTime flow={flow} />
+      <section className={styles.section} aria-labelledby="your-day">
+        <h2 id="your-day" className={styles.label}>
+          Your day
+        </h2>
+        <ul className={styles.dayList}>
+          {slots.map(({ slot, item }) => {
+            const slotLabel = SLOT_LABEL[slot] ?? slot;
 
-        {slots.map(({ slot, item }) => {
-          const slotLabel = SLOT_LABEL[slot] ?? slot;
-
-          if (!item) {
-            return <OpenTimeSlot key={slot} slotLabel={slotLabel} slot={slot} flow={flow} />;
-          }
-
-          const status = statuses[item.id] ?? item.status;
-          return (
-            <div
-              key={item.id}
-              style={{
-                background: T.surface,
-                border: `1px solid ${T.line}`,
-                borderRadius: 14,
-                padding: "18px 20px",
-                marginBottom: 14,
-                opacity: status === "skipped" ? 0.55 : 1,
-              }}
-            >
-              <p style={{ fontSize: 12, fontWeight: 700, color: CATEGORY_COLOR[item.category] ?? T.primary, letterSpacing: 0.3, margin: "0 0 6px" }}>
-                {slotLabel.toUpperCase()} · {item.category.toUpperCase()}
-              </p>
-              <h3 style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 18, color: T.ink, margin: "0 0 6px" }}>{item.title}</h3>
-              <p style={{ fontSize: 13.5, color: T.inkSoft, margin: "0 0 10px" }}>
-                {item.time} · {item.location} · {item.cost}
-              </p>
-              {item.why && <p style={{ fontSize: 13.5, color: T.ink, margin: "0 0 12px" }}>{item.why}</p>}
-
-              {status === "pending" && (
-                <div style={{ display: "flex", gap: 10 }}>
-                  <button
-                    onClick={() => handleAction(item.id, "accepted")}
-                    style={{ flex: 1, minHeight: 44, padding: "10px", borderRadius: 8, border: "none", background: T.primary, color: "#fff", fontSize: 13.5, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
-                  >
-                    <Check size={14} /> Accept
+            if (!item) {
+              return (
+                <li key={slot}>
+                  <button type="button" className={styles.freeRow} onClick={() => openFlow(SLOT_START[slot])}>
+                    <span className={styles.time}>{slotLabel}</span>
+                    <span className={styles.freeText}>
+                      Free
+                      <span className={styles.freeHint}>
+                        Find something <ChevronRight size={16} aria-hidden="true" />
+                      </span>
+                    </span>
                   </button>
-                  <button
-                    onClick={() => handleAction(item.id, "skipped")}
-                    style={{ flex: 1, minHeight: 44, padding: "10px", borderRadius: 8, border: `1.5px solid ${T.line}`, background: "none", color: T.ink, fontSize: 13.5, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
-                  >
-                    <X size={14} /> Skip
-                  </button>
+                </li>
+              );
+            }
+
+            const status = statuses[item.id] ?? item.status;
+            const place = placeLabel(item.location);
+            return (
+              <li key={item.id} className={`${styles.row} ${status === "skipped" ? styles.skipped : ""}`}>
+                <span className={styles.time}>{item.time}</span>
+                <div>
+                  <h3 className={styles.itemTitle}>{item.title}</h3>
+                  <p className={styles.itemMeta}>
+                    <span style={{ color: CATEGORY_COLOR[item.category], fontWeight: 600 }}>{item.category}</span>
+                    {place ? ` · ${place}` : ""}
+                    {item.cost && item.cost !== "Price TBC" ? ` · ${item.cost}` : ""}
+                  </p>
+                  {status === "pending" && (
+                    <div className={styles.itemActions}>
+                      <Button size="sm" onClick={() => handleAction(item.id, "accepted")}>
+                        Accept
+                      </Button>
+                      <Button size="sm" variant="quiet" onClick={() => handleAction(item.id, "skipped")}>
+                        Skip
+                      </Button>
+                    </div>
+                  )}
+                  {status === "accepted" && (
+                    <p className={styles.status}>
+                      <Check size={16} strokeWidth={2.25} aria-hidden="true" /> Going
+                    </p>
+                  )}
                 </div>
-              )}
-              {status === "accepted" && <p style={{ fontSize: 13, color: T.primary, fontWeight: 600, margin: 0 }}>✓ Accepted</p>}
-              {status === "skipped" && <p style={{ fontSize: 13, color: T.inkSoft, margin: 0 }}>Skipped</p>}
-            </div>
-          );
-        })}
-      </div>
+              </li>
+            );
+          })}
+        </ul>
+
+        <div className={styles.cta}>
+          <Button variant="accent" fullWidth onClick={() => openFlow()}>
+            <Hourglass size={18} strokeWidth={1.75} aria-hidden="true" /> I&apos;ve got some time
+          </Button>
+        </div>
+
+        {flow && (
+          <div ref={flowRef} className={`${styles.flow} ync-appear`}>
+            <Card padding="lg">
+              <SomeTimeFlow key={flow.key} initial={flow.initial} {...flowActions} />
+              <div className={styles.flowClose}>
+                <Button variant="quiet" size="sm" onClick={() => setFlow(null)}>
+                  Close
+                </Button>
+              </div>
+            </Card>
+          </div>
+        )}
+      </section>
+
+      {featured && (
+        <section className={styles.section} aria-labelledby="for-you">
+          <h2 id="for-you" className={styles.label}>
+            For you today
+          </h2>
+          <FeaturedIdea option={featured} flow={flowActions} />
+        </section>
+      )}
     </div>
   );
 }

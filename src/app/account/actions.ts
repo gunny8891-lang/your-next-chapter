@@ -6,6 +6,7 @@ import { after } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { geocodeLocation } from "@/lib/geo/geocode";
+import { cleanFirstName } from "@/lib/someTime/format";
 import { generateAndSaveItinerary } from "@/lib/itinerary/generateAndSave";
 import { triggerDiscoveryForRegion } from "@/lib/discovery/regional";
 
@@ -22,6 +23,10 @@ export async function updateProfileAction(formData: FormData) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  // The first name lives on the sign-in profile (user_metadata), not in a table, so it needs no migration.
+  const firstName = cleanFirstName(formData.get("first_name"));
+  await supabase.auth.updateUser({ data: { first_name: firstName } });
 
   const radiusRaw = formData.get("travel_radius_km");
   const budgetRaw = String(formData.get("budget_band") ?? "");

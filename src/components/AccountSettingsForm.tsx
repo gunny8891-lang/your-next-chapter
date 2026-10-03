@@ -41,6 +41,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 export function AccountSettingsForm({
   email,
+  firstName,
   profile,
   subscription,
   saved,
@@ -50,6 +51,7 @@ export function AccountSettingsForm({
   onDeleteAccount,
 }: {
   email: string;
+  firstName: string;
   profile: Profile;
   subscription: Subscription;
   saved: boolean;
@@ -89,6 +91,10 @@ export function AccountSettingsForm({
           </Field>
 
           <form action={onSave}>
+            <Field label="First name">
+              <input name="first_name" defaultValue={firstName} autoComplete="given-name" maxLength={40} style={inputStyle} placeholder="So we can say hello" />
+            </Field>
+
             <Field label="Location">
               <input name="location_text" defaultValue={profile.location_text ?? ""} style={inputStyle} placeholder="e.g. Bath, Somerset" />
               <p style={{ fontSize: 12.5, color: T.inkSoft, margin: "6px 0 0" }}>

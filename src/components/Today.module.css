@@ -1,0 +1,246 @@
+/*
+ * Today: a calm single column. Greeting, the day as a plain list on the page
+ * (never boxed cards inside cards), the one warm button, and one hero idea.
+ */
+
+.page {
+  max-width: var(--content-width);
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-5) var(--space-12);
+}
+
+/* ---- greeting ------------------------------------------------------- */
+
+.greeting {
+  font-size: 34px;
+  line-height: 1.12;
+  color: var(--color-ink);
+}
+
+.dateLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin-top: var(--space-2);
+  font-size: var(--text-body);
+  color: var(--color-ink-soft);
+}
+
+/* ---- sections ------------------------------------------------------- */
+
+.section {
+  margin-top: var(--space-10);
+}
+
+.label {
+  font-family: var(--font-sans), system-ui, sans-serif;
+  margin-bottom: var(--space-2);
+  font-size: var(--text-label);
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-ink-soft);
+}
+
+/* ---- your day ------------------------------------------------------- */
+
+.dayList {
+  list-style: none;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  gap: var(--space-4);
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--color-line);
+}
+
+.dayList .row:last-child {
+  border-bottom: 1px solid var(--color-line);
+}
+
+.time {
+  padding-top: 2px;
+  font-size: var(--text-small);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ink);
+}
+
+.itemTitle {
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0;
+  color: var(--color-ink);
+}
+
+.itemMeta {
+  margin-top: 2px;
+  font-size: var(--text-small);
+  color: var(--color-ink-soft);
+}
+
+.itemActions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+  font-size: var(--text-small);
+  font-weight: 600;
+  color: var(--color-sage);
+}
+
+.skipped {
+  opacity: 0.55;
+}
+
+/* A part of the day with nothing in it: quiet, and tappable. */
+.freeRow {
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+  min-height: 60px;
+  padding: var(--space-3) 0;
+  border: none;
+  border-top: 1px solid var(--color-line);
+  background: none;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+  transition: background var(--duration-quick) var(--ease-out);
+}
+
+.dayList li:last-child .freeRow {
+  border-bottom: 1px solid var(--color-line);
+}
+
+.freeRow:hover {
+  background: var(--color-sage-soft);
+}
+
+.freeText {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--text-body);
+  color: var(--color-ink-soft);
+}
+
+.freeHint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-small);
+  font-weight: 600;
+  color: var(--color-sage);
+}
+
+/* ---- the one warm button -------------------------------------------- */
+
+.cta {
+  margin-top: var(--space-6);
+}
+
+.flow {
+  margin-top: var(--space-4);
+  scroll-margin-top: calc(var(--topbar-height) + var(--space-4));
+}
+
+.flowClose {
+  margin-top: var(--space-3);
+}
+
+/* ---- for you today -------------------------------------------------- */
+
+.heroBody {
+  padding: var(--space-5) var(--space-5) var(--space-6);
+}
+
+.heroTitle {
+  font-size: 28px;
+  line-height: 1.18;
+  color: var(--color-ink);
+}
+
+.heroMeta {
+  margin-top: var(--space-2);
+  font-size: var(--text-small);
+  color: var(--color-ink-soft);
+}
+
+.heroReason {
+  margin-top: var(--space-4);
+  font-size: var(--text-body);
+  line-height: 1.55;
+  color: var(--color-ink);
+}
+
+.heroThen {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  font-size: var(--text-small);
+  line-height: 1.45;
+  color: var(--color-sage);
+}
+
+.heroThen svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.heroActions {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+}
+
+.planned {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 48px;
+  font-size: var(--text-body);
+  font-weight: 600;
+  color: var(--color-sage);
+}
+
+/* ---- wider screens -------------------------------------------------- */
+
+@media (min-width: 768px) {
+  .page {
+    padding-top: var(--space-12);
+  }
+
+  .greeting {
+    font-size: 42px;
+  }
+
+  .heroBody {
+    padding: var(--space-6) var(--space-8) var(--space-8);
+  }
+
+  .heroTitle {
+    font-size: 32px;
+  }
+
+  .heroActions {
+    grid-template-columns: auto auto;
+    justify-content: start;
+    align-items: center;
+  }
+}
