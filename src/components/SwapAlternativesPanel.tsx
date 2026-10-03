@@ -29,7 +29,7 @@ export function SwapAlternativesPanel({
         style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "24px 24px 32px", maxHeight: "80vh", overflowY: "auto" }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-          <h2 style={{ fontFamily: "Georgia, serif", fontSize: 20, color: T.ink, margin: 0 }}>Swap for something else</h2>
+          <h2 style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 20, color: T.ink, margin: 0 }}>Swap for something else</h2>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: T.inkSoft }}>
             <X size={20} />
           </button>
@@ -51,7 +51,7 @@ export function SwapAlternativesPanel({
                 style={{ border: `1px solid ${T.line}`, borderRadius: 14, padding: "14px 16px" }}
               >
                 <Pill color={color}><Icon size={13} /> {alt.category}</Pill>
-                <h3 style={{ fontFamily: "Georgia, serif", fontSize: 17, color: T.ink, margin: "10px 0 8px" }}>{alt.title}</h3>
+                <h3 style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 17, color: T.ink, margin: "10px 0 8px" }}>{alt.title}</h3>
                 <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 12 }}>
                   {alt.address && (
                     <span style={{ fontSize: 13, color: T.inkSoft, display: "flex", alignItems: "center", gap: 5 }}>

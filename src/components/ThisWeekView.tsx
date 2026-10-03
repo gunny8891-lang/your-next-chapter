@@ -2,14 +2,13 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { Sun, Clock, MapPin, Banknote, Check, Sparkles, Settings, MessageCircle, Compass, CalendarDays, Users } from "lucide-react";
+import { Clock, MapPin, Banknote, Check, Sparkles } from "lucide-react";
 import { T } from "@/lib/theme";
 import { CATEGORY, DAYS } from "@/lib/categories";
 import { Pill } from "@/components/Pill";
 import { ItemDetailModal } from "@/components/ItemDetailModal";
 import { SwapAlternativesPanel } from "@/components/SwapAlternativesPanel";
 import { GenerateWeekButton } from "@/components/GenerateWeekButton";
-import { logout } from "@/app/auth/actions";
 import type { ItineraryItemView, SurpriseView, MemberAction, SwapAlternative } from "@/lib/types";
 
 const isRealItem = (id: string) => !id.startsWith("demo-");
@@ -115,51 +114,18 @@ export function ThisWeekView({
     <div style={{ minHeight: "100%", background: T.bg }}>
       <div style={{ background: T.primary, padding: "22px 20px 26px" }}>
         <div style={{ maxWidth: 640, margin: "0 auto" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 30, height: 30, borderRadius: 7, background: T.accent, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Sun size={16} color="#fff" />
-              </div>
-              <span style={{ fontFamily: "Georgia, serif", fontSize: 17, color: "#fff" }}>Your Next Chapter</span>
+          {isAdmin && (
+            <div style={{ display: "flex", gap: 16, marginBottom: 14 }}>
+              <Link href="/admin/activities" style={{ color: "#EAE3D0", fontSize: 13, textDecoration: "none" }}>
+                Review Queue
+              </Link>
+              <Link href="/admin/ai-costs" style={{ color: "#EAE3D0", fontSize: 13, textDecoration: "none" }}>
+                AI Costs
+              </Link>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              {isAdmin && (
-                <Link href="/admin/activities" style={{ color: "#EAE3D0", fontSize: 12.5, textDecoration: "none" }}>
-                  Review Queue
-                </Link>
-              )}
-              {isAdmin && (
-                <Link href="/admin/ai-costs" style={{ color: "#EAE3D0", fontSize: 12.5, textDecoration: "none" }}>
-                  AI Costs
-                </Link>
-              )}
-              <Link href="/today" style={{ color: "#EAE3D0", fontSize: 12.5, textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
-                <CalendarDays size={13} /> Today
-              </Link>
-              <Link href="/explore" style={{ color: "#EAE3D0", fontSize: 12.5, textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
-                <Sparkles size={13} /> Explore
-              </Link>
-              <Link href="/people" style={{ color: "#EAE3D0", fontSize: 12.5, textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
-                <Users size={13} /> People
-              </Link>
-              <Link href="/chapter" style={{ color: "#EAE3D0", fontSize: 12.5, textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
-                <Compass size={13} /> My Chapter
-              </Link>
-              <Link href="/chat" style={{ color: "#EAE3D0", fontSize: 12.5, textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
-                <MessageCircle size={13} /> Ask
-              </Link>
-              <Link href="/account" style={{ color: "#EAE3D0", fontSize: 12.5, textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
-                <Settings size={13} /> Account
-              </Link>
-              <form action={logout}>
-                <button type="submit" style={{ background: "none", border: "none", color: "#EAE3D0", fontSize: 12.5, cursor: "pointer" }}>
-                  Log out
-                </button>
-              </form>
-            </div>
-          </div>
+          )}
           <p style={{ color: "#EAE3D0", fontSize: 13, margin: "0 0 4px", letterSpacing: 0.4, fontWeight: 600 }}>YOUR PERFECT WEEK</p>
-          <h1 style={{ fontFamily: "Georgia, serif", color: "#fff", fontSize: 26, margin: 0 }}>{locationLabel}</h1>
+          <h1 style={{ fontFamily: "var(--font-display), Georgia, serif", color: "#fff", fontSize: 26, margin: 0 }}>{locationLabel}</h1>
           {isDemo && (
             <>
               <p style={{ color: "#EAE3D0", fontSize: 12.5, marginTop: 8, opacity: 0.85 }}>
@@ -230,7 +196,7 @@ export function ThisWeekView({
                 {status === "accepted" && <Pill color={T.primary}><Check size={12} /> Accepted</Pill>}
                 {status === "skipped" && <Pill color={T.inkSoft}>Skipped</Pill>}
               </div>
-              <h3 style={{ fontFamily: "Georgia, serif", fontSize: 19, color: T.ink, margin: "12px 0 8px" }}>{item.title}</h3>
+              <h3 style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 19, color: T.ink, margin: "12px 0 8px" }}>{item.title}</h3>
               <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
                 <span style={{ fontSize: 13.5, color: T.inkSoft, display: "flex", alignItems: "center", gap: 5 }}><Clock size={13} /> {item.time}</span>
                 <span style={{ fontSize: 13.5, color: T.inkSoft, display: "flex", alignItems: "center", gap: 5 }}><MapPin size={13} /> {item.location}</span>
@@ -257,7 +223,7 @@ export function ThisWeekView({
             }}
           >
             <Pill color={T.accent}><Sparkles size={13} /> Surprise Me — this week</Pill>
-            <h3 style={{ fontFamily: "Georgia, serif", fontSize: 19, color: T.ink, margin: "12px 0 6px" }}>{surprise.title}</h3>
+            <h3 style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 19, color: T.ink, margin: "12px 0 6px" }}>{surprise.title}</h3>
             <p style={{ fontSize: 13.5, color: T.inkSoft, margin: 0 }}>{surprise.location} · {surprise.cost}</p>
           </div>
         )}

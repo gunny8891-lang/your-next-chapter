@@ -122,3 +122,17 @@ export function isStrongOutdoorWeather(weather: TodayWeather): boolean {
     weather.temperatureMax <= MAX_PLEASANT_TEMP_C
   );
 }
+
+/** Rain chance from which to say "chance of showers" rather than "dry". */
+const SHOWERS_PRECIP_PROBABILITY = 30;
+
+/** Plain words for a day's weather: "19°" and "Dry today". Null when there is no forecast. */
+export function describeWeather(weather: TodayWeather): { temperature: string; summary: string } | null {
+  if (!weather) return null;
+  const summary = isWetDay(weather)
+    ? "Rain likely today"
+    : weather.precipitationProbabilityMax >= SHOWERS_PRECIP_PROBABILITY
+      ? "Chance of showers"
+      : "Dry today";
+  return { temperature: `${Math.round(weather.temperatureMax)}°`, summary };
+}

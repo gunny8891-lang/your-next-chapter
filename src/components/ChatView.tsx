@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import Link from "next/link";
-import { ArrowLeft, MessageCircle, Send } from "lucide-react";
+import { MessageCircle, Send } from "lucide-react";
 import { T } from "@/lib/theme";
 import type { ChatMessageView } from "@/lib/types";
 
@@ -50,15 +49,11 @@ export function ChatView({
   return (
     <div style={{ minHeight: "100%", background: T.bg, display: "flex", flexDirection: "column" }}>
       <div style={{ background: T.primary, padding: "18px 20px" }}>
-        <div style={{ maxWidth: 640, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Link href="/week" style={{ color: "#EAE3D0", fontSize: 12.5, textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
-            <ArrowLeft size={14} /> This Week
-          </Link>
+        <div style={{ maxWidth: 640, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <MessageCircle size={15} color="#fff" />
-            <span style={{ fontFamily: "Georgia, serif", fontSize: 16, color: "#fff" }}>Ask your concierge</span>
+            <span style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 16, color: "#fff" }}>Ask your concierge</span>
           </div>
-          <span style={{ width: 74 }} />
         </div>
       </div>
 

@@ -37,7 +37,7 @@ export function ItemDetailModal({
             <X size={20} />
           </button>
         </div>
-        <h2 style={{ fontFamily: "Georgia, serif", fontSize: 24, color: T.ink, margin: "0 0 16px" }}>{item.title}</h2>
+        <h2 style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 24, color: T.ink, margin: "0 0 16px" }}>{item.title}</h2>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 18 }}>
           <div style={{ display: "flex", gap: 10, alignItems: "center", color: T.inkSoft, fontSize: 15 }}><Clock size={16} /> {item.time}</div>

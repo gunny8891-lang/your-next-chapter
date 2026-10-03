@@ -1,17 +1,67 @@
+/*
+ * Your Next Chapter — foundations.
+ *
+ * Tokens here mirror src/lib/theme.ts (a test keeps them in step). Light only:
+ * the whole interface is designed on warm stone, and a dark scheme would fight
+ * every component that sets its own colours.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  /* colour */
+  --color-bg: #F5F2EB;
+  --color-surface: #FDFBF7;
+  --color-ink: #2B2F2A;
+  --color-ink-soft: #5A6258;
+  --color-line: #E3DDD0;
+  --color-primary: #2F4A3C;
+  --color-primary-soft: #7C9A82;
+  --color-accent: #A25437;
+  --color-accent-soft: #F2E4DA;
+  --color-sage: #52705B;
+  --color-sage-soft: #E4EBE2;
+  --color-mist: #4C6879;
+  --color-mist-soft: #E3EBF0;
+  --color-error: #9A3B22;
+  --color-error-soft: #F6E6DF;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* spacing (4-point scale) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* shape */
+  --radius-control: 10px;
+  --radius-card: 14px;
+  --radius-pill: 999px;
+
+  /* the one shadow: barely there */
+  --shadow-1: 0 1px 2px rgba(43, 47, 42, 0.05);
+  --shadow-sheet: 0 -8px 32px rgba(43, 47, 42, 0.12);
+
+  /* type */
+  --text-body: 17px;
+  --text-small: 15px;
+  --text-label: 13px;
+
+  /* motion */
+  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --duration-quick: 150ms;
+  --duration-base: 220ms;
+
+  /* layout */
+  --content-width: 640px;
+  --tabbar-height: 64px;
+  --topbar-height: 56px;
 }
 
 html {
   height: 100%;
+  color-scheme: light;
 }
 
 html,
@@ -22,13 +72,14 @@ body {
 
 body {
   min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--color-ink);
+  background: var(--color-bg);
+  font-family: var(--font-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: var(--text-body);
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
 }
 
 * {
@@ -42,8 +93,68 @@ a {
   text-decoration: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
+h1,
+h2,
+h3 {
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 500;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+button {
+  font-family: inherit;
+}
+
+/* A clear, consistent keyboard focus: never removed, always visible. */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Text that is only for screen readers (skip links, icon-only button names). */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Motion: purposeful and short, and off for anyone who asks. */
+@keyframes ync-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ync-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+.ync-appear {
+  animation: ync-fade-up var(--duration-base) var(--ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

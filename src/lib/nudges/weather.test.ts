@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  describeWeather,
   getDailyForecast,
   getTodayWeather,
   isStrongOutdoorWeather,
@@ -130,5 +131,22 @@ describe("parseForecast — daylight", () => {
     await getDailyForecast(51.65, -0.2);
     vi.unstubAllGlobals();
     expect(fetchMock.mock.calls[0][0]).toContain("sunrise,sunset");
+  });
+});
+
+describe("describeWeather", () => {
+  it("says it plainly: a rounded temperature and whether it is dry", () => {
+    expect(describeWeather({ precipitationProbabilityMax: 5, temperatureMax: 18.6 })).toEqual({ temperature: "19°", summary: "Dry today" });
+  });
+
+  it("warns of showers and of rain at sensible thresholds", () => {
+    expect(describeWeather({ precipitationProbabilityMax: 29, temperatureMax: 12 })?.summary).toBe("Dry today");
+    expect(describeWeather({ precipitationProbabilityMax: 30, temperatureMax: 12 })?.summary).toBe("Chance of showers");
+    expect(describeWeather({ precipitationProbabilityMax: 59, temperatureMax: 12 })?.summary).toBe("Chance of showers");
+    expect(describeWeather({ precipitationProbabilityMax: 60, temperatureMax: 12 })?.summary).toBe("Rain likely today");
+  });
+
+  it("is null when there is no forecast, so nothing is drawn", () => {
+    expect(describeWeather(null)).toBeNull();
   });
 });

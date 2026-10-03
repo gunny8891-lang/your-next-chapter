@@ -59,7 +59,7 @@ function Stat({ label, value, note }: { label: string; value: string; note?: str
   return (
     <div style={card}>
       <p style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: 0.3, color: T.inkSoft, margin: "0 0 6px" }}>{label}</p>
-      <p style={{ fontFamily: "Georgia, serif", fontSize: 24, color: T.ink, margin: 0 }}>{value}</p>
+      <p style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 24, color: T.ink, margin: 0 }}>{value}</p>
       {note && <p style={{ fontSize: 12, color: T.inkSoft, margin: "4px 0 0" }}>{note}</p>}
     </div>
   );
@@ -127,7 +127,7 @@ export function AiCostDashboard({ summary }: { summary: UsageSummary }) {
           <Link href="/week" style={{ color: "#EAE3D0", fontSize: 13, display: "inline-flex", alignItems: "center", gap: 4, textDecoration: "none" }}>
             <ChevronLeft size={14} /> Back to This Week
           </Link>
-          <h1 style={{ fontFamily: "Georgia, serif", color: "#fff", fontSize: 24, margin: "10px 0 0", display: "flex", alignItems: "center", gap: 10 }}>
+          <h1 style={{ fontFamily: "var(--font-display), Georgia, serif", color: "#fff", fontSize: 24, margin: "10px 0 0", display: "flex", alignItems: "center", gap: 10 }}>
             <Coins size={22} /> AI costs
           </h1>
           <p style={{ color: "#EAE3D0", fontSize: 13.5, margin: "6px 0 0" }}>
@@ -161,7 +161,7 @@ export function AiCostDashboard({ summary }: { summary: UsageSummary }) {
           This month: {usd(summary.memberCostThisMonth)} tied to members · {usd(summary.systemCostThisMonth)} system (Discovery Agent, not tied to a member)
         </p>
 
-        <h2 style={{ fontFamily: "Georgia, serif", fontSize: 17, color: T.ink, margin: "0 0 12px" }}>Average cost per call</h2>
+        <h2 style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 17, color: T.ink, margin: "0 0 12px" }}>Average cost per call</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 6 }}>
           {keyAverages.map(({ label, row }) => (
             <Stat key={label} label={label} value={row ? usd(row.avgCost) : "—"} note={row ? calls(row.calls) : "No calls yet"} />
@@ -171,12 +171,12 @@ export function AiCostDashboard({ summary }: { summary: UsageSummary }) {
           Per call, not per generation — a My Week build retries once if the first answer is invalid, so it can be up to two calls.
         </p>
 
-        <h2 style={{ fontFamily: "Georgia, serif", fontSize: 17, color: T.ink, margin: "0 0 12px" }}>By feature</h2>
+        <h2 style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 17, color: T.ink, margin: "0 0 12px" }}>By feature</h2>
         <div style={{ ...card, marginBottom: 28 }}>
           <BreakdownTable rows={summary.byFeature} labelFor={featureLabel} totalCost={successfulCost} firstColumn="FEATURE" />
         </div>
 
-        <h2 style={{ fontFamily: "Georgia, serif", fontSize: 17, color: T.ink, margin: "0 0 12px" }}>By model</h2>
+        <h2 style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 17, color: T.ink, margin: "0 0 12px" }}>By model</h2>
         <div style={{ ...card, marginBottom: 12 }}>
           <BreakdownTable rows={summary.byModel} labelFor={(k) => k} totalCost={successfulCost} firstColumn="MODEL" />
         </div>
@@ -186,7 +186,7 @@ export function AiCostDashboard({ summary }: { summary: UsageSummary }) {
           {other.calls > 0 && ` (${other.calls} on other models)`}
         </p>
 
-        <h2 style={{ fontFamily: "Georgia, serif", fontSize: 17, color: T.ink, margin: "0 0 12px" }}>
+        <h2 style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 17, color: T.ink, margin: "0 0 12px" }}>
           Failed calls this month: {summary.failedCallsThisMonth}
         </h2>
         {summary.recentFailures.length === 0 ? (

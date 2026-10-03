@@ -59,7 +59,7 @@ export function OnboardingFlow({ onDone }: { onDone: (answers: OnboardingAnswers
           <div style={{ width: 34, height: 34, borderRadius: 8, background: T.primary, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Sun size={18} color={T.accentSoft} />
           </div>
-          <span style={{ fontFamily: "Georgia, serif", fontSize: 19, color: T.primary, letterSpacing: 0.2 }}>Your Next Chapter</span>
+          <span style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 19, color: T.primary, letterSpacing: 0.2 }}>Your Next Chapter</span>
         </div>
 
         <div style={{ display: "flex", gap: 6, marginBottom: 28 }}>
@@ -69,7 +69,7 @@ export function OnboardingFlow({ onDone }: { onDone: (answers: OnboardingAnswers
         </div>
 
         <div style={{ background: T.surface, border: `1px solid ${T.line}`, borderRadius: 16, padding: "28px 26px", marginBottom: 20 }}>
-          <p style={{ fontFamily: "Georgia, serif", fontSize: 21, lineHeight: 1.5, color: T.ink, margin: 0 }}>
+          <p style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 21, lineHeight: 1.5, color: T.ink, margin: 0 }}>
             {isPending ? "Saving your answers…" : current.q}
           </p>
         </div>

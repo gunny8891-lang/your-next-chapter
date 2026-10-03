@@ -16,10 +16,10 @@ export default async function LandingPage() {
           <div style={{ width: 40, height: 40, borderRadius: 10, background: T.primary, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Sun size={20} color={T.accentSoft} />
           </div>
-          <span style={{ fontFamily: "Georgia, serif", fontSize: 24, color: T.primary }}>Your Next Chapter</span>
+          <span style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 24, color: T.primary }}>Your Next Chapter</span>
         </div>
 
-        <h1 style={{ fontFamily: "Georgia, serif", fontSize: 34, lineHeight: 1.3, color: T.ink, margin: "0 0 16px" }}>
+        <h1 style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 34, lineHeight: 1.3, color: T.ink, margin: "0 0 16px" }}>
           An AI concierge for making the most of retirement.
         </h1>
         <p style={{ fontSize: 17, color: T.inkSoft, lineHeight: 1.6, margin: "0 0 32px" }}>

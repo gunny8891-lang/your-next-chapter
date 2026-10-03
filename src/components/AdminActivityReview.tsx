@@ -38,7 +38,7 @@ export function AdminActivityReview({
     <div style={{ minHeight: "100vh", background: T.bg }}>
       <div style={{ background: T.primary, padding: "20px" }}>
         <div style={{ maxWidth: 720, margin: "0 auto" }}>
-          <h1 style={{ fontFamily: "Georgia, serif", color: "#fff", fontSize: 24, margin: 0 }}>Review Queue</h1>
+          <h1 style={{ fontFamily: "var(--font-display), Georgia, serif", color: "#fff", fontSize: 24, margin: 0 }}>Review Queue</h1>
           <p style={{ color: "#EAE3D0", fontSize: 13, margin: "6px 0 0" }}>
             {activities.length} activit{activities.length === 1 ? "y" : "ies"} awaiting review
           </p>

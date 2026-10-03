@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Link from "next/link";
-import { ChevronLeft, Users, Heart, Trash2, CalendarCheck } from "lucide-react";
+import { Users, Heart, Trash2, CalendarCheck } from "lucide-react";
 import { T } from "@/lib/theme";
 
 export type Person = {
@@ -80,10 +79,7 @@ export function PeopleView({
     <div style={{ minHeight: "100vh", background: T.bg }}>
       <div style={{ background: T.primary, padding: "20px" }}>
         <div style={{ maxWidth: 560, margin: "0 auto" }}>
-          <Link href="/week" style={{ color: "#EAE3D0", fontSize: 13, display: "inline-flex", alignItems: "center", gap: 4, textDecoration: "none" }}>
-            <ChevronLeft size={14} /> Back to This Week
-          </Link>
-          <h1 style={{ fontFamily: "Georgia, serif", color: "#fff", fontSize: 24, margin: "10px 0 0", display: "flex", alignItems: "center", gap: 10 }}>
+          <h1 style={{ fontFamily: "var(--font-display), Georgia, serif", color: "#fff", fontSize: 24, margin: "10px 0 0", display: "flex", alignItems: "center", gap: 10 }}>
             <Users size={22} /> People
           </h1>
           <p style={{ color: "#EAE3D0", fontSize: 13.5, margin: "6px 0 0" }}>
@@ -102,7 +98,7 @@ export function PeopleView({
           </button>
         ) : (
           <div style={{ background: T.surface, border: `1px solid ${T.line}`, borderRadius: 16, padding: "22px", marginBottom: 20 }}>
-            <h2 style={{ fontFamily: "Georgia, serif", fontSize: 17, color: T.ink, margin: "0 0 14px" }}>Add someone</h2>
+            <h2 style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 17, color: T.ink, margin: "0 0 14px" }}>Add someone</h2>
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" style={{ ...inputStyle, marginBottom: 10 }} />
             <input
               value={relationship}
@@ -157,7 +153,7 @@ export function PeopleView({
             <div key={person.id} style={{ background: T.surface, border: `1px solid ${T.line}`, borderRadius: 14, padding: "18px 20px", marginBottom: 12 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                 <div>
-                  <p style={{ fontFamily: "Georgia, serif", fontSize: 17, color: T.ink, margin: 0, fontWeight: 500 }}>{person.name}</p>
+                  <p style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 17, color: T.ink, margin: 0, fontWeight: 500 }}>{person.name}</p>
                   {person.relationship && <p style={{ fontSize: 12.5, color: T.inkSoft, margin: "2px 0 0" }}>{person.relationship}</p>}
                 </div>
                 <button

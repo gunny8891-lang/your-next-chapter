@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Link from "next/link";
-import { ChevronLeft, Sparkles, Check } from "lucide-react";
+import { Sparkles, Check } from "lucide-react";
 import { T, CATEGORY_COLOR } from "@/lib/theme";
 import { Pill } from "@/components/Pill";
 import type { SurpriseOption } from "@/lib/types";
@@ -86,10 +85,7 @@ export function ExploreView({
     <div style={{ minHeight: "100vh", background: T.bg }}>
       <div style={{ background: T.primary, padding: "20px" }}>
         <div style={{ maxWidth: 560, margin: "0 auto" }}>
-          <Link href="/week" style={{ color: "#EAE3D0", fontSize: 13, display: "inline-flex", alignItems: "center", gap: 4, textDecoration: "none" }}>
-            <ChevronLeft size={14} /> Back to This Week
-          </Link>
-          <h1 style={{ fontFamily: "Georgia, serif", color: "#fff", fontSize: 24, margin: "10px 0 0", display: "flex", alignItems: "center", gap: 10 }}>
+          <h1 style={{ fontFamily: "var(--font-display), Georgia, serif", color: "#fff", fontSize: 24, margin: "10px 0 0", display: "flex", alignItems: "center", gap: 10 }}>
             <Sparkles size={22} /> Explore
           </h1>
         </div>
@@ -97,7 +93,7 @@ export function ExploreView({
 
       <div style={{ maxWidth: 560, margin: "0 auto", padding: "24px 20px 60px" }}>
         <div style={{ background: T.surface, border: `1px solid ${T.line}`, borderRadius: 16, padding: "22px", marginBottom: 20 }}>
-          <h2 style={{ fontFamily: "Georgia, serif", fontSize: 18, color: T.ink, margin: "0 0 16px" }}>Surprise Me</h2>
+          <h2 style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 18, color: T.ink, margin: "0 0 16px" }}>Surprise Me</h2>
 
           <p style={{ fontSize: 13, fontWeight: 600, color: T.inkSoft, margin: "0 0 8px" }}>WHEN</p>
           <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
@@ -168,7 +164,7 @@ export function ExploreView({
             <div style={{ marginBottom: 8 }}>
               <Pill color={CATEGORY_COLOR[option.category] ?? T.primary}>{option.category}</Pill>
             </div>
-            <h3 style={{ fontFamily: "Georgia, serif", fontSize: 18, color: T.ink, margin: "0 0 6px" }}>{option.title}</h3>
+            <h3 style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 18, color: T.ink, margin: "0 0 6px" }}>{option.title}</h3>
             <p style={{ fontSize: 13.5, color: T.inkSoft, margin: "0 0 10px" }}>
               {[option.address, formatCost(option.priceEstimate)].filter(Boolean).join(" · ")}
             </p>

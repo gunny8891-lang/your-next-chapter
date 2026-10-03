@@ -1,0 +1,226 @@
+/* Shared styles for the design-system primitives. Everything here uses the tokens in globals.css. */
+
+/* ---- Button --------------------------------------------------------- */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 48px;
+  padding: 0 var(--space-6);
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-control);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  text-align: center;
+  transition:
+    background var(--duration-quick) var(--ease-out),
+    border-color var(--duration-quick) var(--ease-out),
+    transform var(--duration-quick) var(--ease-out);
+}
+
+.button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.button:disabled,
+.button[aria-disabled="true"] {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.small {
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  font-size: var(--text-small);
+}
+
+.fullWidth {
+  display: flex;
+  width: 100%;
+}
+
+.primary {
+  background: var(--color-primary);
+  color: var(--color-surface);
+}
+
+.primary:hover:not(:disabled) {
+  background: #264034;
+}
+
+/* The one warm action on a screen: the thing to do next. */
+.accent {
+  background: var(--color-accent);
+  color: var(--color-surface);
+}
+
+.accent:hover:not(:disabled) {
+  background: #8F4830;
+}
+
+.secondary {
+  background: transparent;
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.secondary:hover:not(:disabled) {
+  background: var(--color-sage-soft);
+}
+
+.quiet {
+  background: transparent;
+  color: var(--color-ink-soft);
+}
+
+.quiet:hover:not(:disabled) {
+  background: var(--color-sage-soft);
+  color: var(--color-ink);
+}
+
+/* ---- Chip ----------------------------------------------------------- */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border: 1.5px solid var(--color-line);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: var(--text-small);
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background var(--duration-quick) var(--ease-out),
+    border-color var(--duration-quick) var(--ease-out),
+    color var(--duration-quick) var(--ease-out);
+}
+
+.chip:hover:not([aria-pressed="true"]) {
+  border-color: var(--color-primary-soft);
+}
+
+/* Selected is obvious: filled, with a tick, not just a colour change. */
+.chip[aria-pressed="true"] {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-surface);
+  font-weight: 600;
+}
+
+/* ---- Card ----------------------------------------------------------- */
+
+.card {
+  display: block;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-1);
+}
+
+.padSm {
+  padding: var(--space-4);
+}
+
+.padMd {
+  padding: var(--space-5);
+}
+
+.padLg {
+  padding: var(--space-6);
+}
+
+.padNone {
+  padding: 0;
+  overflow: hidden;
+}
+
+.interactive {
+  cursor: pointer;
+  transition: border-color var(--duration-quick) var(--ease-out);
+}
+
+.interactive:hover {
+  border-color: var(--color-primary-soft);
+}
+
+/* ---- Skeleton ------------------------------------------------------- */
+
+.skeleton {
+  background: linear-gradient(90deg, var(--color-line) 25%, #EDE8DC 50%, var(--color-line) 75%);
+  background-size: 200% 100%;
+  animation: ync-shimmer 1.4s linear infinite;
+}
+
+/* ---- Empty and error states ----------------------------------------- */
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-10) var(--space-6);
+  text-align: center;
+}
+
+.emptyIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-pill);
+  background: var(--color-sage-soft);
+  color: var(--color-sage);
+}
+
+.emptyTitle {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 22px;
+  color: var(--color-ink);
+}
+
+.emptyText {
+  max-width: 34ch;
+  font-size: var(--text-body);
+  color: var(--color-ink-soft);
+}
+
+.error {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-4);
+  border-radius: var(--radius-control);
+  background: var(--color-error-soft);
+  color: var(--color-error);
+  font-size: var(--text-small);
+  line-height: 1.5;
+}
+
+.errorIcon {
+  flex: none;
+  margin-top: 2px;
+}
+
+/* ---- Weather -------------------------------------------------------- */
+
+.weather {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-small);
+  color: var(--color-ink-soft);
+}
+
+.weatherTemp {
+  font-weight: 600;
+  color: var(--color-ink);
+}

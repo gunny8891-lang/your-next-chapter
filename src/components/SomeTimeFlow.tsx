@@ -239,7 +239,7 @@ export function SomeTimeFlow({ initial, onFind, onAccept, onFeedback }: Props) {
             <Pill color={CATEGORY_COLOR[option.category] ?? T.primary}>{option.isFood ? "Food & drink" : option.category}</Pill>
             {option.happeningToday && <Pill color={T.accent}>On today</Pill>}
           </div>
-          <h3 style={{ fontFamily: "Georgia, serif", fontSize: 18, color: T.ink, margin: "0 0 4px" }}>{option.title}</h3>
+          <h3 style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 18, color: T.ink, margin: "0 0 4px" }}>{option.title}</h3>
           {option.address && (
             <p style={{ fontSize: 13, color: T.inkSoft, margin: "0 0 6px", display: "flex", gap: 5, alignItems: "flex-start" }}>
               <MapPin size={13} style={{ marginTop: 2, flexShrink: 0 }} /> {option.address}

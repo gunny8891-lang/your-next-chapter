@@ -12,7 +12,7 @@ export default async function SignupPage({
   return (
     <div style={{ minHeight: "100vh", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div style={{ width: "100%", maxWidth: 400, background: T.surface, border: `1px solid ${T.line}`, borderRadius: 16, padding: "32px 28px" }}>
-        <h1 style={{ fontFamily: "Georgia, serif", fontSize: 24, color: T.ink, margin: "0 0 24px" }}>
+        <h1 style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 24, color: T.ink, margin: "0 0 24px" }}>
           Start your next chapter
         </h1>
 

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ChevronLeft, Compass, Check, Archive, Trash2 } from "lucide-react";
+import { useState, useTransition } from "react";
+import { Compass, Check, Archive, Trash2, Users, ChevronRight } from "lucide-react";
 import { T } from "@/lib/theme";
 
 export type Goal = {
@@ -70,10 +70,7 @@ export function MyChapterView({
     <div style={{ minHeight: "100vh", background: T.bg }}>
       <div style={{ background: T.primary, padding: "20px" }}>
         <div style={{ maxWidth: 560, margin: "0 auto" }}>
-          <Link href="/week" style={{ color: "#EAE3D0", fontSize: 13, display: "inline-flex", alignItems: "center", gap: 4, textDecoration: "none" }}>
-            <ChevronLeft size={14} /> Back to This Week
-          </Link>
-          <h1 style={{ fontFamily: "Georgia, serif", color: "#fff", fontSize: 24, margin: "10px 0 0", display: "flex", alignItems: "center", gap: 10 }}>
+          <h1 style={{ fontFamily: "var(--font-display), Georgia, serif", color: "#fff", fontSize: 24, margin: "10px 0 0", display: "flex", alignItems: "center", gap: 10 }}>
             <Compass size={22} /> My Chapter
           </h1>
           <p style={{ color: "#EAE3D0", fontSize: 13.5, margin: "6px 0 0" }}>
@@ -83,8 +80,17 @@ export function MyChapterView({
       </div>
 
       <div style={{ maxWidth: 560, margin: "0 auto", padding: "24px 20px 60px" }}>
+        <Link
+          href="/people"
+          style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 56, padding: "12px 18px", marginBottom: 20, background: T.surface, border: `1px solid ${T.line}`, borderRadius: 14, color: T.ink }}
+        >
+          <Users size={20} strokeWidth={1.75} color={T.sage} />
+          <span style={{ flex: 1, fontSize: 16, fontWeight: 500 }}>The people in your chapter</span>
+          <ChevronRight size={18} color={T.inkSoft} />
+        </Link>
+
         <div style={{ background: T.surface, border: `1px solid ${T.line}`, borderRadius: 16, padding: "22px", marginBottom: 20 }}>
-          <h2 style={{ fontFamily: "Georgia, serif", fontSize: 17, color: T.ink, margin: "0 0 14px" }}>
+          <h2 style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 17, color: T.ink, margin: "0 0 14px" }}>
             What would you still love to do?
           </h2>
           <input
@@ -183,7 +189,7 @@ export function MyChapterView({
 
         {completed.length > 0 && (
           <div>
-            <h3 style={{ fontFamily: "Georgia, serif", fontSize: 15, color: T.inkSoft, margin: "0 0 10px" }}>
+            <h3 style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 15, color: T.inkSoft, margin: "0 0 10px" }}>
               Done and set aside
             </h3>
             {completed.map((goal) => (

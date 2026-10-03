@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
 import { T } from "@/lib/theme";
+import { Button } from "@/components/ui";
+import { logout } from "@/app/auth/actions";
 
 type Profile = {
   location_text: string | null;
@@ -65,10 +65,7 @@ export function AccountSettingsForm({
     <div style={{ minHeight: "100vh", background: T.bg }}>
       <div style={{ background: T.primary, padding: "20px" }}>
         <div style={{ maxWidth: 560, margin: "0 auto" }}>
-          <Link href="/week" style={{ color: "#EAE3D0", fontSize: 13, display: "inline-flex", alignItems: "center", gap: 4, textDecoration: "none" }}>
-            <ChevronLeft size={14} /> Back to This Week
-          </Link>
-          <h1 style={{ fontFamily: "Georgia, serif", color: "#fff", fontSize: 24, margin: "10px 0 0" }}>Account & Settings</h1>
+          <h1 style={{ fontFamily: "var(--font-display), Georgia, serif", color: "#fff", fontSize: 24, margin: "10px 0 0" }}>Account & Settings</h1>
         </div>
       </div>
 
@@ -85,7 +82,7 @@ export function AccountSettingsForm({
         )}
 
         <div style={{ background: T.surface, border: `1px solid ${T.line}`, borderRadius: 16, padding: "22px 22px 8px", marginBottom: 20 }}>
-          <h2 style={{ fontFamily: "Georgia, serif", fontSize: 18, color: T.ink, margin: "0 0 18px" }}>Profile</h2>
+          <h2 style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 18, color: T.ink, margin: "0 0 18px" }}>Profile</h2>
 
           <Field label="Email">
             <input value={email} disabled style={{ ...inputStyle, background: T.bg, color: T.inkSoft }} />
@@ -150,7 +147,7 @@ export function AccountSettingsForm({
         </div>
 
         <div style={{ background: T.surface, border: `1px solid ${T.line}`, borderRadius: 16, padding: "22px", marginBottom: 20 }}>
-          <h2 style={{ fontFamily: "Georgia, serif", fontSize: 18, color: T.ink, margin: "0 0 12px" }}>Subscription</h2>
+          <h2 style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 18, color: T.ink, margin: "0 0 12px" }}>Subscription</h2>
           {subscription ? (
             <p style={{ fontSize: 14.5, color: T.ink, margin: 0 }}>
               {subscription.plan} plan — {subscription.status}
@@ -163,8 +160,14 @@ export function AccountSettingsForm({
           )}
         </div>
 
+        <form action={logout} style={{ marginBottom: 20 }}>
+          <Button type="submit" variant="secondary" fullWidth>
+            Log out
+          </Button>
+        </form>
+
         <div style={{ background: T.surface, border: "1px solid #E3B8A8", borderRadius: 16, padding: "22px" }}>
-          <h2 style={{ fontFamily: "Georgia, serif", fontSize: 18, color: "#B0562F", margin: "0 0 8px" }}>Danger zone</h2>
+          <h2 style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 18, color: "#B0562F", margin: "0 0 8px" }}>Danger zone</h2>
           <p style={{ fontSize: 14, color: T.inkSoft, margin: "0 0 16px", lineHeight: 1.5 }}>
             Permanently deletes your account and all associated data — profile, itineraries, preference history.
             This cannot be undone.

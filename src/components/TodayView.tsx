@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { ChevronLeft, Check, X, Hourglass } from "lucide-react";
+import { Check, X, Hourglass } from "lucide-react";
 import { T, CATEGORY_COLOR } from "@/lib/theme";
 import { SomeTimeFlow, type SomeTimeInitial } from "@/components/SomeTimeFlow";
 import type { ItineraryItemView } from "@/lib/types";
@@ -37,7 +36,7 @@ function GotSomeTime({ flow }: { flow: FlowActions }) {
 
   return (
     <div style={{ background: T.surface, border: `1.5px solid ${T.accent}`, borderRadius: 16, padding: "18px 20px", marginBottom: 22 }}>
-      <p style={{ fontFamily: "Georgia, serif", fontSize: 19, color: T.ink, margin: "0 0 4px", display: "flex", alignItems: "center", gap: 8 }}>
+      <p style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 19, color: T.ink, margin: "0 0 4px", display: "flex", alignItems: "center", gap: 8 }}>
         <Hourglass size={18} color={T.accent} /> I&apos;ve got some time
       </p>
       {!open ? (
@@ -77,7 +76,7 @@ function OpenTimeSlot({ slotLabel, slot, flow }: { slotLabel: string; slot: stri
     return (
       <div style={{ background: T.accentSoft, border: `1.5px dashed ${T.accent}`, borderRadius: 14, padding: "18px 20px", marginBottom: 14 }}>
         <p style={{ fontSize: 12, fontWeight: 700, color: T.accent, letterSpacing: 0.3, margin: "0 0 4px" }}>{slotLabel.toUpperCase()}</p>
-        <p style={{ fontFamily: "Georgia, serif", fontSize: 17, color: T.ink, margin: "0 0 12px" }}>✨ Open Time</p>
+        <p style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 17, color: T.ink, margin: "0 0 12px" }}>✨ Open Time</p>
         <button
           type="button"
           onClick={() => setExpanded(true)}
@@ -138,10 +137,7 @@ export function TodayView({
     <div style={{ minHeight: "100vh", background: T.bg }}>
       <div style={{ background: T.primary, padding: "20px" }}>
         <div style={{ maxWidth: 560, margin: "0 auto" }}>
-          <Link href="/week" style={{ color: "#EAE3D0", fontSize: 13, display: "inline-flex", alignItems: "center", gap: 4, textDecoration: "none" }}>
-            <ChevronLeft size={14} /> Back to This Week
-          </Link>
-          <h1 style={{ fontFamily: "Georgia, serif", color: "#fff", fontSize: 24, margin: "10px 0 0" }}>Today</h1>
+          <h1 style={{ fontFamily: "var(--font-display), Georgia, serif", color: "#fff", fontSize: 24, margin: "10px 0 0" }}>Today</h1>
           <p style={{ color: "#EAE3D0", fontSize: 13.5, margin: "6px 0 0" }}>
             {dateLabel}
             {line ? ` · ${line}` : ""}
@@ -175,7 +171,7 @@ export function TodayView({
               <p style={{ fontSize: 12, fontWeight: 700, color: CATEGORY_COLOR[item.category] ?? T.primary, letterSpacing: 0.3, margin: "0 0 6px" }}>
                 {slotLabel.toUpperCase()} · {item.category.toUpperCase()}
               </p>
-              <h3 style={{ fontFamily: "Georgia, serif", fontSize: 18, color: T.ink, margin: "0 0 6px" }}>{item.title}</h3>
+              <h3 style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 18, color: T.ink, margin: "0 0 6px" }}>{item.title}</h3>
               <p style={{ fontSize: 13.5, color: T.inkSoft, margin: "0 0 10px" }}>
                 {item.time} · {item.location} · {item.cost}
               </p>
