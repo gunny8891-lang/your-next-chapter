@@ -74,6 +74,18 @@ describe("assess: is it a photograph of this place", () => {
     expect(assess(cask, generic).ok).toBe(false);
   });
 
+  it("refuses a street scene that only mentions a small venue's name", () => {
+    const arkley: Place = { title: "The Arkley", lat: 51.65, lng: -0.22, radiusKm: 0.35, locality: ["barnet"] };
+    const street = file({ fileTitle: "File:Houses on Galley Lane, Arkley - geograph.org.uk - 2665134.jpg", coords: { lat: 51.65, lng: -0.22 } });
+    expect(assess(arkley, street)).toEqual({ ok: false, reason: "name is not what the photograph is titled" });
+    expect(assess(arkley, file({ fileTitle: "File:The Arkley pub.jpg", coords: { lat: 51.65, lng: -0.22 } })).ok).toBe(true);
+  });
+
+  it("lets a large place's name turn up anywhere in the title", () => {
+    const richmond: Place = { title: "Richmond Park", lat: 51.44, lng: -0.27, radiusKm: 1.5 };
+    expect(assess(richmond, file({ fileTitle: "File:Deer in Richmond Park.jpg", coords: { lat: 51.44, lng: -0.27 } })).ok).toBe(true);
+  });
+
   it("refuses a photograph geotagged too far from a small place", () => {
     const farAway = file({ coords: { lat: 51.5, lng: -0.1 } });
     expect(assess(redLion, farAway)).toEqual({ ok: false, reason: "photographed somewhere else" });

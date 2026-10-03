@@ -108,11 +108,15 @@ export function hasDistinctiveName(name: string): boolean {
   return nameWords(name).some((w) => w.length >= 3 && !GENERIC.has(w));
 }
 
-/** Every word of `needles`, in order and side by side: "Angel Cafe, New Barnet" does not hold "Barnet Cafe". */
-function containsPhrase(haystack: string, needles: string[]): boolean {
+/**
+ * Every word of `needles`, in order and side by side: "Angel Cafe, New Barnet" does not hold
+ * "Barnet Cafe". With `atStart`, the phrase must also open the title.
+ */
+function containsPhrase(haystack: string, needles: string[], atStart = false): boolean {
   if (needles.length === 0) return false;
   const have = words(haystack).filter((w) => !STOP_WORDS.has(w));
   for (let i = 0; i + needles.length <= have.length; i++) {
+    if (atStart && i > 0) return false;
     if (needles.every((n, j) => have[i + j] === n)) return true;
   }
   return false;
@@ -158,9 +162,13 @@ export function assess(place: Place, c: CommonsCandidate): Verdict {
   // The name, as a phrase, in the file's own title. Not scattered through it, and not only
   // in a description: that is how a photograph of the Angel Cafe in New Barnet gets offered
   // for "Barnet Cafe", and how a museum's jewellery-box exhibit becomes its picture.
-  if (!containsPhrase(baseTitle, needed)) return { ok: false, reason: "name not in the file's title" };
-  const named = new Set(needed);
   const small = (place.radiusKm ?? SMALL_PLACE_KM) <= SMALL_PLACE_KM;
+  if (!containsPhrase(baseTitle, needed)) return { ok: false, reason: "name not in the file's title" };
+  // A building is photographed by its name ("Red Lion, High Barnet"); a street scene merely
+  // mentions it ("Houses on Galley Lane, Arkley" is not a picture of the pub called The Arkley).
+  // A park, by contrast, turns up in the middle of a title ("Deer in Richmond Park").
+  if (small && !containsPhrase(baseTitle, needed, true)) return { ok: false, reason: "name is not what the photograph is titled" };
+  const named = new Set(needed);
   if (words(baseTitle).some((w) => !named.has(w) && (OTHER_SUBJECT.has(w) || (small && OUTDOOR_FEATURE.has(w))))) return { ok: false, reason: "a photograph of something else nearby" };
 
   let distance: number | null = null;
