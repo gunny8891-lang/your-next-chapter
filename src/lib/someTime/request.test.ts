@@ -5,7 +5,7 @@ const GOOD = { start: "now", duration: "1-2h", who: "partner", mood: "culture", 
 
 describe("parseTimeRequest", () => {
   it("accepts a valid request", () => {
-    expect(parseTimeRequest(GOOD)).toEqual(GOOD);
+    expect(parseTimeRequest(GOOD)).toEqual({ ...GOOD, untilMin: null });
   });
 
   it("treats the mood as optional", () => {
@@ -37,5 +37,29 @@ describe("parseTimeRequest", () => {
 
   it("defaults a missing exclusion list to empty", () => {
     expect(parseTimeRequest({ ...GOOD, exclude: undefined })?.exclude).toEqual([]);
+  });
+});
+
+describe("parseTimeRequest — the time before the next plan", () => {
+  const base = { start: "now", who: "just_me", mood: null, exclude: [] };
+
+  it("accepts it with a time to be back for", () => {
+    expect(parseTimeRequest({ ...base, duration: "until_next", untilMin: 17 * 60 })?.untilMin).toBe(1020);
+  });
+
+  it("rejects it without a usable time, since it would mean nothing", () => {
+    expect(parseTimeRequest({ ...base, duration: "until_next" })).toBeNull();
+    expect(parseTimeRequest({ ...base, duration: "until_next", untilMin: -5 })).toBeNull();
+    expect(parseTimeRequest({ ...base, duration: "until_next", untilMin: 5000 })).toBeNull();
+    expect(parseTimeRequest({ ...base, duration: "until_next", untilMin: "17:00" })).toBeNull();
+    expect(parseTimeRequest({ ...base, duration: "until_next", untilMin: 12.5 })).toBeNull();
+  });
+
+  it("ignores a stray time on any other duration", () => {
+    expect(parseTimeRequest({ ...base, duration: "1-2h", untilMin: 600 })?.untilMin).toBeNull();
+  });
+
+  it("knows the outdoors mood", () => {
+    expect(parseTimeRequest({ ...base, duration: "30m", mood: "outdoors" })?.mood).toBe("outdoors");
   });
 });

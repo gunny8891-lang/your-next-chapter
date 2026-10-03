@@ -42,7 +42,7 @@ export async function getTimeOptionsAction(raw: unknown): Promise<TimeResult> {
  */
 export async function acceptTimeOptionAction(
   activityId: string,
-  choice: { start?: unknown; duration?: unknown },
+  choice: { start?: unknown; duration?: unknown; untilMin?: unknown },
   foodStopId?: string
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
@@ -51,7 +51,7 @@ export async function acceptTimeOptionAction(
   } = await supabase.auth.getUser();
   if (!user) return { error: "Please sign in again." };
 
-  const request = parseTimeRequest({ start: choice.start, duration: choice.duration, who: "just_me" });
+  const request = parseTimeRequest({ start: choice.start, duration: choice.duration, untilMin: choice.untilMin, who: "just_me" });
   if (!request) return { error: "That didn't look right — please try again." };
   const resolved = resolveWindow(request, new Date());
   if (!resolved.ok) return { error: resolved.reason };

@@ -80,3 +80,27 @@ describe("labels", () => {
     expect(durationLabel(120)).toBe("2 hours");
   });
 });
+
+describe("resolveWindow — until the next plan", () => {
+  // 13:07 London on Friday 2 October 2026; starts 13:10.
+  const NOW_BST = new Date("2026-10-02T12:07:00Z");
+
+  it("is the time up to the next thing, ready to be back for it", () => {
+    const r = resolveWindow({ start: "now", duration: "until_next", untilMin: 17 * 60 }, NOW_BST);
+    expect(r.ok && r.window.endMin).toBe(17 * 60);
+    expect(r.ok && r.window.availableMinutes).toBe(17 * 60 - (13 * 60 + 10));
+  });
+
+  it("says plainly when there is no real gap before the next plan", () => {
+    const r = resolveWindow({ start: "now", duration: "until_next", untilMin: 13 * 60 + 25 }, NOW_BST);
+    expect(r.ok).toBe(false);
+    expect(!r.ok && r.reason).toMatch(/not enough time before your next plan/);
+  });
+
+  it("never runs past a sensible end of day, or beyond ten hours", () => {
+    const late = resolveWindow({ start: "now", duration: "until_next", untilMin: 23 * 60 + 30 }, NOW_BST);
+    expect(late.ok && late.window.endMin).toBeLessThanOrEqual(22 * 60 + 30);
+    const morning = resolveWindow({ start: "now", duration: "until_next", untilMin: 22 * 60 }, new Date("2026-10-02T06:00:00Z"));
+    expect(morning.ok && morning.window.availableMinutes).toBeLessThanOrEqual(600);
+  });
+});

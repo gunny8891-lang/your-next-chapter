@@ -57,7 +57,10 @@ export function durationLabel(minutes: number): string {
  * concrete stretch of today. A later start never begins before the time it names,
  * and never before now; the end is clipped to the end of a sensible day.
  */
-export function resolveWindow(request: { start: StartChoice; duration: DurationChoice }, now: Date): WindowResult {
+export function resolveWindow(
+  request: { start: StartChoice; duration: DurationChoice; untilMin?: number | null },
+  now: Date
+): WindowResult {
   const clock = londonClock(now);
   const nowMin = roundUp5(clock.minutes);
   const startMin =
@@ -70,11 +73,25 @@ export function resolveWindow(request: { start: StartChoice; duration: DurationC
   }
 
   const untilDayEnd = DAY_END_MIN - startMin;
+
+  // Time before the next thing already in their day: free until then, and back for it.
+  if (request.duration === "until_next") {
+    const gap = (request.untilMin ?? 0) - startMin;
+    if (gap < MIN_USABLE_MIN) {
+      return { ok: false, reason: "There is not enough time before your next plan — try a different amount of time." };
+    }
+    const available = Math.min(gap, untilDayEnd, 600);
+    return {
+      ok: true,
+      window: { date: clock.date, startMin, endMin: startMin + available, availableMinutes: available, minUsefulMinutes: Math.min(45, available) },
+    };
+  }
+
   const [wanted, minUseful] =
     request.duration === "30m" ? [30, 15]
     : request.duration === "1-2h" ? [120, 45]
     : request.duration === "half_day" ? [240, 120]
-    : [Math.min(600, untilDayEnd), Math.min(90, untilDayEnd)];
+    : [Math.min(600, untilDayEnd), Math.min(90, untilDayEnd)]; // rest of the day
 
   const availableMinutes = Math.min(wanted, untilDayEnd);
   return {

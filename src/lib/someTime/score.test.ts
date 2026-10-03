@@ -526,3 +526,16 @@ describe("reasons read like a person would say them", () => {
     expect(learn.reasons).toContain("you have enjoyed learning lately");
   });
 });
+
+describe("outdoors mood", () => {
+  it("prefers a walk to a museum, and a garden to a cinema", () => {
+    const outdoors = input({ request: { start: "now", duration: "1-2h", who: "just_me", mood: "outdoors", exclude: [] } });
+    expect(score(place({ tags: ["walking", "outdoors"] }), outdoors)!).toBeGreaterThan(score(place({ tags: ["museum"] }), outdoors)!);
+    expect(score(place({ tags: ["gardens"] }), outdoors)!).toBeGreaterThan(score(place({ tags: ["cinema"] }), outdoors)!);
+  });
+
+  it("has no effect on anything when no mood is chosen", () => {
+    expect(moodBonus(null, { category: "Move", tags: ["walking", "outdoors"] })).toBe(0);
+    expect(moodBonus("outdoors", { category: "Move", tags: ["walking"] })).toBeGreaterThan(moodBonus("outdoors", { category: "Learn", tags: [] }));
+  });
+});

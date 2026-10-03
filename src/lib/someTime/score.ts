@@ -142,6 +142,8 @@ export function minimumVisitMinutes(tags: string[]): number | null {
 export function moodBonus(mood: Mood | null, c: Pick<OpportunityCandidate, "category" | "tags"> & { title?: string }): number {
   const has = (...tags: string[]) => tags.some((t) => c.tags.includes(t));
   switch (mood) {
+    case "outdoors":
+      return (has("outdoors", "walking", "nature", "gardens") ? 3.5 : 0) + (c.category === "Move" ? 0.5 : 0) - (has("books", "cinema", "theatre", "museum") ? 1.5 : 0);
     case "active":
       return (["Move", "Wellness"].includes(c.category) ? 3 : 0) + (has("walking", "fitness", "swimming", "yoga") ? 1 : 0) - (has("books", "cinema") ? 1.5 : 0);
     case "social":
