@@ -1,0 +1,115 @@
+/* The two sheets opened from My Week: one planned thing, and the alternatives to it. */
+
+.body {
+  display: grid;
+  gap: var(--space-4);
+  padding-top: var(--space-4);
+}
+
+.category {
+  font-size: var(--text-label);
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin-top: calc(var(--space-2) * -1);
+  padding-right: var(--space-8);
+  font-size: 28px;
+  line-height: 1.18;
+  color: var(--color-ink);
+}
+
+.details {
+  display: grid;
+  gap: var(--space-2);
+  list-style: none;
+  color: var(--color-ink-soft);
+}
+
+.details li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.details svg {
+  flex: none;
+  color: var(--color-sage);
+}
+
+.why {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--color-line);
+  line-height: 1.55;
+}
+
+.whyTitle {
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: var(--text-small);
+  font-weight: 600;
+  color: var(--color-sage);
+}
+
+.note {
+  font-size: var(--text-small);
+  color: var(--color-ink-soft);
+}
+
+.actions {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.secondary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.hint {
+  font-size: var(--text-small);
+  color: var(--color-ink-soft);
+}
+
+/* ---- alternatives --------------------------------------------------- */
+
+.alternatives {
+  display: grid;
+  list-style: none;
+}
+
+.alternative {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-5) 0;
+  border-top: 1px solid var(--color-line);
+}
+
+.alternative:first-child {
+  border-top: none;
+}
+
+.altTitle {
+  font-size: 20px;
+  color: var(--color-ink);
+}
+
+.meta {
+  font-size: var(--text-small);
+  color: var(--color-ink-soft);
+}
+
+.skeletons {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.skeleton {
+  display: grid;
+  gap: var(--space-2);
+}

@@ -9,3 +9,4 @@ export { Cover, type CoverImage } from "@/components/ui/Cover";
 export { Sheet } from "@/components/ui/Sheet";
 export { Timeline } from "@/components/ui/Timeline";
 export { Field } from "@/components/ui/Field";
+export { Page, PageHeader, SectionTitle } from "@/components/ui/Page";

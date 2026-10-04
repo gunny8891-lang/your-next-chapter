@@ -1,24 +1,38 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import Link from "next/link";
-import { Clock, MapPin, Banknote, Check, Sparkles } from "lucide-react";
-import { T } from "@/lib/theme";
-import { CATEGORY, DAYS } from "@/lib/categories";
-import { Pill } from "@/components/Pill";
-import { ItemDetailModal } from "@/components/ItemDetailModal";
-import { SwapAlternativesPanel } from "@/components/SwapAlternativesPanel";
+import { Check, Gift } from "lucide-react";
+import { DAYS } from "@/lib/categories";
+import { CATEGORY_COLOR } from "@/lib/theme";
+import { placeLabel } from "@/lib/someTime/format";
+import { Button, Card, EmptyState, Page, PageHeader } from "@/components/ui";
+import { ItemSheet } from "@/components/ItemSheet";
+import { SwapSheet } from "@/components/SwapSheet";
 import { GenerateWeekButton } from "@/components/GenerateWeekButton";
 import type { ItineraryItemView, SurpriseView, MemberAction, SwapAlternative } from "@/lib/types";
+import styles from "@/components/ThisWeek.module.css";
 
 const isRealItem = (id: string) => !id.startsWith("demo-");
 
+const FULL_DAY: Record<string, string> = {
+  Mon: "Monday",
+  Tue: "Tuesday",
+  Wed: "Wednesday",
+  Thu: "Thursday",
+  Fri: "Friday",
+  Sat: "Saturday",
+  Sun: "Sunday",
+};
+
+/** What the database stores when it does not know: not worth showing as a fact. */
+const UNKNOWN = new Set(["Price TBC", "Location TBC"]);
+
 export function ThisWeekView({
   locationLabel,
+  today,
   items,
   surprise,
   isDemo,
-  isAdmin,
   onItemAction,
   onSurpriseAction,
   onGenerate,
@@ -26,10 +40,11 @@ export function ThisWeekView({
   onApplySwap,
 }: {
   locationLabel: string;
+  /** "Mon".."Sun": today in London, so the week opens on it. */
+  today: string;
   items: ItineraryItemView[];
   surprise: SurpriseView;
   isDemo: boolean;
-  isAdmin: boolean;
   onItemAction: (itemId: string, action: "accepted" | "swapped" | "skipped") => Promise<void>;
   onSurpriseAction: (cardId: string, response: "accepted" | "dismissed") => Promise<void>;
   onGenerate: () => Promise<{ error: string | null; usedFallback?: boolean }>;
@@ -45,14 +60,12 @@ export function ThisWeekView({
     return map;
   }, [items]);
 
-  const firstDayWithItems = DAYS.find((d) => itemsByDay[d]?.length) ?? "Mon";
-  const [activeDay, setActiveDay] = useState<string>(firstDayWithItems);
+  // The week opens on today, wherever in it that is.
+  const [activeDay, setActiveDay] = useState<string>((DAYS as readonly string[]).includes(today) ? today : "Mon");
   const [statuses, setStatuses] = useState<Record<string, MemberAction>>(() =>
     Object.fromEntries(items.map((i) => [i.id, i.status]))
   );
-  const [surpriseStatus, setSurpriseStatus] = useState<"accepted" | "dismissed" | null>(
-    surprise?.response ?? null
-  );
+  const [surpriseStatus, setSurpriseStatus] = useState<"accepted" | "dismissed" | null>(surprise?.response ?? null);
   const [openItemId, setOpenItemId] = useState<string | null>(null);
   const [swapItemId, setSwapItemId] = useState<string | null>(null);
   const [swapAlternatives, setSwapAlternatives] = useState<SwapAlternative[]>([]);
@@ -61,7 +74,7 @@ export function ThisWeekView({
   const [, startTransition] = useTransition();
 
   const openingSurprise = openItemId === "surprise";
-  const openItem = openingSurprise ? surprise : items.find((i) => i.id === openItemId) ?? null;
+  const openItem = openingSurprise ? surprise : (items.find((i) => i.id === openItemId) ?? null);
 
   const handleAction = (action: "accepted" | "swapped" | "skipped") => {
     if (openingSurprise && surprise) {
@@ -109,128 +122,131 @@ export function ThisWeekView({
   };
 
   const dayItems = itemsByDay[activeDay] ?? [];
+  const dayName = FULL_DAY[activeDay] ?? activeDay;
 
   return (
-    <div style={{ minHeight: "100%", background: T.bg }}>
-      <div style={{ background: T.primary, padding: "22px 20px 26px" }}>
-        <div style={{ maxWidth: 640, margin: "0 auto" }}>
-          {isAdmin && (
-            <div style={{ display: "flex", gap: 16, marginBottom: 14 }}>
-              <Link href="/admin/activities" style={{ color: "#EAE3D0", fontSize: 13, textDecoration: "none" }}>
-                Review Queue
-              </Link>
-              <Link href="/admin/ai-costs" style={{ color: "#EAE3D0", fontSize: 13, textDecoration: "none" }}>
-                AI Costs
-              </Link>
-            </div>
-          )}
-          <p style={{ color: "#EAE3D0", fontSize: 13, margin: "0 0 4px", letterSpacing: 0.4, fontWeight: 600 }}>YOUR PERFECT WEEK</p>
-          <h1 style={{ fontFamily: "var(--font-display), Georgia, serif", color: "#fff", fontSize: 26, margin: 0 }}>{locationLabel}</h1>
-          {isDemo && (
-            <>
-              <p style={{ color: "#EAE3D0", fontSize: 12.5, marginTop: 8, opacity: 0.85 }}>
-                Showing a demo week — generate your real, personalised week below.
-              </p>
-              <GenerateWeekButton onGenerate={onGenerate} />
-            </>
-          )}
+    <Page>
+      <PageHeader title="My week" lead={isDemo ? "An example of how a week can look." : `Around ${locationLabel}`} />
 
-          <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
-            {DAYS.map((d) => {
-              const dItems = itemsByDay[d] ?? [];
-              const cat = dItems[0]?.category;
-              const color = cat ? CATEGORY[cat].color : T.line;
-              const s = dItems[0] ? statuses[dItems[0].id] : undefined;
-              return (
-                <button
-                  key={d}
-                  onClick={() => setActiveDay(d)}
-                  style={{
-                    flex: 1,
-                    padding: "10px 4px",
-                    borderRadius: 10,
-                    border: "none",
-                    background: activeDay === d ? "#fff" : "rgba(255,255,255,0.14)",
-                    color: activeDay === d ? T.primary : "#EAE3D0",
-                    cursor: "pointer",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 5,
-                    transition: "all 0.15s",
-                  }}
-                >
-                  <span style={{ fontSize: 12.5, fontWeight: 700 }}>{d}</span>
-                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: s === "skipped" ? "transparent" : color, border: s === "skipped" ? `1px solid ${color}` : "none" }} />
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+      {isDemo && (
+        <Card className={styles.demo}>
+          <p>This is only an example. Plan your own and it will be chosen around you.</p>
+          <GenerateWeekButton onGenerate={onGenerate} />
+        </Card>
+      )}
 
-      <div style={{ maxWidth: 640, margin: "0 auto", padding: "24px 20px 60px" }}>
-        {dayItems.length === 0 && (
-          <p style={{ color: T.inkSoft, fontSize: 14.5 }}>Nothing planned for {activeDay} yet.</p>
-        )}
-        {dayItems.map((item) => {
-          const Icon = CATEGORY[item.category].icon;
-          const color = CATEGORY[item.category].color;
-          const status = statuses[item.id];
+      <div className={styles.days} role="group" aria-label="Day of the week">
+        {DAYS.map((d) => {
+          const dItems = itemsByDay[d] ?? [];
+          const isToday = d === today;
           return (
-            <div
-              key={item.id}
-              onClick={() => setOpenItemId(item.id)}
-              style={{
-                background: T.surface,
-                border: `1px solid ${T.line}`,
-                borderRadius: 16,
-                padding: "18px 20px",
-                marginBottom: 14,
-                cursor: "pointer",
-                opacity: status === "skipped" ? 0.5 : 1,
-              }}
+            <button
+              key={d}
+              type="button"
+              className={styles.day}
+              aria-pressed={activeDay === d}
+              aria-label={`${FULL_DAY[d]}${isToday ? ", today" : ""}, ${dItems.length === 0 ? "nothing planned" : `${dItems.length} planned`}`}
+              onClick={() => setActiveDay(d)}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                <Pill color={color}><Icon size={13} /> {item.category}</Pill>
-                {status === "accepted" && <Pill color={T.primary}><Check size={12} /> Accepted</Pill>}
-                {status === "skipped" && <Pill color={T.inkSoft}>Skipped</Pill>}
-              </div>
-              <h3 style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 19, color: T.ink, margin: "12px 0 8px" }}>{item.title}</h3>
-              <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 13.5, color: T.inkSoft, display: "flex", alignItems: "center", gap: 5 }}><Clock size={13} /> {item.time}</span>
-                <span style={{ fontSize: 13.5, color: T.inkSoft, display: "flex", alignItems: "center", gap: 5 }}><MapPin size={13} /> {item.location}</span>
-                <span style={{ fontSize: 13.5, color: T.inkSoft, display: "flex", alignItems: "center", gap: 5 }}><Banknote size={13} /> {item.cost}</span>
-              </div>
-              {item.behaviorNote && (
-                <p style={{ fontSize: 12.5, color: T.primarySoft, margin: "10px 0 0", fontStyle: "italic" }}>{item.behaviorNote}</p>
-              )}
-            </div>
+              <span className={styles.dayName}>{d}</span>
+              <span className={styles.dots} aria-hidden="true">
+                {dItems.slice(0, 3).map((item) => {
+                  const color = CATEGORY_COLOR[item.category] ?? CATEGORY_COLOR.Joy;
+                  const skipped = statuses[item.id] === "skipped";
+                  return (
+                    <span
+                      key={item.id}
+                      className={styles.dot}
+                      style={skipped ? { border: `1.5px solid ${color}` } : { background: color }}
+                    />
+                  );
+                })}
+              </span>
+              {isToday && <span className={styles.todayMark}>Today</span>}
+            </button>
           );
         })}
-
-        {surprise && (
-          <div
-            onClick={() => setOpenItemId("surprise")}
-            style={{
-              marginTop: 28,
-              borderRadius: 18,
-              padding: "20px 22px",
-              background: `linear-gradient(135deg, ${T.accentSoft}, #fff)`,
-              border: `1.5px solid ${T.accent}`,
-              cursor: "pointer",
-              opacity: surpriseStatus === "dismissed" ? 0.5 : 1,
-            }}
-          >
-            <Pill color={T.accent}><Sparkles size={13} /> Surprise Me — this week</Pill>
-            <h3 style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 19, color: T.ink, margin: "12px 0 6px" }}>{surprise.title}</h3>
-            <p style={{ fontSize: 13.5, color: T.inkSoft, margin: 0 }}>{surprise.location} · {surprise.cost}</p>
-          </div>
-        )}
       </div>
 
+      <section aria-labelledby="week-day" className={styles.dayPanel}>
+        <h2 id="week-day" className={styles.dayTitle}>
+          {dayName}
+          {activeDay === today && <span className={styles.dayTitleNote}> · today</span>}
+        </h2>
+
+        {dayItems.length === 0 ? (
+          <EmptyState
+            icon={<Check size={24} strokeWidth={1.75} />}
+            title="Nothing planned"
+            action={
+              activeDay === today ? (
+                <Button href="/today" variant="secondary">
+                  Find something for today
+                </Button>
+              ) : undefined
+            }
+          >
+            {activeDay === today ? "A free day. Perhaps there's something you'd enjoy." : `${dayName} is free so far.`}
+          </EmptyState>
+        ) : (
+          <ul className={styles.list}>
+            {dayItems.map((item) => {
+              const status = statuses[item.id];
+              const place = placeLabel(item.location);
+              const meta = [place, UNKNOWN.has(item.cost) ? null : item.cost].filter(Boolean).join(" · ");
+              return (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    className={`${styles.item} ${status === "skipped" ? styles.skipped : ""}`}
+                    onClick={() => setOpenItemId(item.id)}
+                  >
+                    <span className={styles.time}>{item.time}</span>
+                    <span className={styles.itemBody}>
+                      <span className={styles.itemTitle}>{item.title}</span>
+                      <span className={styles.itemMeta}>
+                        <span style={{ color: CATEGORY_COLOR[item.category], fontWeight: 600 }}>{item.category}</span>
+                        {meta ? ` · ${meta}` : ""}
+                      </span>
+                      {status === "accepted" && (
+                        <span className={styles.going}>
+                          <Check size={16} strokeWidth={2.25} aria-hidden="true" /> Going
+                        </span>
+                      )}
+                      {status === "skipped" && <span className={styles.skippedNote}>Not this time</span>}
+                      {item.behaviorNote && <span className={styles.note}>{item.behaviorNote}</span>}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      {surprise && (
+        <button
+          type="button"
+          className={`${styles.treat} ${surpriseStatus === "dismissed" ? styles.skipped : ""}`}
+          onClick={() => setOpenItemId("surprise")}
+        >
+          <span className={styles.treatLabel}>
+            <Gift size={16} strokeWidth={1.75} aria-hidden="true" /> A little extra this week
+          </span>
+          <span className={styles.itemTitle}>{surprise.title}</span>
+          <span className={styles.itemMeta}>
+            {[placeLabel(surprise.location), UNKNOWN.has(surprise.cost) ? null : surprise.cost].filter(Boolean).join(" · ")}
+          </span>
+          {surpriseStatus === "accepted" && (
+            <span className={styles.going}>
+              <Check size={16} strokeWidth={2.25} aria-hidden="true" /> Going
+            </span>
+          )}
+        </button>
+      )}
+
       {openItem && (
-        <ItemDetailModal
+        <ItemSheet
           item={openItem}
           status={openingSurprise ? surpriseStatus : statuses[openItem.id]}
           onClose={() => setOpenItemId(null)}
@@ -239,7 +255,7 @@ export function ThisWeekView({
       )}
 
       {swapItemId && (
-        <SwapAlternativesPanel
+        <SwapSheet
           isLoading={swapLoading}
           alternatives={swapAlternatives}
           error={swapError}
@@ -247,6 +263,6 @@ export function ThisWeekView({
           onClose={() => setSwapItemId(null)}
         />
       )}
-    </div>
+    </Page>
   );
 }

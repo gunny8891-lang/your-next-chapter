@@ -1,0 +1,212 @@
+/* My week: a row of days, then the chosen day as a plain list on the page. */
+
+.demo {
+  display: grid;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+  background: var(--color-accent-soft);
+  border-color: transparent;
+}
+
+/* ---- the days ------------------------------------------------------- */
+
+.days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--space-1);
+}
+
+.day {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-height: 64px;
+  padding: var(--space-2) 0;
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-ink);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    background var(--duration-quick) var(--ease-out),
+    border-color var(--duration-quick) var(--ease-out);
+}
+
+.day:hover:not([aria-pressed="true"]) {
+  background: var(--color-sage-soft);
+}
+
+.day[aria-pressed="true"] {
+  background: var(--color-primary);
+  color: var(--color-surface);
+}
+
+.dayName {
+  font-size: var(--text-small);
+  font-weight: 600;
+}
+
+.dots {
+  display: flex;
+  gap: 3px;
+  min-height: 7px;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+/* On the selected day's dark chip a dot needs its own ring to stay visible. */
+.day[aria-pressed="true"] .dot {
+  box-shadow: 0 0 0 1.5px var(--color-surface);
+}
+
+.todayMark {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.day[aria-pressed="true"] .todayMark {
+  color: var(--color-accent-soft);
+}
+
+/* ---- the chosen day ------------------------------------------------- */
+
+.dayPanel {
+  margin-top: var(--space-6);
+}
+
+.dayTitle {
+  margin-bottom: var(--space-2);
+  font-size: 24px;
+  color: var(--color-ink);
+}
+
+.dayTitleNote {
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: var(--text-small);
+  font-weight: 500;
+  color: var(--color-ink-soft);
+}
+
+.list {
+  list-style: none;
+}
+
+.item {
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  gap: var(--space-4);
+  width: 100%;
+  padding: var(--space-4) 0;
+  border: none;
+  border-top: 1px solid var(--color-line);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.list li:last-child .item {
+  border-bottom: 1px solid var(--color-line);
+}
+
+.item:hover .itemTitle {
+  text-decoration: underline;
+  text-decoration-color: var(--color-primary-soft);
+  text-underline-offset: 3px;
+}
+
+.time {
+  padding-top: 3px;
+  font-size: var(--text-small);
+  font-weight: 600;
+  color: var(--color-ink-soft);
+}
+
+.itemBody {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.itemTitle {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 20px;
+  line-height: 1.25;
+  color: var(--color-ink);
+}
+
+.itemMeta {
+  font-size: var(--text-small);
+  color: var(--color-ink-soft);
+}
+
+.going {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-small);
+  font-weight: 600;
+  color: var(--color-sage);
+}
+
+.skipped {
+  opacity: 0.55;
+}
+
+.skippedNote {
+  font-size: var(--text-small);
+  color: var(--color-ink-soft);
+}
+
+.note {
+  font-size: var(--text-small);
+  color: var(--color-ink-soft);
+}
+
+/* ---- the extra ------------------------------------------------------ */
+
+.treat {
+  display: grid;
+  gap: var(--space-1);
+  width: 100%;
+  margin-top: var(--space-8);
+  padding: var(--space-5);
+  border: 1.5px solid var(--color-accent-soft);
+  border-radius: var(--radius-card);
+  background: var(--color-accent-soft);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.treat:hover {
+  border-color: var(--color-accent);
+}
+
+.treatLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-small);
+  font-weight: 600;
+  color: var(--color-accent);
+}
+
+@media (min-width: 768px) {
+  .item {
+    grid-template-columns: 110px 1fr;
+  }
+}

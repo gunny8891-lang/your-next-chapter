@@ -36,8 +36,8 @@ export default async function WeekPage() {
 
   if (!profile) redirect("/onboarding");
 
-  const { data: userRow } = await supabase.from("users").select("role").eq("id", user.id).single();
-  const isAdmin = userRow?.role === "admin";
+  // London's calendar, not the server's: the week opens on today's day.
+  const today = new Date().toLocaleDateString("en-GB", { weekday: "short", timeZone: "Europe/London" });
 
   const { data: itinerary } = await supabase
     .from("itineraries")
@@ -120,7 +120,7 @@ export default async function WeekPage() {
       items={items}
       surprise={surprise}
       isDemo={isDemo}
-      isAdmin={isAdmin}
+      today={today}
       onItemAction={updateItineraryItemAction}
       onSurpriseAction={respondSurpriseAction}
       onGenerate={generateWeekItineraryAction}

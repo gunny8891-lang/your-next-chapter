@@ -2,8 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles } from "lucide-react";
-import { T } from "@/lib/theme";
+import { Button, ErrorNote } from "@/components/ui";
 
 export function GenerateWeekButton({
   onGenerate,
@@ -12,53 +11,35 @@ export function GenerateWeekButton({
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
 
   const handleClick = () => {
-    setMessage(null);
+    setError(null);
+    setNote(null);
     startTransition(async () => {
       const result = await onGenerate();
       if (result.error) {
-        setMessage(`Couldn't generate your week: ${result.error}`);
+        setError(`We couldn't plan your week just now: ${result.error}`);
         return;
       }
       if (!result.itemCount) {
-        setMessage(
-          "We don't have any activities near you yet — we're searching now, so check back soon. In the meantime, here's a sample week."
-        );
+        setNote("We don't have anything near you yet. We're looking now, so check back soon.");
       } else if (result.usedFallback) {
-        setMessage("Generated using our backup picks — the AI response needed a fallback this time.");
+        setNote("Your week is planned from our usual favourites this time.");
       }
-      // The itinerary items just written server-side aren't reflected in this
-      // Server Component page's props until it re-renders.
+      // The plan just written on the server isn't in this page's props until it re-renders.
       router.refresh();
     });
   };
 
   return (
-    <div style={{ marginTop: 14 }}>
-      <button
-        onClick={handleClick}
-        disabled={isPending}
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 8,
-          padding: "10px 18px",
-          borderRadius: 10,
-          border: "none",
-          background: T.accent,
-          color: "#fff",
-          fontSize: 14,
-          fontWeight: 600,
-          cursor: isPending ? "default" : "pointer",
-          opacity: isPending ? 0.7 : 1,
-        }}
-      >
-        <Sparkles size={14} />
-        {isPending ? "Building your week…" : "Generate my real week"}
-      </button>
-      {message && <p style={{ color: "#EAE3D0", fontSize: 12.5, marginTop: 8 }}>{message}</p>}
+    <div aria-live="polite">
+      <Button variant="accent" onClick={handleClick} loading={isPending}>
+        {isPending ? "Planning your week…" : "Plan my week"}
+      </Button>
+      {error && <ErrorNote>{error}</ErrorNote>}
+      {note && <p style={{ marginTop: "var(--space-3)", fontSize: "var(--text-small)", color: "var(--color-ink-soft)" }}>{note}</p>}
     </div>
   );
 }

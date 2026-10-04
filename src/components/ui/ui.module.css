@@ -283,3 +283,42 @@
   font-size: var(--text-small);
   color: var(--color-error);
 }
+
+/* ---- Page, PageHeader, SectionTitle --------------------------------- */
+
+.page {
+  max-width: var(--content-width);
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-5) var(--space-12);
+}
+
+.pageHeader {
+  margin-bottom: var(--space-6);
+}
+
+.pageTitle {
+  font-size: 34px;
+  line-height: 1.12;
+  color: var(--color-ink);
+}
+
+.pageLead {
+  margin-top: var(--space-2);
+  color: var(--color-ink-soft);
+}
+
+.sectionTitle {
+  margin-bottom: var(--space-3);
+  font-size: 22px;
+  color: var(--color-ink);
+}
+
+@media (min-width: 768px) {
+  .page {
+    padding-top: var(--space-12);
+  }
+
+  .pageTitle {
+    font-size: 40px;
+  }
+}
