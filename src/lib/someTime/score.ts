@@ -9,6 +9,7 @@ import { openStatus } from "@/lib/someTime/openingHours";
 import type { Mood, TimeRequest } from "@/lib/someTime/request";
 import { estimateTravel, type TravelMode, type TravelProfile } from "@/lib/someTime/travel";
 import { clockLabel, durationLabel, type TimeWindow } from "@/lib/someTime/window";
+import { dailyStateAdjustment, type DailyState } from "@/lib/experience/dailyState";
 
 /**
  * Everything that decides whether something is a good way to spend a given
@@ -37,6 +38,8 @@ export type RepetitionHistory = {
 export const EMPTY_HISTORY: RepetitionHistory = { recentActivityIds: new Set(), categoryCounts: {} };
 
 export type ScoringInput = {
+  /** How they said they are today, if they did: adjusts today's ranking and nothing lasting. */
+  dailyState?: DailyState | null;
   window: TimeWindow;
   request: TimeRequest;
   member: MemberContext;
@@ -329,6 +332,12 @@ export function evaluateCandidate(c: OpportunityCandidate, input: ScoringInput):
   }
 
   if (runsPastSunset) score -= 1.5;
+
+  const today = dailyStateAdjustment(input.dailyState ?? null, c, { durationMinutes, travelMinutes: travel.minutes });
+  // Hours of exertion on a day they said they are taking it easy is not offered at all.
+  if (today.exclude) return null;
+  score += today.score;
+  reasons.push(...today.reasons);
 
   score -= repetitionPenalty(c, history);
   if (c.tags.includes("chain")) score -= 1.5;

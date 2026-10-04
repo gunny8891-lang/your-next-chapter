@@ -4,6 +4,7 @@ import { cleanTitle } from "@/lib/someTime/experience";
 import { MOOD_LABEL, type TimeRequest } from "@/lib/someTime/request";
 import type { Evaluated, FoodStop } from "@/lib/someTime/score";
 import { clockLabel, durationLabel, type TimeWindow } from "@/lib/someTime/window";
+import { describeDailyState, type DailyState } from "@/lib/experience/dailyState";
 
 export const MAX_OPTIONS = 3;
 const MAX_WHY_CHARS = 420;
@@ -35,6 +36,8 @@ export type PromptContext = {
   };
   aspirations: string[];
   affinitySummary: string;
+  /** How they said they are today, if they did. */
+  dailyState?: DailyState | null;
 };
 
 export const SYSTEM_PROMPT = `You are "I've got some time" for "Your Next Chapter", an AI concierge for people in \
@@ -50,6 +53,7 @@ How to choose:
 - Prefer the earlier candidates, but reorder or skip when it gives better variety. The ${MAX_OPTIONS} options must be \
 genuinely different ways to spend the time — never three similar things. Put the strongest first.
 - Respect their mood, who they are with, and anything in their profile (mobility, diet, budget).
+- If they have said how they feel today, respect that over their usual habits: on a day they are taking it easy, never choose something strenuous or long, however much they usually enjoy it. How they feel today is only about today.
 - If fewer than ${MAX_OPTIONS} are genuinely good, return fewer rather than padding.
 
 How to name each outing: give it a short, plain "title" of three to eight words that sounds like a good plan for the \
@@ -91,6 +95,7 @@ export function buildUserPrompt(ctx: PromptContext, shortlist: ShortlistEntry[])
     `Who with: ${WHO_LABEL[request.who]}.`,
     `Mood: ${request.mood ? MOOD_LABEL[request.mood] : "not specified"}.`,
     ctx.weatherNote ? `Weather: ${ctx.weatherNote}` : null,
+    ctx.dailyState ? `How they say they are today: ${describeDailyState(ctx.dailyState)}.` : null,
     "",
     "About the member:",
     `- Goals: ${profile.goals.join(", ") || "none recorded"}`,

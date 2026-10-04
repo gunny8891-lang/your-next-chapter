@@ -25,6 +25,8 @@ import {
 import { fallbackImageFor } from "@/lib/imagery/fallback";
 import { attachImages } from "@/lib/someTime/images";
 import type { TimeRequest } from "@/lib/someTime/request";
+import { requestWithDailyState, type DailyState } from "@/lib/experience/dailyState";
+import { loadDailyState } from "@/lib/experience/dailyStateStore";
 import {
   diversify,
   evaluateCandidate,
@@ -63,6 +65,8 @@ export type RecommendInputs = {
   member: MemberContext;
   affinity: AffinityScores;
   history: RepetitionHistory;
+  /** How they said they are today, if they did. */
+  dailyState?: DailyState | null;
   profile: PromptContext["profile"];
   aspirations: string[];
   /** null = no model: use the scored fallback directly (instant, free — for the Today hero). */
@@ -144,8 +148,11 @@ function toTimeOption(entry: ShortlistEntry, why: string, includeFood: boolean, 
  * scored candidates with an explanation built from real facts if it cannot.
  */
 export async function buildRecommendations(inputs: RecommendInputs): Promise<{ options: TimeOption[]; notice: string | null }> {
-  const { request, window, member, affinity, history } = inputs;
-  const scoring: ScoringInput = { window, request, member, affinity, history, pleasantWeather: inputs.pleasantWeather, daylight: inputs.daylight };
+  const { window, member, affinity, history } = inputs;
+  const dailyState = inputs.dailyState ?? null;
+  // What they feel like today stands in for a mood they did not choose for this request.
+  const request = requestWithDailyState(inputs.request, dailyState);
+  const scoring: ScoringInput = { window, request, member, affinity, history, pleasantWeather: inputs.pleasantWeather, daylight: inputs.daylight, dailyState };
 
   const foodVenues = inputs.candidates.filter(isFoodVenue);
   const evaluated = primaryPool(inputs.candidates, request, window)
@@ -180,6 +187,7 @@ export async function buildRecommendations(inputs: RecommendInputs): Promise<{ o
     profile: inputs.profile,
     aspirations: inputs.aspirations,
     affinitySummary: summarizeAffinity(affinity),
+    dailyState,
   };
 
   if (inputs.ask) try {
@@ -267,11 +275,12 @@ export async function getTimeOptions(
   ]);
 
   const hasHome = profile?.location_lat != null && profile?.location_lng != null;
-  const [{ candidates: ranked, affinity }, forecast, history, goalRows] = await Promise.all([
+  const [{ candidates: ranked, affinity }, forecast, history, goalRows, dailyState] = await Promise.all([
     fetchRankedOpportunities(supabase, memberId, { excludeActivityIds: exclude, foodVenues: "include" }),
     hasHome ? getDailyForecast(profile!.location_lat, profile!.location_lng, 2) : Promise.resolve(null as DayForecast[] | null),
     loadRepetitionHistory(supabase, memberId, window.date),
     supabase.from("goals").select("text").eq("member_id", memberId).eq("status", "active"),
+    loadDailyState(supabase, memberId, window.date),
   ]);
 
   const { candidates, weatherNote } = applyOpenTimeContext(ranked, {
@@ -310,6 +319,7 @@ export async function getTimeOptions(
     member,
     affinity,
     history,
+    dailyState,
     profile: {
       goals: member.goals,
       interests: member.interests,
