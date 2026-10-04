@@ -4,6 +4,8 @@ import { updatePassword } from "@/app/auth/actions";
 import { AuthPage } from "@/components/AuthPage";
 import { Button, ErrorNote, Field } from "@/components/ui";
 
+export const metadata = { title: "Choose a new password" };
+
 export default async function ResetPasswordPage({
   searchParams,
 }: {

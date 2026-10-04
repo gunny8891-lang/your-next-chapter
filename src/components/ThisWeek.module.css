@@ -13,7 +13,8 @@
 .days {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: var(--space-1);
+  /* A hair apart, so each day is still 44px wide on the narrowest phones (360px). */
+  gap: 2px;
 }
 
 .day {
@@ -68,9 +69,9 @@
 }
 
 .todayMark {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
   color: var(--color-accent);
 }
@@ -202,7 +203,7 @@
   gap: var(--space-2);
   font-size: var(--text-small);
   font-weight: 600;
-  color: var(--color-accent);
+  color: var(--color-accent-ink);
 }
 
 @media (min-width: 768px) {

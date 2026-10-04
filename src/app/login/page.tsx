@@ -2,6 +2,8 @@ import { login } from "@/app/auth/actions";
 import { AuthLink, AuthLinks, AuthPage } from "@/components/AuthPage";
 import { Button, ErrorNote, Field } from "@/components/ui";
 
+export const metadata = { title: "Log in" };
+
 export default async function LoginPage({
   searchParams,
 }: {

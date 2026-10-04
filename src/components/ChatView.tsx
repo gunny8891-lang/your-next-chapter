@@ -29,7 +29,9 @@ export function ChatView({
   const makeLocalId = () => `local-${nextLocalId.current++}`;
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    // CSS cannot switch off a script's smooth scrolling, so ask the browser whether to animate.
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    bottomRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "end" });
   }, [messages, isPending]);
 
   const submit = (text: string) => {

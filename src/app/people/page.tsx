@@ -3,6 +3,8 @@ import { createClient } from "@/utils/supabase/server";
 import { PeopleView } from "@/components/PeopleView";
 import { addPersonAction, markSeenTodayAction, toggleWantsToSeeMoreAction, deletePersonAction } from "@/app/people/actions";
 
+export const metadata = { title: "People" };
+
 export default async function PeoplePage() {
   const supabase = await createClient();
   const {

@@ -21,6 +21,8 @@ type ActivityRow = {
   tags: string[];
 };
 
+export const metadata = { title: "My week" };
+
 export default async function WeekPage() {
   const supabase = await createClient();
   const {

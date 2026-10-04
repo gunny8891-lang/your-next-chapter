@@ -58,7 +58,7 @@
   border-radius: 6px;
   background: rgba(43, 47, 42, 0.78);
   color: #fff;
-  font-size: 12px;
+  font-size: var(--text-label);
   text-decoration: none;
   white-space: nowrap;
   overflow: hidden;

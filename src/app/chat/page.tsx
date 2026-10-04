@@ -4,6 +4,8 @@ import { ChatView } from "@/components/ChatView";
 import { sendChatMessageAction } from "@/app/chat/actions";
 import type { ChatMessageView } from "@/lib/types";
 
+export const metadata = { title: "Concierge" };
+
 export default async function ChatPage() {
   const supabase = await createClient();
   const {

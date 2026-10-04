@@ -24,6 +24,8 @@ type ActivityRow = {
 
 const SLOT_ORDER = ["morning", "afternoon", "evening"] as const;
 
+export const metadata = { title: "Today" };
+
 export default async function TodayPage() {
   const supabase = await createClient();
   const {

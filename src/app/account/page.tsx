@@ -4,6 +4,8 @@ import { AccountSettingsForm } from "@/components/AccountSettingsForm";
 import { cleanFirstName } from "@/lib/someTime/format";
 import { updateProfileAction, deleteAccountAction } from "@/app/account/actions";
 
+export const metadata = { title: "Account" };
+
 export default async function AccountPage({
   searchParams,
 }: {

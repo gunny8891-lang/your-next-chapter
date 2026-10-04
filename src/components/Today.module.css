@@ -154,6 +154,12 @@
   margin-top: var(--space-6);
 }
 
+/* ---- nothing more today ---------------------------------------------- */
+
+.quiet {
+  color: var(--color-ink-soft);
+}
+
 /* ---- credits -------------------------------------------------------- */
 
 .credits {
@@ -166,7 +172,7 @@
 
 .credits a {
   display: inline-block;
-  padding: var(--space-2) 0;
+  padding: 11px 0;
   color: inherit;
   text-decoration: underline;
   text-underline-offset: 3px;

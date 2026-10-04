@@ -25,6 +25,8 @@ export const T = {
   /** Muted clay: the single warm accent, used sparingly for the one thing to do next. */
   accent: "#A25437",
   accentSoft: "#F2E4DA",
+  /** The accent, darkened enough to read as text on its own tint (accent on accentSoft is 4.4:1). */
+  accentInk: "#8F4830",
   /** A sage that is dark enough to use for text and icons. */
   sage: "#52705B",
   sageSoft: "#E4EBE2",

@@ -10,6 +10,8 @@ import {
 } from "@/app/today/timeActions";
 import { loadSavedIdeas } from "@/lib/someTime/saved";
 
+export const metadata = { title: "Explore" };
+
 export default async function ExplorePage() {
   const supabase = await createClient();
   const {

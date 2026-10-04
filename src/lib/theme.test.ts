@@ -41,6 +41,11 @@ describe("colour contrast (WCAG AA for text)", () => {
     expect(contrast(T.ink, T.accentSoft)).toBeGreaterThanOrEqual(AA);
     expect(contrast(T.primary, T.sageSoft)).toBeGreaterThanOrEqual(AA);
     expect(contrast(T.primary, T.accentSoft)).toBeGreaterThanOrEqual(AA);
+    // The plain accent is a hair under AA on its own tint (4.4:1), which is why accentInk exists.
+    expect(contrast(T.accent, T.accentSoft)).toBeLessThan(AA);
+    for (const background of [T.accentSoft, T.surface, T.bg]) {
+      expect(contrast(T.accentInk, background)).toBeGreaterThanOrEqual(AA);
+    }
     expect(contrast(T.error, T.errorSoft)).toBeGreaterThanOrEqual(AA);
     expect(contrast(T.mist, T.mistSoft)).toBeGreaterThanOrEqual(AA);
   });
@@ -69,6 +74,7 @@ describe("tokens: CSS and TypeScript agree", () => {
     ["primary-soft", T.primarySoft],
     ["accent", T.accent],
     ["accent-soft", T.accentSoft],
+    ["accent-ink", T.accentInk],
     ["sage", T.sage],
     ["sage-soft", T.sageSoft],
     ["mist", T.mist],
