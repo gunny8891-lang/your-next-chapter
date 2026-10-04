@@ -10,6 +10,7 @@ import type { Mood, TimeRequest } from "@/lib/someTime/request";
 import { estimateTravel, type TravelMode, type TravelProfile } from "@/lib/someTime/travel";
 import { clockLabel, durationLabel, type TimeWindow } from "@/lib/someTime/window";
 import { dailyStateAdjustment, type DailyState } from "@/lib/experience/dailyState";
+import type { RecommendationMemory } from "@/lib/memory/memory";
 
 /**
  * Everything that decides whether something is a good way to spend a given
@@ -29,6 +30,8 @@ export type MemberContext = {
 
 /** What the member has recently done, so the same thing is not suggested again and again. */
 export type RepetitionHistory = {
+  /** What they have loved, repeated and turned down: see memory.ts. Absent for someone with no recorded history. */
+  memory?: RecommendationMemory;
   /** Done or enjoyed in roughly the last month. */
   recentActivityIds: Set<string>;
   /** How many items of each category were in their last week. */
@@ -181,7 +184,14 @@ function whoBonus(who: TimeRequest["who"], c: Pick<OpportunityCandidate, "tags">
 
 export function repetitionPenalty(c: Pick<OpportunityCandidate, "id" | "category">, history: RepetitionHistory): number {
   let penalty = 0;
-  if (history.recentActivityIds.has(c.id)) penalty += 6;
+  const memory = history.memory;
+  if (history.recentActivityIds.has(c.id)) {
+    // A favourite they keep going back to is not a repeat to avoid: only very soon after the last time.
+    if (memory?.favouriteIds.has(c.id)) penalty += memory.recentFavouriteIds.has(c.id) ? 3 : 0;
+    else penalty += 6;
+  }
+  // Something they turned down stays turned down, for as long as that kind of "no" deserves.
+  penalty += memory?.rejectionPenalty.get(c.id) ?? 0;
   const sameCategory = history.categoryCounts[c.category] ?? 0;
   if (sameCategory >= 3) penalty += 2;
   else if (sameCategory === 2) penalty += 1;

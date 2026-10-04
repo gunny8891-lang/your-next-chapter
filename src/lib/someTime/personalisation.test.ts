@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { OpportunityCandidate } from "@/lib/opportunities/engine";
 import { computeAffinity, type AffinityScores, type PreferenceSignalRow } from "@/lib/memory/scoring";
+import { computeLearnedAffinity, type LearningEvent } from "@/lib/memory/learning";
+import { buildRecommendationMemory } from "@/lib/memory/memory";
+import { buildRepetitionHistory } from "@/lib/someTime/history";
 import { requestWithDailyState, type DailyState } from "@/lib/experience/dailyState";
 import { explainedByState, signalForDismissal } from "@/lib/experience/events";
 import { buildRecommendations, type RecommendInputs } from "@/lib/someTime/recommend";
@@ -258,5 +261,122 @@ describe("end to end, through the real recommendation pipeline", () => {
   it("brings in what they said they feel like today", async () => {
     const { options } = await buildRecommendations(base({ affinity: NONE, dailyState: state({ intention: "outdoors" }) }));
     expect(["Woodland Trail", "Rose Garden"]).toContain(options[0].title);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 1 learning: behaviour in context, memory of what was done and refused.
+// ---------------------------------------------------------------------------
+
+describe("learning from real behaviour, end to end", () => {
+  const NOW = new Date("2026-10-02T12:00:00Z");
+  const ago = (d: number) => new Date(NOW.getTime() - d * 86_400_000).toISOString();
+  const eventOn = (c: OpportunityCandidate, type: string, days: number, over: Partial<LearningEvent> = {}): LearningEvent => ({
+    activity_id: c.id,
+    event_type: type,
+    outcome: null,
+    reason: null,
+    context: null,
+    created_at: ago(days),
+    activities: { category: c.category, tags: c.tags },
+    ...over,
+  });
+  const completed = (c: OpportunityCandidate, days: number, outcome = "loved") => eventOn(c, "completed", days, { outcome });
+
+  const scoringFor = (events: LearningEvent[]): ScoringInput => {
+    const memory = buildRecommendationMemory(events, NOW);
+    return scoring({ affinity: computeLearnedAffinity(events, [], NOW), history: buildRepetitionHistory([], [], "2026-10-02", memory) });
+  };
+  const scoreOf = (c: OpportunityCandidate, input: ScoringInput) => evaluateCandidate(c, input)!.score;
+
+  it("ranks a six-month pattern above a single recent whim", () => {
+    // They went to the heritage house on four separate occasions across months, and to the theatre once.
+    const events = [completed(heritageHouse, 150), completed(heritageHouse, 110), completed(heritageHouse, 70), completed(heritageHouse, 35), completed(theatre, 2)];
+    const input = scoringFor(events);
+    const gap = (i: ScoringInput) => scoreOf(heritageHouse, i) - scoreOf(theatre, i);
+    expect(scoreOf(heritageHouse, input)).toBeGreaterThan(scoreOf(theatre, input));
+    // A newcomer has no such pattern to go on: the history is what widens the gap.
+    expect(gap(input)).toBeGreaterThan(gap(scoring()) + 2);
+  });
+
+  it("learns to pass over what is shown and never touched, without treating it as a refusal", () => {
+    const shown = Array.from({ length: 6 }, (_, i) => eventOn(localMuseum, "shown", 10 + i * 2));
+    const input = scoringFor(shown);
+    expect(scoreOf(localMuseum, input)).toBeLessThan(scoreOf(localMuseum, scoring()));
+    expect(scoreOf(localMuseum, input)).toBeGreaterThan(scoreOf(localMuseum, scoring()) - 2); // faint: it is not a verdict
+  });
+
+  describe("repeatable favourites versus one-offs", () => {
+    const aWeekAgo = (c: OpportunityCandidate) => [completed(c, 8)];
+
+    it("a one-off done last week is marked down as a repeat", () => {
+      const penalised = scoreOf(heritageHouse, scoringFor(aWeekAgo(heritageHouse)));
+      const never = scoreOf(heritageHouse, scoring());
+      // (it was loved, so the affinity helps, but the repeat penalty must still bite)
+      const affinityOnly = scoreOf(heritageHouse, scoring({ affinity: computeLearnedAffinity(aWeekAgo(heritageHouse), [], NOW) }));
+      expect(penalised).toBeLessThan(affinityOnly);
+      expect(never).toBeLessThan(affinityOnly);
+    });
+
+    it("a favourite they keep going back to is not marked down for a repeat", () => {
+      const events = [completed(woodlandWalk, 22), completed(woodlandWalk, 15), completed(woodlandWalk, 8)];
+      const withMemory = scoringFor(events);
+      const affinityOnly = scoring({ affinity: computeLearnedAffinity(events, [], NOW) });
+      expect(scoreOf(woodlandWalk, withMemory)).toBe(scoreOf(woodlandWalk, affinityOnly));
+    });
+
+    it("but not the very day after the last time", () => {
+      const events = [completed(woodlandWalk, 20), completed(woodlandWalk, 10), completed(woodlandWalk, 2)];
+      const input = scoringFor(events);
+      const affinityOnly = scoring({ affinity: computeLearnedAffinity(events, [], NOW) });
+      expect(scoreOf(woodlandWalk, input)).toBeLessThan(scoreOf(woodlandWalk, affinityOnly));
+    });
+  });
+
+  describe("what was turned down stays turned down", () => {
+    it("is kept out of the way while it is fresh, and welcomed back after a long while", () => {
+      const refusal = (days: number) => [eventOn(localMuseum, "dismissed", days, { reason: "not_my_thing" })];
+      const fresh = scoreOf(localMuseum, scoringFor(refusal(3)));
+      const later = scoreOf(localMuseum, scoringFor(refusal(75)));
+      expect(fresh).toBeLessThan(later);
+      expect(later).toBeLessThan(scoreOf(localMuseum, scoring()) + 1); // still a little cooler than never having been refused
+    });
+
+    it("a refusal the day explains is not held against it", () => {
+      const explained = [eventOn(woodlandWalk, "dismissed", 3, { reason: "not_my_thing", context: { explainedByState: true } })];
+      expect(scoreOf(woodlandWalk, scoringFor(explained))).toBe(scoreOf(woodlandWalk, scoring()));
+    });
+
+    it("'too far' is forgotten within a fortnight", () => {
+      const tooFar = (days: number) => [eventOn(woodlandWalk, "dismissed", days, { reason: "too_far" })];
+      expect(scoreOf(woodlandWalk, scoringFor(tooFar(2)))).toBeLessThan(scoreOf(woodlandWalk, scoring()));
+      expect(scoreOf(woodlandWalk, scoringFor(tooFar(20)))).toBe(scoreOf(woodlandWalk, scoring()));
+    });
+  });
+
+  it("'I didn't go' leaves something not done, so it is not avoided as a repeat", () => {
+    // They said yes to the plan (an accepted plan item counts as done), then said they never went.
+    const plans = [{ week_start_date: "2026-09-28", itinerary_items: [{ day_of_week: "Wed", member_action: "accepted", activities: { id: theatre.id, category: theatre.category } }] }];
+    const didntGo = [eventOn(theatre, "dismissed", 1, { reason: "didnt_go" })];
+    const withoutAnswer = buildRepetitionHistory(plans, [], "2026-10-02");
+    const memory = buildRecommendationMemory(didntGo, NOW);
+    const withAnswer = buildRepetitionHistory(plans, [], "2026-10-02", memory);
+    expect(withoutAnswer.recentActivityIds.has(theatre.id)).toBe(true);
+    expect(withAnswer.recentActivityIds.has(theatre.id)).toBe(false);
+  });
+
+  it("a skipped plan is not read as a dislike: far milder than the older scoring did", () => {
+    const skips = Array.from({ length: 5 }, (_, i) => ({
+      signal_type: "disliked",
+      source: "skip",
+      activity_id: woodlandWalk.id,
+      created_at: ago(i + 1),
+      activities: { category: woodlandWalk.category, tags: woodlandWalk.tags },
+    }));
+    const learned = scoring({ affinity: computeLearnedAffinity([], skips, NOW) });
+    const olderReading = scoring({ affinity: computeAffinity(skips as unknown as PreferenceSignalRow[]) });
+    expect(scoreOf(woodlandWalk, learned)).toBeGreaterThan(scoreOf(woodlandWalk, olderReading) + 3);
+    // Still a faint note against this one thing (they did skip it five times), not a verdict on walking.
+    expect(scoreOf(woodlandWalk, learned)).toBeLessThan(scoreOf(woodlandWalk, scoring()));
   });
 });

@@ -1,10 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { DAYS_OF_WEEK } from "@/lib/itinerary/schema";
 import { addDays } from "@/lib/opportunities/schedule";
+import { buildRecommendationMemory, type MemoryEvent, type RecommendationMemory } from "@/lib/memory/memory";
 import type { RepetitionHistory } from "@/lib/someTime/score";
 
 const ACTIVITY_MEMORY_DAYS = 28;
 const CATEGORY_MEMORY_DAYS = 7;
+/** How far back what they have turned down or repeated is remembered (the longest "no" is half a year). */
+const MEMORY_DAYS = 185;
 
 type PlanRow = {
   week_start_date: string;
@@ -25,7 +28,7 @@ const firstActivity = (a: PlanRow["itinerary_items"][number]["activities"]) => (
  * Anything dated after today is the future, not history, and skipped or swapped
  * items are things they chose not to do.
  */
-export function buildRepetitionHistory(plans: PlanRow[], likedActivityIds: string[], today: string): RepetitionHistory {
+export function buildRepetitionHistory(plans: PlanRow[], likedActivityIds: string[], today: string, memory?: RecommendationMemory): RepetitionHistory {
   const recentActivityIds = new Set<string>(likedActivityIds);
   const categoryCounts: Record<string, number> = {};
   const activityCutoff = addDays(today, -ACTIVITY_MEMORY_DAYS);
@@ -45,12 +48,18 @@ export function buildRepetitionHistory(plans: PlanRow[], likedActivityIds: strin
       if (date >= categoryCutoff) categoryCounts[activity.category] = (categoryCounts[activity.category] ?? 0) + 1;
     }
   }
-  return { recentActivityIds, categoryCounts };
+  if (memory) {
+    // What they actually went to is better evidence of "done" than what they said yes to,
+    // and something they planned but did not go to has not been done at all.
+    for (const id of memory.recentlyDoneIds) recentActivityIds.add(id);
+    for (const id of memory.notDoneIds) recentActivityIds.delete(id);
+  }
+  return { recentActivityIds, categoryCounts, ...(memory ? { memory } : {}) };
 }
 
 export async function loadRepetitionHistory(supabase: SupabaseClient, memberId: string, today: string): Promise<RepetitionHistory> {
   const since = addDays(today, -ACTIVITY_MEMORY_DAYS - 7);
-  const [{ data: plans }, { data: liked }] = await Promise.all([
+  const [{ data: plans }, { data: liked }, { data: events, error: eventsError }] = await Promise.all([
     supabase
       .from("itineraries")
       .select("week_start_date, itinerary_items(day_of_week, member_action, activities(id, category))")
@@ -65,11 +74,22 @@ export async function loadRepetitionHistory(supabase: SupabaseClient, memberId: 
       // this, some time", not "I have done this", so it must not count as repetition.
       .neq("source", "explicit_feedback")
       .gte("created_at", `${addDays(today, -ACTIVITY_MEMORY_DAYS)}T00:00:00Z`),
+    // The fuller record: what they went to, repeated, turned down. A failed read just means no memory beyond plans and signals.
+    supabase
+      .from("experience_events")
+      .select("activity_id, event_type, outcome, reason, context, created_at")
+      .eq("member_id", memberId)
+      .in("event_type", ["planned", "completed", "dismissed"])
+      .gte("created_at", `${addDays(today, -MEMORY_DAYS)}T00:00:00Z`)
+      .limit(2000),
   ]);
+  if (eventsError) console.warn("history: could not read the experience log:", eventsError.message);
+  const memory = eventsError ? undefined : buildRecommendationMemory((events ?? []) as MemoryEvent[], new Date(`${today}T12:00:00Z`));
 
   return buildRepetitionHistory(
     (plans ?? []) as unknown as PlanRow[],
     ((liked ?? []) as { activity_id: string | null }[]).map((r) => r.activity_id).filter((id): id is string => !!id),
-    today
+    today,
+    memory
   );
 }
