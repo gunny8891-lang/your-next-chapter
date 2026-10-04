@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { availableStarts, DURATION_OPTIONS, MOOD_OPTIONS, nextCommitment, startLabel, summaryLine, untilOption } from "@/lib/someTime/choices";
+import { availableStarts, DURATION_OPTIONS, exploreDuration, MOOD_OPTIONS, nextCommitment, startLabel, summaryLine, untilOption } from "@/lib/someTime/choices";
 
 const at = (h: number, m = 0) => h * 60 + m;
 
@@ -89,5 +89,17 @@ describe("summaryLine", () => {
 
   it("names the start", () => {
     expect(startLabel("evening")).toBe("This evening");
+  });
+});
+
+describe("exploreDuration", () => {
+  it("plans most of the afternoon in the morning and early afternoon", () => {
+    expect(exploreDuration(8)).toBe("half_day");
+    expect(exploreDuration(14)).toBe("half_day");
+  });
+
+  it("plans what is left of the day once it is later", () => {
+    expect(exploreDuration(15)).toBe("rest_of_day");
+    expect(exploreDuration(21)).toBe("rest_of_day");
   });
 });

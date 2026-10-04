@@ -1,7 +1,14 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { ExploreView } from "@/components/ExploreView";
-import { getSurpriseOptionsAction, acceptSurpriseOptionAction, dismissSurpriseOptionAction } from "@/app/explore/actions";
+import {
+  acceptTimeOptionAction,
+  feedbackTimeOptionAction,
+  getTimeOptionsAction,
+  saveIdeaAction,
+  unsaveIdeaAction,
+} from "@/app/today/timeActions";
+import { loadSavedIdeas } from "@/lib/someTime/saved";
 
 export default async function ExplorePage() {
   const supabase = await createClient();
@@ -10,11 +17,16 @@ export default async function ExplorePage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const saved = await loadSavedIdeas(supabase, user.id);
+
   return (
     <ExploreView
-      onSurpriseMe={getSurpriseOptionsAction}
-      onAccept={acceptSurpriseOptionAction}
-      onDismiss={dismissSurpriseOptionAction}
+      saved={saved}
+      onFind={getTimeOptionsAction}
+      onAccept={acceptTimeOptionAction}
+      onFeedback={feedbackTimeOptionAction}
+      onSave={saveIdeaAction}
+      onUnsave={unsaveIdeaAction}
     />
   );
 }

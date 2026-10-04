@@ -27,6 +27,14 @@ export const MOOD_OPTIONS: { value: Mood; label: string }[] = [
   { value: "relaxed", label: "Relaxed" },
 ];
 
+/**
+ * How long Explore plans for when it is just browsing: most of the afternoon, or
+ * what is left of the day once it is late.
+ */
+export function exploreDuration(hour: number): Exclude<DurationChoice, "until_next"> {
+  return hour < 15 ? "half_day" : "rest_of_day";
+}
+
 export const WHO_OPTIONS: { value: SurpriseWho; label: string }[] = [
   { value: "just_me", label: "Just me" },
   { value: "partner", label: "Partner" },

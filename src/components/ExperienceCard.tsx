@@ -27,7 +27,11 @@ type Props = {
   state: "idle" | "planning" | "planned";
   error?: string | null;
   onPlan: () => void;
+  /** Already on the member's Saved list when the card appears. */
+  saved?: boolean;
   onSave: () => Promise<{ error: string | null }>;
+  /** When given, tapping Saved again takes the idea off the list. */
+  onUnsave?: () => Promise<{ error: string | null }>;
   onNotForMe: (reason: FeedbackReason) => void;
 };
 
@@ -37,10 +41,13 @@ type Props = {
  * Used both for the hero on Today and for each idea in "I've got some time", so
  * they always look and behave the same.
  */
-export function ExperienceCard({ option, reason, variant, state, error, onPlan, onSave, onNotForMe }: Props) {
+export function ExperienceCard({ option, reason, variant, state, error, saved: savedProp = false, onPlan, onSave, onUnsave, onNotForMe }: Props) {
   const planId = useId();
   const [planOpen, setPlanOpen] = useState(false);
-  const [saved, setSaved] = useState<"idle" | "saved">("idle");
+  // Whether it was already saved when it appeared is remembered once: a parent that tracks the
+  // list updates `saved` the moment a save succeeds, and that must not hide the acknowledgement.
+  const [initiallySaved] = useState(savedProp);
+  const [saved, setSaved] = useState<"idle" | "saved" | "removed">(initiallySaved ? "saved" : "idle");
   const [asking, setAsking] = useState(false);
 
   // Once planned, the plan is the confirmation, so it is shown.
@@ -62,8 +69,15 @@ export function ExperienceCard({ option, reason, variant, state, error, onPlan, 
   );
 
   const save = async () => {
-    if (saved === "saved") return;
-    setSaved("saved"); // optimistic: it is a tiny, reversible-in-spirit signal
+    // Optimistic both ways: these are tiny, quickly-undone taps, put back if the server says no.
+    if (saved === "saved") {
+      if (!onUnsave) return;
+      setSaved("removed");
+      const result = await onUnsave();
+      if (result.error) setSaved("saved");
+      return;
+    }
+    setSaved("saved");
     const result = await onSave();
     if (result.error) setSaved("idle");
   };
@@ -118,7 +132,8 @@ export function ExperienceCard({ option, reason, variant, state, error, onPlan, 
                 </Button>
               </div>
 
-              {saved === "saved" && <p className={styles.ack}>Saved. We will bring you more like this.</p>}
+              {saved === "saved" && !initiallySaved && <p className={styles.ack}>Saved. We will bring you more like this.</p>}
+              {saved === "removed" && <p className={styles.ack}>Taken off your saved ideas.</p>}
 
               {asking && (
                 <div className={styles.reasons}>

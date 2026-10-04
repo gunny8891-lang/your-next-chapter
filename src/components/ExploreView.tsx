@@ -1,243 +1,215 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Sparkles, Check } from "lucide-react";
-import { T, CATEGORY_COLOR } from "@/lib/theme";
-import { Pill } from "@/components/Pill";
-import type { SurpriseOption } from "@/lib/types";
-import type { SurpriseWhen, SurpriseWho } from "@/lib/surprise/onDemand";
+import { Clock, Heart } from "lucide-react";
+import { Button, Card, Chip, ErrorNote, Page, PageHeader, SectionTitle, Skeleton } from "@/components/ui";
+import { ExperienceCard, type FeedbackReason } from "@/components/ExperienceCard";
+import type { TimeSheet } from "@/components/TimeSheet";
+import { exploreDuration, MOOD_OPTIONS } from "@/lib/someTime/choices";
+import { placeLabel, priceBand } from "@/lib/someTime/format";
+import type { Mood } from "@/lib/someTime/request";
+import type { SavedIdea } from "@/lib/someTime/saved";
+import type { TimeOption, TimeResult } from "@/lib/someTime/types";
+import { CATEGORY_COLOR } from "@/lib/theme";
+import styles from "@/components/Explore.module.css";
 
-const WHEN_OPTIONS: { value: SurpriseWhen; label: string }[] = [
-  { value: "today", label: "Today" },
-  { value: "tomorrow", label: "Tomorrow" },
-  { value: "weekend", label: "Weekend" },
-];
+type Flow = React.ComponentProps<typeof TimeSheet>;
+type CardState = "idle" | "planning" | "planned";
 
-const WHO_OPTIONS: { value: SurpriseWho; label: string }[] = [
-  { value: "just_me", label: "Just me" },
-  { value: "partner", label: "Partner" },
-  { value: "friends", label: "Friends" },
-  { value: "family", label: "Family" },
-];
+const toSaved = (o: TimeOption): SavedIdea => ({
+  id: o.id,
+  title: o.title,
+  category: o.category,
+  address: o.address,
+  priceEstimate: o.priceEstimate,
+  setting: o.setting,
+});
 
-function formatCost(price: number | null): string {
-  if (price === null) return "Price TBC";
-  if (price === 0) return "Free";
-  return `£${price}`;
-}
-
-function pillButtonStyle(active: boolean) {
-  return {
-    padding: "8px 16px",
-    borderRadius: 20,
-    border: `1.5px solid ${active ? T.primary : T.line}`,
-    background: active ? T.primary : T.surface,
-    color: active ? "#fff" : T.ink,
-    fontSize: 13.5,
-    fontWeight: 600,
-    cursor: "pointer",
-  };
-}
-
+/**
+ * Explore: ideas for today by what you feel like, and the ideas you have saved. It
+ * uses the same engine and the same cards as Today, so an idea looks and behaves
+ * the same wherever it turns up.
+ */
 export function ExploreView({
-  onSurpriseMe,
+  saved: initialSaved,
+  onFind,
   onAccept,
-  onDismiss,
+  onFeedback,
+  onSave,
+  onUnsave,
 }: {
-  onSurpriseMe: (when: SurpriseWhen, who: SurpriseWho) => Promise<{ error: string | null; options: SurpriseOption[] }>;
-  onAccept: (activityId: string) => Promise<{ error: string | null }>;
-  onDismiss: (activityId: string) => Promise<{ error: string | null }>;
+  saved: SavedIdea[];
+  onFind: Flow["onFind"];
+  onAccept: Flow["onAccept"];
+  onFeedback: Flow["onFeedback"];
+  onSave: (activityId: string) => Promise<{ error: string | null }>;
+  onUnsave: (activityId: string) => Promise<{ error: string | null }>;
 }) {
-  const [when, setWhen] = useState<SurpriseWhen>("today");
-  const [who, setWho] = useState<SurpriseWho>("just_me");
-  const [isPending, startTransition] = useTransition();
-  const [options, setOptions] = useState<SurpriseOption[] | null>(null);
+  const [mood, setMood] = useState<Mood | null>(null);
+  const [result, setResult] = useState<TimeResult | null>(null);
+  const [shown, setShown] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [acceptedId, setAcceptedId] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
-  const handleSurpriseMe = () => {
+  const [savedList, setSavedList] = useState<SavedIdea[]>(initialSaved);
+  const [states, setStates] = useState<Record<string, CardState>>({});
+  const [errors, setErrors] = useState<Record<string, string | null>>({});
+
+  const savedIds = new Set(savedList.map((s) => s.id));
+
+  const find = (chosen: Mood, exclude: string[]) => {
+    setMood(chosen);
     setError(null);
-    setAcceptedId(null);
+    setResult(null);
+    setStates({});
+    setErrors({});
     startTransition(async () => {
-      const result = await onSurpriseMe(when, who);
-      if (result.error) {
-        setError(result.error);
-        setOptions(null);
-      } else {
-        setOptions(result.options);
+      const res = await onFind({
+        start: "now",
+        duration: exploreDuration(new Date().getHours()),
+        who: "just_me",
+        mood: chosen,
+        exclude,
+      });
+      if (res.error) {
+        setError(res.error);
+        return;
       }
+      setResult(res);
+      setShown((prev) => [...new Set([...exclude, ...prev, ...res.options.map((o) => o.id)])]);
     });
   };
 
-  const handleDismiss = (id: string) => {
-    void onDismiss(id);
-    setOptions((current) => (current ? current.filter((o) => o.id !== id) : current));
+  const plan = async (id: string, foodStopId?: string) => {
+    setErrors((e) => ({ ...e, [id]: null }));
+    setStates((s) => ({ ...s, [id]: "planning" }));
+    const res = await onAccept(id, { start: "now", duration: exploreDuration(new Date().getHours()) }, foodStopId);
+    if (res.error) {
+      setErrors((e) => ({ ...e, [id]: res.error }));
+      setStates((s) => ({ ...s, [id]: "idle" }));
+    } else {
+      setStates((s) => ({ ...s, [id]: "planned" }));
+    }
   };
 
-  const handleAccept = (id: string) => {
-    setAcceptedId(id);
-    startTransition(() => {
-      void onAccept(id);
-    });
+  const notForMe = (option: TimeOption, reason: FeedbackReason) => {
+    void onFeedback(option.id, reason);
+    setResult((r) => (r ? { ...r, options: r.options.filter((o) => o.id !== option.id) } : r));
   };
+
+  const save = async (option: TimeOption) => {
+    const res = await onSave(option.id);
+    if (!res.error) setSavedList((list) => (list.some((s) => s.id === option.id) ? list : [toSaved(option), ...list]));
+    return res;
+  };
+
+  const unsave = async (id: string) => {
+    const res = await onUnsave(id);
+    if (!res.error) setSavedList((list) => list.filter((s) => s.id !== id));
+    return res;
+  };
+
+  const loading = isPending && !result && !error;
 
   return (
-    <div style={{ minHeight: "100vh", background: T.bg }}>
-      <div style={{ background: T.primary, padding: "20px" }}>
-        <div style={{ maxWidth: 560, margin: "0 auto" }}>
-          <h1 style={{ fontFamily: "var(--font-display), Georgia, serif", color: "#fff", fontSize: 24, margin: "10px 0 0", display: "flex", alignItems: "center", gap: 10 }}>
-            <Sparkles size={22} /> Explore
-          </h1>
-        </div>
-      </div>
+    <Page>
+      <PageHeader title="Explore" lead="Ideas for today, whatever you feel like." />
 
-      <div style={{ maxWidth: 560, margin: "0 auto", padding: "24px 20px 60px" }}>
-        <div style={{ background: T.surface, border: `1px solid ${T.line}`, borderRadius: 16, padding: "22px", marginBottom: 20 }}>
-          <h2 style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 18, color: T.ink, margin: "0 0 16px" }}>Surprise Me</h2>
-
-          <p style={{ fontSize: 13, fontWeight: 600, color: T.inkSoft, margin: "0 0 8px" }}>WHEN</p>
-          <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-            {WHEN_OPTIONS.map((opt) => (
-              <button key={opt.value} onClick={() => setWhen(opt.value)} style={pillButtonStyle(when === opt.value)}>
-                {opt.label}
-              </button>
-            ))}
-          </div>
-
-          <p style={{ fontSize: 13, fontWeight: 600, color: T.inkSoft, margin: "0 0 8px" }}>WHO</p>
-          <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
-            {WHO_OPTIONS.map((opt) => (
-              <button key={opt.value} onClick={() => setWho(opt.value)} style={pillButtonStyle(who === opt.value)}>
-                {opt.label}
-              </button>
-            ))}
-          </div>
-
-          <button
-            onClick={handleSurpriseMe}
-            disabled={isPending}
-            style={{
-              width: "100%",
-              padding: "14px",
-              borderRadius: 12,
-              border: "none",
-              background: T.accent,
-              color: "#fff",
-              fontSize: 15,
-              fontWeight: 600,
-              cursor: isPending ? "default" : "pointer",
-              opacity: isPending ? 0.7 : 1,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-            }}
-          >
-            <Sparkles size={16} />
-            {isPending ? "Finding something good…" : options ? "Surprise Me again" : "Surprise Me"}
-          </button>
+      <section aria-labelledby="feel">
+        <SectionTitle id="feel">What do you feel like?</SectionTitle>
+        <div className={styles.chips} role="group" aria-label="What you feel like">
+          {MOOD_OPTIONS.map((m) => (
+            <Chip key={m.value} selected={mood === m.value} onClick={() => find(m.value, [])} disabled={isPending}>
+              {m.label}
+            </Chip>
+          ))}
         </div>
 
-        {error && (
-          <div style={{ background: "#F5E9E2", border: "1px solid #D3A98C", borderRadius: 10, padding: "12px 14px", marginBottom: 20, fontSize: 14, color: "#8A4A28" }}>
-            {error}
-          </div>
-        )}
+        <div className={styles.results} aria-live="polite" aria-busy={loading}>
+          {loading &&
+            [0, 1, 2].map((i) => (
+              <Card key={i}>
+                <div className={styles.skeleton}>
+                  <Skeleton height={130} />
+                  <Skeleton height={24} width="70%" />
+                  <Skeleton height={14} width="45%" />
+                  <Skeleton height={16} />
+                </div>
+              </Card>
+            ))}
 
-        {options && options.length === 0 && !error && (
-          <p style={{ fontSize: 14, color: T.inkSoft, textAlign: "center", padding: "20px 0" }}>
-            Nothing genuinely suitable nearby right now — check back soon as we find more.
-          </p>
-        )}
+          {error && <ErrorNote>{error}</ErrorNote>}
 
-        {options?.map((option) => (
-          <div
-            key={option.id}
-            style={{
-              background: T.surface,
-              border: `1px solid ${T.line}`,
-              borderRadius: 14,
-              padding: "18px 20px",
-              marginBottom: 12,
-            }}
-          >
-            <div style={{ marginBottom: 8 }}>
-              <Pill color={CATEGORY_COLOR[option.category] ?? T.primary}>{option.category}</Pill>
-            </div>
-            <h3 style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 18, color: T.ink, margin: "0 0 6px" }}>{option.title}</h3>
-            <p style={{ fontSize: 13.5, color: T.inkSoft, margin: "0 0 10px" }}>
-              {[option.address, formatCost(option.priceEstimate)].filter(Boolean).join(" · ")}
+          {result?.windowLabel && (
+            <p className={styles.windowLine}>
+              <Clock size={14} aria-hidden="true" /> {result.windowLabel}
             </p>
-            <p style={{ fontSize: 14, color: T.ink, margin: "0 0 14px", lineHeight: 1.5 }}>{option.why}</p>
-            <div style={{ display: "flex", gap: 10 }}>
-              <button
-                onClick={() => handleAccept(option.id)}
-                disabled={isPending}
-                style={{
-                  flex: 1,
-                  padding: "11px",
-                  borderRadius: 10,
-                  border: "none",
-                  background: acceptedId === option.id ? T.primarySoft : T.primary,
-                  color: "#fff",
-                  fontSize: 14,
-                  fontWeight: 600,
-                  cursor: isPending ? "default" : "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 6,
-                }}
-              >
-                {acceptedId === option.id ? (
-                  <>
-                    <Check size={14} /> Noted
-                  </>
-                ) : (
-                  "I'll do this"
-                )}
-              </button>
-              <button
-                onClick={() => handleDismiss(option.id)}
-                disabled={isPending}
-                style={{
-                  flex: 1,
-                  padding: "11px",
-                  borderRadius: 10,
-                  border: `1.5px solid ${T.line}`,
-                  background: "none",
-                  color: T.inkSoft,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  cursor: isPending ? "default" : "pointer",
-                }}
-              >
-                Not for me
-              </button>
-              {option.bookingUrl && (
-                <a
-                  href={option.bookingUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    flex: 1,
-                    padding: "11px",
-                    borderRadius: 10,
-                    border: `1.5px solid ${T.line}`,
-                    color: T.ink,
-                    fontSize: 14,
-                    fontWeight: 600,
-                    textAlign: "center",
-                    textDecoration: "none",
-                  }}
-                >
-                  Details
-                </a>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
+          )}
+          {result && result.options.length === 0 && !error && (
+            <p className={styles.notice}>{result.notice ?? "Nothing suitable nearby right now. Check back soon as we find more."}</p>
+          )}
+
+          {result?.options.map((option) => (
+            <ExperienceCard
+              key={option.id}
+              option={option}
+              reason={option.why}
+              variant="result"
+              state={states[option.id] ?? "idle"}
+              error={errors[option.id]}
+              saved={savedIds.has(option.id)}
+              onPlan={() => plan(option.id, option.foodStop?.id)}
+              onSave={() => save(option)}
+              onUnsave={() => unsave(option.id)}
+              onNotForMe={(reason) => notForMe(option, reason)}
+            />
+          ))}
+
+          {result && result.options.length > 0 && mood && (
+            <Button variant="secondary" onClick={() => find(mood, shown)} disabled={isPending}>
+              Show me different ideas
+            </Button>
+          )}
+        </div>
+      </section>
+
+      <section aria-labelledby="saved" className={styles.saved}>
+        <SectionTitle id="saved">Saved for later</SectionTitle>
+        {savedList.length === 0 ? (
+          <p className={styles.notice}>
+            <Heart size={16} aria-hidden="true" /> Tap Save on an idea you like and it will wait for you here.
+          </p>
+        ) : (
+          <ul className={styles.savedList}>
+            {savedList.map((idea) => {
+              const meta = [placeLabel(idea.address), priceBand(idea.priceEstimate)].filter(Boolean).join(" · ");
+              const state = states[idea.id] ?? "idle";
+              return (
+                <li key={idea.id} className={styles.savedRow}>
+                  <p className={styles.savedCategory} style={{ color: CATEGORY_COLOR[idea.category] }}>
+                    {idea.category}
+                  </p>
+                  <h3 className={styles.savedTitle}>{idea.title}</h3>
+                  {meta && <p className={styles.savedMeta}>{meta}</p>}
+                  <div className={styles.savedActions}>
+                    {state === "planned" ? (
+                      <p className={styles.planned}>Added to your day</p>
+                    ) : (
+                      <Button size="sm" loading={state === "planning"} onClick={() => plan(idea.id)}>
+                        {state === "planning" ? "Planning…" : "Plan this for today"}
+                      </Button>
+                    )}
+                    <Button size="sm" variant="quiet" onClick={() => unsave(idea.id)}>
+                      Remove
+                    </Button>
+                  </div>
+                  {errors[idea.id] && <p className={styles.rowError}>{errors[idea.id]}</p>}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+    </Page>
   );
 }

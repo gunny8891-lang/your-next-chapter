@@ -123,10 +123,10 @@ export async function feedbackTimeOptionAction(activityId: string, reason: strin
 }
 
 /**
- * "Save" on an idea: "I would like this, not necessarily now". It is recorded as a
- * positive signal (explicit feedback, so it is never mistaken for something the
- * member has already done — see loadRepetitionHistory), which is what makes ideas
- * like it come back. There is no saved list yet; the card says only what is true.
+ * "Save" on an idea: "I would like this, not necessarily now". It goes on the member's
+ * Saved list, and is also recorded as a positive signal (explicit feedback, so it is
+ * never mistaken for something the member has already done — see loadRepetitionHistory),
+ * which is what makes ideas like it come back.
  */
 export async function saveIdeaAction(activityId: string): Promise<{ error: string | null }> {
   const supabase = await createClient();
@@ -135,11 +135,34 @@ export async function saveIdeaAction(activityId: string): Promise<{ error: strin
   } = await supabase.auth.getUser();
   if (!user) return { error: "Please sign in again." };
 
+  // Saving twice is not an error: the list holds an idea once.
+  const { error: listError } = await supabase
+    .from("saved_ideas")
+    .upsert({ member_id: user.id, activity_id: activityId }, { onConflict: "member_id,activity_id", ignoreDuplicates: true });
+  if (listError) return { error: listError.message };
+
   const { error } = await supabase.from("preference_signals").insert({
     member_id: user.id,
     source: "explicit_feedback",
     activity_id: activityId,
     signal_type: "liked",
   });
+  // The list is what the member sees; a failed learning signal is not worth failing the save for.
+  if (error) console.warn("save: could not record the preference signal:", error.message);
+  return { error: null };
+}
+
+/**
+ * Takes an idea off the Saved list. The positive signal stays: they did like it, and
+ * that is still worth learning from.
+ */
+export async function unsaveIdeaAction(activityId: string): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Please sign in again." };
+
+  const { error } = await supabase.from("saved_ideas").delete().eq("member_id", user.id).eq("activity_id", activityId);
   return { error: error?.message ?? null };
 }
