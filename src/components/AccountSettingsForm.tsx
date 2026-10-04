@@ -53,6 +53,7 @@ export function AccountSettingsForm({
   deleteError,
   onSave,
   onDeleteAccount,
+  onClearLearning,
 }: {
   email: string;
   firstName: string;
@@ -64,10 +65,23 @@ export function AccountSettingsForm({
   deleteError?: string;
   onSave: (formData: FormData) => Promise<void>;
   onDeleteAccount: () => Promise<void>;
+  onClearLearning: () => Promise<{ error: string | null }>;
 }) {
   const [confirmText, setConfirmText] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [goals, setGoals] = useState<string[]>(profile.goals);
+  const [clearStep, setClearStep] = useState<"idle" | "confirm" | "busy" | "done">("idle");
+  const [clearError, setClearError] = useState<string | null>(null);
+
+  const clearLearning = async () => {
+    setClearStep("busy");
+    setClearError(null);
+    const res = await onClearLearning();
+    if (res.error) {
+      setClearError(res.error);
+      setClearStep("confirm");
+    } else setClearStep("done");
+  };
 
   const radiusKm = profile.travel_radius_km;
   const radiusIsOffered = radiusKm === null || RADIUS_OPTIONS.some((o) => o.km === radiusKm);
@@ -181,6 +195,33 @@ export function AccountSettingsForm({
             ? `${subscription.plan} plan, ${subscription.status}${subscription.renewal_date ? `, renews ${subscription.renewal_date}` : ""}.`
             : "You haven't subscribed."}
         </p>
+      </section>
+
+      <section aria-labelledby="learned" className={styles.section}>
+        <SectionTitle id="learned">What we&apos;ve learned about you</SectionTitle>
+        <p className={styles.plain}>
+          To choose well for you, we note which ideas you open, save and plan, how they went when you tell us, and how you say you feel each day. How you feel on a given day is only used that day, and is
+          deleted after a week. None of it is shared or used for advertising. You can clear it all whenever you like.
+        </p>
+        {clearError && <ErrorNote>{clearError}</ErrorNote>}
+        {clearStep === "done" && <Notice>Cleared. We&apos;ll start learning afresh from here.</Notice>}
+        {clearStep === "idle" || clearStep === "done" ? (
+          <Button variant="secondary" onClick={() => setClearStep("confirm")}>
+            Clear what we&apos;ve learned
+          </Button>
+        ) : (
+          <div className={`${styles.deleteForm} ync-appear`} role="group" aria-label="Confirm clearing what we have learned">
+            <p className={styles.plain}>Your suggestions will be less personal for a while. Your plans, saved ideas, goals and people are not affected.</p>
+            <div className={styles.deleteButtons}>
+              <Button loading={clearStep === "busy"} onClick={clearLearning}>
+                Yes, clear it
+              </Button>
+              <Button variant="quiet" onClick={() => setClearStep("idle")}>
+                Keep it
+              </Button>
+            </div>
+          </div>
+        )}
       </section>
 
       <form action={logout} className={styles.section}>

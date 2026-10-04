@@ -3,6 +3,8 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { detectNudgeCandidate } from "@/lib/nudges/detect";
 import { writeNudgeMessage } from "@/lib/nudges/message";
 import { sendNudgeEmail } from "@/lib/email/send";
+import { purgeOldDailyStates } from "@/lib/experience/dailyStateStore";
+import { londonToday } from "@/lib/opportunities/schedule";
 
 type MemberRow = {
   user_id: string;
@@ -24,6 +26,8 @@ export async function GET(request: Request) {
   }
 
   const admin = createAdminClient();
+  // How someone said they felt only ever shapes its own day: keep a week, then delete.
+  const purgedDailyStates = await purgeOldDailyStates(admin, londonToday());
   const { data: members } = await admin
     .from("member_profiles")
     .select("user_id, interests, users(email, status)");
@@ -74,5 +78,5 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.json({ results });
+  return NextResponse.json({ results, purgedDailyStates });
 }

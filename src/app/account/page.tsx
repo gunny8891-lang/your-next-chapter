@@ -3,6 +3,7 @@ import { createClient } from "@/utils/supabase/server";
 import { AccountSettingsForm } from "@/components/AccountSettingsForm";
 import { cleanFirstName } from "@/lib/someTime/format";
 import { updateProfileAction, deleteAccountAction } from "@/app/account/actions";
+import { clearLearningAction } from "@/app/account/learningActions";
 
 export const metadata = { title: "Account" };
 
@@ -45,6 +46,7 @@ export default async function AccountPage({
       deleteError={deleteError}
       onSave={updateProfileAction}
       onDeleteAccount={deleteAccountAction}
+      onClearLearning={clearLearningAction}
     />
   );
 }
