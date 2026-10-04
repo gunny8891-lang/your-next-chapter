@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Users, Heart, Trash2, CalendarCheck } from "lucide-react";
-import { T } from "@/lib/theme";
+import { CalendarCheck, Heart, Trash2, Users } from "lucide-react";
+import { Button, Card, CheckboxField, EmptyState, Field, IconButton, Page, PageHeader, TextareaField } from "@/components/ui";
+import styles from "@/components/People.module.css";
 
 export type Person = {
   id: string;
@@ -15,15 +16,6 @@ export type Person = {
 };
 
 const RECONNECT_GAP_DAYS = 21;
-
-const inputStyle = {
-  padding: "11px 13px",
-  borderRadius: 10,
-  border: `1.5px solid ${T.line}`,
-  fontSize: 15,
-  width: "100%",
-  boxSizing: "border-box" as const,
-};
 
 function daysSince(dateStr: string | null): number | null {
   if (!dateStr) return null;
@@ -55,6 +47,8 @@ export function PeopleView({
   const [sharedInterests, setSharedInterests] = useState("");
   const [notes, setNotes] = useState("");
   const [wantsToSeeMore, setWantsToSeeMore] = useState(true);
+  // Removing someone asks first: it cannot be undone.
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
   const handleAdd = () => {
     if (!name.trim()) return;
@@ -76,135 +70,127 @@ export function PeopleView({
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: T.bg }}>
-      <div style={{ background: T.primary, padding: "20px" }}>
-        <div style={{ maxWidth: 560, margin: "0 auto" }}>
-          <h1 style={{ fontFamily: "var(--font-display), Georgia, serif", color: "#fff", fontSize: 24, margin: "10px 0 0", display: "flex", alignItems: "center", gap: 10 }}>
-            <Users size={22} /> People
-          </h1>
-          <p style={{ color: "#EAE3D0", fontSize: 13.5, margin: "6px 0 0" }}>
-            The people who matter — we&apos;ll look for natural chances to help you see them.
-          </p>
-        </div>
-      </div>
+    <Page>
+      <PageHeader title="People" lead="The people who matter. We'll look for natural chances to help you see them." />
 
-      <div style={{ maxWidth: 560, margin: "0 auto", padding: "24px 20px 60px" }}>
-        {!showForm ? (
-          <button
-            onClick={() => setShowForm(true)}
-            style={{ width: "100%", padding: "14px", borderRadius: 12, border: `1.5px dashed ${T.line}`, background: T.surface, color: T.ink, fontSize: 15, fontWeight: 600, cursor: "pointer", marginBottom: 20 }}
+      {!showForm ? (
+        <Button variant="secondary" fullWidth onClick={() => setShowForm(true)}>
+          Add someone
+        </Button>
+      ) : (
+        <Card padding="lg" className="ync-appear">
+          <form
+            className={styles.form}
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleAdd();
+            }}
           >
-            + Add someone
-          </button>
-        ) : (
-          <div style={{ background: T.surface, border: `1px solid ${T.line}`, borderRadius: 16, padding: "22px", marginBottom: 20 }}>
-            <h2 style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 17, color: T.ink, margin: "0 0 14px" }}>Add someone</h2>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" style={{ ...inputStyle, marginBottom: 10 }} />
-            <input
+            <h2 className={styles.formTitle}>Add someone</h2>
+            <Field label="Name" name="person_name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="off" required />
+            <Field
+              label="How you know them"
+              name="person_relationship"
               value={relationship}
               onChange={(e) => setRelationship(e.target.value)}
-              placeholder="Relationship (e.g. Friend, Sister, Neighbour)"
-              style={{ ...inputStyle, marginBottom: 10 }}
+              placeholder="e.g. Friend, Sister, Neighbour"
             />
-            <input
+            <Field
+              label="What you enjoy together"
+              name="person_interests"
               value={sharedInterests}
               onChange={(e) => setSharedInterests(e.target.value)}
-              placeholder="Shared interests (comma-separated, e.g. golf, restaurants)"
-              style={{ ...inputStyle, marginBottom: 10 }}
+              hint="Separate with commas, like golf, restaurants"
             />
-            <textarea
+            <TextareaField
+              label="Anything worth remembering"
+              name="person_notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Anything worth remembering — recent chats, plans mentioned..."
-              style={{ ...inputStyle, minHeight: 70, resize: "vertical" as const, marginBottom: 12 }}
+              placeholder="Recent chats, plans they mentioned…"
             />
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: T.ink, marginBottom: 16, cursor: "pointer" }}>
-              <input type="checkbox" checked={wantsToSeeMore} onChange={(e) => setWantsToSeeMore(e.target.checked)} />
-              I&apos;d like to see them more often
-            </label>
-            <div style={{ display: "flex", gap: 10 }}>
-              <button
-                onClick={() => setShowForm(false)}
-                style={{ flex: 1, padding: "12px", borderRadius: 10, border: `1.5px solid ${T.line}`, background: "none", color: T.ink, fontSize: 14, cursor: "pointer" }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAdd}
-                disabled={isPending || !name.trim()}
-                style={{ flex: 2, padding: "12px", borderRadius: 10, border: "none", background: name.trim() ? T.primary : T.line, color: "#fff", fontSize: 14, fontWeight: 600, cursor: name.trim() ? "pointer" : "default" }}
-              >
+            <CheckboxField label="I'd like to see them more often" checked={wantsToSeeMore} onChange={(e) => setWantsToSeeMore(e.target.checked)} />
+            <div className={styles.formButtons}>
+              <Button type="submit" loading={isPending} disabled={!name.trim()}>
                 Add
-              </button>
+              </Button>
+              <Button variant="quiet" onClick={() => setShowForm(false)}>
+                Cancel
+              </Button>
             </div>
-          </div>
-        )}
+          </form>
+        </Card>
+      )}
 
-        {people.length === 0 && (
-          <p style={{ fontSize: 14, color: T.inkSoft, textAlign: "center", padding: "20px 0" }}>
-            No one added yet — start with someone you&apos;d like to see more of.
-          </p>
-        )}
+      {people.length === 0 ? (
+        <Card className={styles.empty}>
+          <EmptyState icon={<Users size={24} strokeWidth={1.75} />} title="No one added yet">
+            Start with someone you&apos;d like to see more of.
+          </EmptyState>
+        </Card>
+      ) : (
+        <ul className={styles.list}>
+          {people.map((person) => {
+            const gap = daysSince(person.last_seen_date);
+            const overdue = person.wants_to_see_more && (gap === null || gap >= RECONNECT_GAP_DAYS);
+            return (
+              <li key={person.id}>
+                <Card className={styles.person}>
+                  <div className={styles.top}>
+                    <div>
+                      <h2 className={styles.name}>{person.name}</h2>
+                      {person.relationship && <p className={styles.relationship}>{person.relationship}</p>}
+                    </div>
+                    <IconButton
+                      label={person.wants_to_see_more ? `You'd like to see ${person.name} more often (tap to change)` : `Mark ${person.name} as someone to see more often`}
+                      aria-pressed={person.wants_to_see_more}
+                      onClick={() => startTransition(() => { void onToggleWantsToSeeMore(person.id, !person.wants_to_see_more); })}
+                    >
+                      <Heart size={22} strokeWidth={1.75} fill={person.wants_to_see_more ? "currentColor" : "none"} aria-hidden="true" />
+                    </IconButton>
+                  </div>
 
-        {people.map((person) => {
-          const gap = daysSince(person.last_seen_date);
-          const overdue = person.wants_to_see_more && (gap === null || gap >= RECONNECT_GAP_DAYS);
-          return (
-            <div key={person.id} style={{ background: T.surface, border: `1px solid ${T.line}`, borderRadius: 14, padding: "18px 20px", marginBottom: 12 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                <div>
-                  <p style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 17, color: T.ink, margin: 0, fontWeight: 500 }}>{person.name}</p>
-                  {person.relationship && <p style={{ fontSize: 12.5, color: T.inkSoft, margin: "2px 0 0" }}>{person.relationship}</p>}
-                </div>
-                <button
-                  title={person.wants_to_see_more ? "You'd like to see them more often" : "Mark as someone to see more often"}
-                  onClick={() => startTransition(() => { void onToggleWantsToSeeMore(person.id, !person.wants_to_see_more); })}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    color: person.wants_to_see_more ? T.accent : T.line,
-                  }}
-                >
-                  <Heart size={18} fill={person.wants_to_see_more ? T.accent : "none"} />
-                </button>
-              </div>
+                  {person.shared_interests.length > 0 && (
+                    <ul className={styles.tags} aria-label="What you enjoy together">
+                      {person.shared_interests.map((tag) => (
+                        <li key={tag}>{tag}</li>
+                      ))}
+                    </ul>
+                  )}
 
-              {person.shared_interests.length > 0 && (
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-                  {person.shared_interests.map((tag) => (
-                    <span key={tag} style={{ fontSize: 11.5, padding: "3px 9px", borderRadius: 20, background: T.bg, color: T.inkSoft }}>
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
+                  {person.notes && <p className={styles.notes}>{person.notes}</p>}
 
-              {person.notes && <p style={{ fontSize: 13.5, color: T.ink, margin: "0 0 10px", lineHeight: 1.5 }}>{person.notes}</p>}
+                  <p className={overdue ? styles.overdue : styles.seen}>
+                    {lastSeenLabel(person.last_seen_date)}
+                    {overdue && ". It's been a while, so it might be worth getting in touch."}
+                  </p>
 
-              <p style={{ fontSize: 12.5, color: overdue ? T.accent : T.inkSoft, margin: "0 0 12px", fontWeight: overdue ? 600 : 400 }}>
-                {lastSeenLabel(person.last_seen_date)}
-                {overdue && " — it's been a while, worth reaching out?"}
-              </p>
-
-              <div style={{ display: "flex", gap: 10 }}>
-                <button
-                  onClick={() => startTransition(() => { void onMarkSeenToday(person.id); })}
-                  style={{ flex: 1, padding: "9px", borderRadius: 8, border: `1.5px solid ${T.line}`, background: "none", color: T.ink, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
-                >
-                  <CalendarCheck size={14} /> Saw them today
-                </button>
-                <button
-                  onClick={() => startTransition(() => { void onDelete(person.id); })}
-                  style={{ padding: "9px 14px", borderRadius: 8, border: `1.5px solid ${T.line}`, background: "none", color: "#B0562F", cursor: "pointer" }}
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
+                  {confirmingId === person.id ? (
+                    <div className={styles.actions} role="group" aria-label={`Remove ${person.name}?`}>
+                      <p className={styles.confirm}>Remove {person.name}?</p>
+                      <Button size="sm" onClick={() => startTransition(() => { void onDelete(person.id); })}>
+                        Yes, remove
+                      </Button>
+                      <Button size="sm" variant="quiet" onClick={() => setConfirmingId(null)}>
+                        Keep
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className={styles.actions}>
+                      <Button size="sm" variant="secondary" onClick={() => startTransition(() => { void onMarkSeenToday(person.id); })}>
+                        <CalendarCheck size={18} aria-hidden="true" /> Saw them today
+                      </Button>
+                      <IconButton label={`Remove ${person.name}`} tone="danger" onClick={() => setConfirmingId(person.id)}>
+                        <Trash2 size={20} strokeWidth={1.75} aria-hidden="true" />
+                      </IconButton>
+                    </div>
+                  )}
+                </Card>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Page>
   );
 }

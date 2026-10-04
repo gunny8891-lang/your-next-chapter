@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { Compass, Check, Archive, Trash2, Users, ChevronRight } from "lucide-react";
-import { T } from "@/lib/theme";
+import { Archive, Check, ChevronRight, Trash2, Users } from "lucide-react";
+import { Button, Card, EmptyState, Field, IconButton, Page, PageHeader, SectionTitle } from "@/components/ui";
+import styles from "@/components/MyChapter.module.css";
 
 export type Goal = {
   id: string;
@@ -12,29 +13,7 @@ export type Goal = {
   status: "active" | "completed" | "archived";
 };
 
-const inputStyle = {
-  padding: "11px 13px",
-  borderRadius: 10,
-  border: `1.5px solid ${T.line}`,
-  fontSize: 15,
-  width: "100%",
-  boxSizing: "border-box" as const,
-};
-
-function iconButton(color: string) {
-  return {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    border: `1.5px solid ${T.line}`,
-    background: "none",
-    color,
-    cursor: "pointer",
-  };
-}
+const dateLabel = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 
 export function MyChapterView({
   goals,
@@ -52,7 +31,7 @@ export function MyChapterView({
   const [targetDate, setTargetDate] = useState("");
 
   const active = goals.filter((g) => g.status === "active");
-  const completed = goals.filter((g) => g.status !== "active");
+  const setAside = goals.filter((g) => g.status !== "active");
 
   const handleAdd = () => {
     if (!text.trim()) return;
@@ -67,154 +46,97 @@ export function MyChapterView({
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: T.bg }}>
-      <div style={{ background: T.primary, padding: "20px" }}>
-        <div style={{ maxWidth: 560, margin: "0 auto" }}>
-          <h1 style={{ fontFamily: "var(--font-display), Georgia, serif", color: "#fff", fontSize: 24, margin: "10px 0 0", display: "flex", alignItems: "center", gap: 10 }}>
-            <Compass size={22} /> My Chapter
-          </h1>
-          <p style={{ color: "#EAE3D0", fontSize: 13.5, margin: "6px 0 0" }}>
-            The things you&apos;d still love to do — we&apos;ll look out for chances to help.
-          </p>
-        </div>
-      </div>
+    <Page>
+      <PageHeader title="My chapter" lead="The things you'd still love to do. We'll look out for chances to help." />
 
-      <div style={{ maxWidth: 560, margin: "0 auto", padding: "24px 20px 60px" }}>
-        <Link
-          href="/people"
-          style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 56, padding: "12px 18px", marginBottom: 20, background: T.surface, border: `1px solid ${T.line}`, borderRadius: 14, color: T.ink }}
+      <Link href="/people" className={styles.people}>
+        <Users size={22} strokeWidth={1.75} aria-hidden="true" />
+        <span>The people in your chapter</span>
+        <ChevronRight size={20} aria-hidden="true" />
+      </Link>
+
+      <section aria-labelledby="add-goal" className={styles.section}>
+        <SectionTitle id="add-goal">What would you still love to do?</SectionTitle>
+        <form
+          className={styles.form}
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleAdd();
+          }}
         >
-          <Users size={20} strokeWidth={1.75} color={T.sage} />
-          <span style={{ flex: 1, fontSize: 16, fontWeight: 500 }}>The people in your chapter</span>
-          <ChevronRight size={18} color={T.inkSoft} />
-        </Link>
-
-        <div style={{ background: T.surface, border: `1px solid ${T.line}`, borderRadius: 16, padding: "22px", marginBottom: 20 }}>
-          <h2 style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 17, color: T.ink, margin: "0 0 14px" }}>
-            What would you still love to do?
-          </h2>
-          <input
+          <Field
+            label="Something you'd love to do"
+            name="goal"
             value={text}
             onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleAdd();
-            }}
             placeholder="e.g. Visit Japan, learn Italian, see the Northern Lights"
-            style={{ ...inputStyle, marginBottom: 10 }}
           />
-          <div style={{ display: "flex", gap: 10 }}>
-            <input
-              type="date"
-              value={targetDate}
-              onChange={(e) => setTargetDate(e.target.value)}
-              style={{ ...inputStyle, flex: 1 }}
-            />
-            <button
-              onClick={handleAdd}
-              disabled={isPending || !text.trim()}
-              style={{
-                padding: "0 20px",
-                borderRadius: 10,
-                border: "none",
-                background: text.trim() ? T.primary : T.line,
-                color: "#fff",
-                fontSize: 14,
-                fontWeight: 600,
-                cursor: text.trim() ? "pointer" : "default",
-              }}
-            >
-              Add
-            </button>
-          </div>
-        </div>
-
-        {active.length > 0 && (
-          <div style={{ marginBottom: 20 }}>
-            {active.map((goal) => (
-              <div
-                key={goal.id}
-                style={{
-                  background: T.surface,
-                  border: `1px solid ${T.line}`,
-                  borderRadius: 14,
-                  padding: "16px 18px",
-                  marginBottom: 10,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 12,
-                }}
-              >
-                <div>
-                  <p style={{ fontSize: 15.5, color: T.ink, margin: 0, fontWeight: 500 }}>{goal.text}</p>
-                  {goal.target_date && (
-                    <p style={{ fontSize: 12.5, color: T.inkSoft, margin: "4px 0 0" }}>
-                      By {new Date(goal.target_date).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
-                    </p>
-                  )}
-                </div>
-                <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                  <button
-                    title="Mark as done"
-                    onClick={() => startTransition(() => onUpdateStatus(goal.id, "completed"))}
-                    style={iconButton(T.primary)}
-                  >
-                    <Check size={15} />
-                  </button>
-                  <button
-                    title="Archive"
-                    onClick={() => startTransition(() => onUpdateStatus(goal.id, "archived"))}
-                    style={iconButton(T.inkSoft)}
-                  >
-                    <Archive size={14} />
-                  </button>
-                  <button
-                    title="Delete"
-                    onClick={() => startTransition(() => onDelete(goal.id))}
-                    style={iconButton("#B0562F")}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {active.length === 0 && (
-          <p style={{ fontSize: 14, color: T.inkSoft, textAlign: "center", padding: "20px 0" }}>
-            Nothing here yet — add something above and we&apos;ll keep an eye out for it.
-          </p>
-        )}
-
-        {completed.length > 0 && (
+          <Field
+            label="By when? (if you have a date in mind)"
+            name="goal_date"
+            type="date"
+            value={targetDate}
+            onChange={(e) => setTargetDate(e.target.value)}
+          />
           <div>
-            <h3 style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 15, color: T.inkSoft, margin: "0 0 10px" }}>
-              Done and set aside
-            </h3>
-            {completed.map((goal) => (
-              <div
-                key={goal.id}
-                style={{
-                  fontSize: 14,
-                  color: T.inkSoft,
-                  padding: "10px 14px",
-                  borderBottom: `1px solid ${T.line}`,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  textDecoration: goal.status === "completed" ? "line-through" : "none",
-                }}
-              >
-                {goal.text}
-                <button onClick={() => startTransition(() => onDelete(goal.id))} style={{ ...iconButton("#B0562F"), border: "none" }}>
-                  <Trash2 size={13} />
-                </button>
-              </div>
-            ))}
+            <Button type="submit" loading={isPending} disabled={!text.trim()}>
+              Add to my chapter
+            </Button>
           </div>
+        </form>
+      </section>
+
+      <section aria-labelledby="your-list" className={styles.section}>
+        <SectionTitle id="your-list">Your list</SectionTitle>
+        {active.length === 0 ? (
+          <Card>
+            <EmptyState icon={<Check size={24} strokeWidth={1.75} />} title="Nothing here yet">
+              Add something above and we&apos;ll keep an eye out for it.
+            </EmptyState>
+          </Card>
+        ) : (
+          <ul className={styles.list}>
+            {active.map((goal) => (
+              <li key={goal.id} className={styles.goal}>
+                <div className={styles.goalText}>
+                  <p className={styles.goalTitle}>{goal.text}</p>
+                  {goal.target_date && <p className={styles.goalDate}>By {dateLabel(goal.target_date)}</p>}
+                </div>
+                <div className={styles.goalActions}>
+                  <IconButton label={`Mark "${goal.text}" as done`} onClick={() => startTransition(() => onUpdateStatus(goal.id, "completed"))}>
+                    <Check size={20} strokeWidth={1.75} aria-hidden="true" />
+                  </IconButton>
+                  <IconButton label={`Set "${goal.text}" aside`} onClick={() => startTransition(() => onUpdateStatus(goal.id, "archived"))}>
+                    <Archive size={20} strokeWidth={1.75} aria-hidden="true" />
+                  </IconButton>
+                  <IconButton label={`Delete "${goal.text}"`} tone="danger" onClick={() => startTransition(() => onDelete(goal.id))}>
+                    <Trash2 size={20} strokeWidth={1.75} aria-hidden="true" />
+                  </IconButton>
+                </div>
+              </li>
+            ))}
+          </ul>
         )}
-      </div>
-    </div>
+      </section>
+
+      {setAside.length > 0 && (
+        <section aria-labelledby="set-aside" className={styles.section}>
+          <SectionTitle id="set-aside">Done and set aside</SectionTitle>
+          <ul className={styles.list}>
+            {setAside.map((goal) => (
+              <li key={goal.id} className={`${styles.goal} ${styles.aside}`}>
+                <p className={goal.status === "completed" ? styles.doneText : undefined}>
+                  {goal.text}
+                  {goal.status === "completed" && <span className="sr-only"> (done)</span>}
+                </p>
+                <IconButton label={`Delete "${goal.text}"`} tone="danger" onClick={() => startTransition(() => onDelete(goal.id))}>
+                  <Trash2 size={20} strokeWidth={1.75} aria-hidden="true" />
+                </IconButton>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </Page>
   );
 }

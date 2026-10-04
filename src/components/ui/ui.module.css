@@ -322,3 +322,109 @@
     font-size: 40px;
   }
 }
+
+/* ---- Textarea, Checkbox --------------------------------------------- */
+
+.textarea {
+  min-height: 112px;
+  padding: var(--space-3) var(--space-4);
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 48px;
+  cursor: pointer;
+}
+
+.check input {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+/* ---- IconButton ----------------------------------------------------- */
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-ink-soft);
+  cursor: pointer;
+  transition:
+    background var(--duration-quick) var(--ease-out),
+    color var(--duration-quick) var(--ease-out);
+}
+
+.iconButton:hover:not(:disabled) {
+  background: var(--color-sage-soft);
+  color: var(--color-ink);
+}
+
+.iconButton:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.iconButton[aria-pressed="true"] {
+  color: var(--color-accent);
+}
+
+.iconDanger:hover:not(:disabled) {
+  background: var(--color-error-soft);
+  color: var(--color-error);
+}
+
+/* ---- Notice, danger button ------------------------------------------ */
+
+.notice {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-4);
+  border-radius: var(--radius-control);
+  font-size: var(--text-small);
+  line-height: 1.5;
+  color: var(--color-ink);
+}
+
+.noticeSuccess {
+  background: var(--color-sage-soft);
+}
+
+.noticeInfo {
+  background: var(--color-accent-soft);
+}
+
+.noticeIcon {
+  flex: none;
+  margin-top: 2px;
+}
+
+.noticeSuccess .noticeIcon {
+  color: var(--color-sage);
+}
+
+.noticeInfo .noticeIcon {
+  color: var(--color-accent);
+}
+
+.danger {
+  background: var(--color-error);
+  color: var(--color-surface);
+}
+
+.danger:hover:not(:disabled) {
+  background: #823219;
+}

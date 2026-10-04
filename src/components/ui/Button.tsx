@@ -2,10 +2,10 @@ import Link from "next/link";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import styles from "@/components/ui/ui.module.css";
 
-type Variant = "primary" | "accent" | "secondary" | "quiet";
+type Variant = "primary" | "accent" | "secondary" | "quiet" | "danger";
 
 type Common = {
-  /** primary: the main action. accent: the one warm "do this next". secondary: an alternative. quiet: low-key. */
+  /** primary: the main action. accent: the one warm "do this next". secondary: an alternative. quiet: low-key. danger: the final step of something that cannot be undone. */
   variant?: Variant;
   size?: "md" | "sm";
   fullWidth?: boolean;

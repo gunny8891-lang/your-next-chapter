@@ -1,0 +1,95 @@
+.form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.formTitle {
+  font-size: 22px;
+  color: var(--color-ink);
+}
+
+.formButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.empty {
+  margin-top: var(--space-6);
+}
+
+.list {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+  list-style: none;
+}
+
+.person {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.name {
+  font-size: 22px;
+  color: var(--color-ink);
+}
+
+.relationship {
+  font-size: var(--text-small);
+  color: var(--color-ink-soft);
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  list-style: none;
+}
+
+.tags li {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--color-sage-soft);
+  font-size: var(--text-small);
+  color: var(--color-ink);
+}
+
+.notes {
+  line-height: 1.55;
+}
+
+.seen,
+.overdue {
+  font-size: var(--text-small);
+  color: var(--color-ink-soft);
+}
+
+.overdue {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.confirm {
+  flex: 1 1 100%;
+  font-weight: 600;
+}
+
+.actions:has(.confirm) {
+  justify-content: flex-start;
+}

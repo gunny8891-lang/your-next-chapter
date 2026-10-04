@@ -1,0 +1,150 @@
+/* The concierge: a calm thread with the message box resting above the tab bar. */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100dvh - var(--topbar-height) - var(--tabbar-height));
+}
+
+.thread {
+  flex: 1;
+  width: 100%;
+  max-width: var(--content-width);
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-5) var(--space-6);
+}
+
+.header {
+  margin-bottom: var(--space-6);
+}
+
+.title {
+  font-size: 34px;
+  line-height: 1.12;
+  color: var(--color-ink);
+}
+
+.lead {
+  margin-top: var(--space-2);
+  color: var(--color-ink-soft);
+}
+
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+}
+
+.messages {
+  display: grid;
+  gap: var(--space-4);
+  list-style: none;
+}
+
+.mine,
+.theirs {
+  max-width: 88%;
+  padding: var(--space-3) var(--space-4);
+  border-radius: 18px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* What the member said: set apart in green and pushed to the right. */
+.mine {
+  justify-self: end;
+  border-bottom-right-radius: 6px;
+  background: var(--color-primary);
+  color: var(--color-surface);
+}
+
+/* The concierge's reply: plain on the page, with a fine edge. */
+.theirs {
+  justify-self: start;
+  border: 1px solid var(--color-line);
+  border-bottom-left-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+.waiting {
+  margin-top: var(--space-4);
+  color: var(--color-ink-soft);
+  font-style: italic;
+}
+
+/* ---- the message box ------------------------------------------------ */
+
+/* Rests just above the tab bar on a phone, and at the foot of the window on a larger screen. */
+.composer {
+  position: sticky;
+  bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--color-line);
+  background: var(--color-surface);
+  padding: var(--space-3) var(--space-5);
+}
+
+.composerInner {
+  display: flex;
+  gap: var(--space-2);
+  max-width: var(--content-width);
+  margin: 0 auto;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  min-height: 52px;
+  padding: 0 var(--space-4);
+  border: 1.5px solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: var(--text-body);
+}
+
+.input:focus-visible {
+  border-color: var(--color-primary);
+  outline-offset: 0;
+}
+
+.send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border: none;
+  border-radius: var(--radius-control);
+  background: var(--color-accent);
+  color: var(--color-surface);
+  cursor: pointer;
+  transition: background var(--duration-quick) var(--ease-out);
+}
+
+.send:hover:not(:disabled) {
+  background: #8F4830;
+}
+
+.send:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+@media (min-width: 768px) {
+  .page {
+    min-height: calc(100dvh - var(--topbar-height));
+  }
+
+  .composer {
+    bottom: 0;
+  }
+
+  .title {
+    font-size: 40px;
+  }
+}
