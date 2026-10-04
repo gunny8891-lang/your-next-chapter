@@ -11,7 +11,18 @@ import { getTimeOptions } from "@/lib/someTime/recommend";
 import { parseTimeRequest } from "@/lib/someTime/request";
 import { slotsForWindow } from "@/lib/someTime/slots";
 import type { TimeResult } from "@/lib/someTime/types";
+import { londonToday } from "@/lib/opportunities/schedule";
+import { loadDailyState } from "@/lib/experience/dailyStateStore";
+import { buildContext, explainedByState, recordExperience, signalForDismissal, validateEvent, type DismissReason, type ExperienceEvent } from "@/lib/experience/events";
 import { resolveWindow } from "@/lib/someTime/window";
+
+/** Where in the app something happened, and who it was for: checked against fixed lists before it is kept. */
+export type ActionMeta = { surface?: string; who?: string };
+
+function eventFor(type: ExperienceEvent["type"], activityId: string, meta: ActionMeta | undefined, extra: Partial<ExperienceEvent> = {}): ExperienceEvent | null {
+  const checked = validateEvent({ type, activityId, surface: meta?.surface, who: meta?.who, ...extra });
+  return checked;
+}
 
 /** "I've got some time": find a few strong ways to spend it. */
 export async function getTimeOptionsAction(raw: unknown): Promise<TimeResult> {
@@ -46,7 +57,8 @@ export async function getTimeOptionsAction(raw: unknown): Promise<TimeResult> {
 export async function acceptTimeOptionAction(
   activityId: string,
   choice: { start?: unknown; duration?: unknown; untilMin?: unknown },
-  foodStopId?: string
+  foodStopId?: string,
+  meta?: ActionMeta
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const {
@@ -78,6 +90,11 @@ export async function acceptTimeOptionAction(
   for (const slot of slots) {
     const result = await placeOpenTimeChoice(supabase, admin, user.id, activityId, slot, new Date(), rationale);
     if (!result.error) {
+      const planned = eventFor("planned", activityId, meta);
+      if (planned) {
+        const state = await loadDailyState(supabase, user.id, londonToday());
+        await recordExperience(supabase, user.id, [{ ...planned, context: buildContext(state, { who: planned.context?.who }) }]);
+      }
       revalidatePath("/today");
       revalidatePath("/week");
       return { error: null };
@@ -102,16 +119,34 @@ const SIGNAL_FOR_REASON: Record<FeedbackReason, "disliked" | "too_far" | "too_ex
  * "Not for me", with a reason. The reason matters: too far and too expensive are
  * about this one thing, and are learned that way (see computeAffinity), while a
  * plain "not my thing" teaches the Memory Agent about the kind of thing.
+ *
+ * Context matters too: turning down a three-hour walk on a day they said they were
+ * taking it easy says the walk was wrong for the day, not that they dislike walking,
+ * so that rejection is recorded (with the reason it is explained) but teaches no dislike.
  */
-export async function feedbackTimeOptionAction(activityId: string, reason: string): Promise<{ error: string | null }> {
+export async function feedbackTimeOptionAction(activityId: string, reason: string, meta?: ActionMeta): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Please sign in again." };
 
-  const signalType = SIGNAL_FOR_REASON[reason as FeedbackReason];
-  if (!signalType) return { error: "Unknown reason." };
+  if (!Object.prototype.hasOwnProperty.call(SIGNAL_FOR_REASON, reason)) return { error: "Unknown reason." };
+  const dismissal = reason as FeedbackReason;
+
+  const [state, activity] = await Promise.all([
+    loadDailyState(supabase, user.id, londonToday()),
+    supabase.from("activities").select("category, tags, duration_minutes").eq("id", activityId).maybeSingle(),
+  ]);
+  const explained = activity.data
+    ? explainedByState(state, { category: activity.data.category, tags: activity.data.tags ?? [] }, { durationMinutes: activity.data.duration_minutes ?? 60 })
+    : false;
+
+  const event = eventFor("dismissed", activityId, meta, { reason: dismissal as DismissReason });
+  if (event) await recordExperience(supabase, user.id, [{ ...event, context: buildContext(state, { who: event.context?.who, explainedByState: explained }) }]);
+
+  const signalType = signalForDismissal(dismissal, explained);
+  if (!signalType) return { error: null };
 
   const { error } = await supabase.from("preference_signals").insert({
     member_id: user.id,
@@ -128,7 +163,7 @@ export async function feedbackTimeOptionAction(activityId: string, reason: strin
  * never mistaken for something the member has already done — see loadRepetitionHistory),
  * which is what makes ideas like it come back.
  */
-export async function saveIdeaAction(activityId: string): Promise<{ error: string | null }> {
+export async function saveIdeaAction(activityId: string, meta?: ActionMeta): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -149,6 +184,12 @@ export async function saveIdeaAction(activityId: string): Promise<{ error: strin
   });
   // The list is what the member sees; a failed learning signal is not worth failing the save for.
   if (error) console.warn("save: could not record the preference signal:", error.message);
+
+  const saved = eventFor("saved", activityId, meta);
+  if (saved) {
+    const state = await loadDailyState(supabase, user.id, londonToday());
+    await recordExperience(supabase, user.id, [{ ...saved, context: buildContext(state, { who: saved.context?.who }) }]);
+  }
   return { error: null };
 }
 

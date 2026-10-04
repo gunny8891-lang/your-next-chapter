@@ -14,6 +14,7 @@ import {
   WHO_OPTIONS,
   type Commitment,
 } from "@/lib/someTime/choices";
+import { INTENTION_OPTIONS } from "@/lib/experience/dailyState";
 import type { DurationChoice, Mood, StartChoice } from "@/lib/someTime/request";
 import type { SurpriseWho } from "@/lib/surprise/context";
 import type { TimeOption, TimeResult } from "@/lib/someTime/types";
@@ -34,16 +35,19 @@ type Props = {
   initial?: TimeSheetInitial;
   /** The next thing already in the member's day, if any: lets us offer "Until Tennis". */
   commitment: Commitment | null;
+  /** What they said they feel like today (Daily State), offered as one tap. */
+  suggestedMood?: Mood | null;
   /** The time now, in minutes after midnight. */
   nowMin: number;
   onFind: (request: FindRequest) => Promise<TimeResult>;
   onAccept: (
     activityId: string,
     choice: { start: StartChoice; duration: DurationChoice; untilMin?: number | null },
-    foodStopId?: string
+    foodStopId?: string,
+    meta?: { surface?: string; who?: string }
   ) => Promise<{ error: string | null }>;
-  onFeedback: (activityId: string, reason: FeedbackReason) => Promise<{ error: string | null }>;
-  onSave: (activityId: string) => Promise<{ error: string | null }>;
+  onFeedback: (activityId: string, reason: FeedbackReason, meta?: { surface?: string; who?: string }) => Promise<{ error: string | null }>;
+  onSave: (activityId: string, meta?: { surface?: string; who?: string }) => Promise<{ error: string | null }>;
   onClose: () => void;
 };
 
@@ -75,7 +79,7 @@ function writeSaved(saved: Saved) {
 const isDuration = (v: unknown): v is DurationChoice => DURATION_OPTIONS.some((d) => d.value === v);
 const isWho = (v: unknown): v is SurpriseWho => WHO_OPTIONS.some((w) => w.value === v);
 
-export function TimeSheet({ initial, commitment, nowMin, onFind, onAccept, onFeedback, onSave, onClose }: Props) {
+export function TimeSheet({ initial, commitment, suggestedMood, nowMin, onFind, onAccept, onFeedback, onSave, onClose }: Props) {
   const [saved] = useState(readSaved);
   const [step, setStep] = useState<"time" | "feel" | "results">("time");
   const [start, setStart] = useState<StartChoice>(initial?.start ?? "now");
@@ -131,7 +135,7 @@ export function TimeSheet({ initial, commitment, nowMin, onFind, onAccept, onFee
     setError(null);
     setAcceptedId(option.id);
     startTransition(async () => {
-      const res = await onAccept(option.id, { start: effectiveStart, duration, untilMin }, option.foodStop?.id);
+      const res = await onAccept(option.id, { start: effectiveStart, duration, untilMin }, option.foodStop?.id, { surface: "sheet", who });
       if (res.error) {
         setAcceptedId(null);
         setError(res.error);
@@ -140,7 +144,7 @@ export function TimeSheet({ initial, commitment, nowMin, onFind, onAccept, onFee
   };
 
   const giveFeedback = (option: TimeOption, reason: FeedbackReason) => {
-    void onFeedback(option.id, reason);
+    void onFeedback(option.id, reason, { surface: "sheet", who });
     setResult((r) => (r ? { ...r, options: r.options.filter((o) => o.id !== option.id) } : r));
   };
 
@@ -203,6 +207,11 @@ export function TimeSheet({ initial, commitment, nowMin, onFind, onAccept, onFee
 
         <div className={styles.feelBody}>
           {/* Tapping any of these is the answer: there is no separate Submit. */}
+          {suggestedMood && suggestedMood !== "surprise" && (
+            <Button variant="primary" fullWidth onClick={() => run(suggestedMood, [])}>
+              {INTENTION_OPTIONS.find((o) => o.value === suggestedMood)?.label ?? suggestedMood}, as you said today
+            </Button>
+          )}
           <Button variant="accent" fullWidth onClick={() => run("surprise", [])}>
             Surprise me
           </Button>
@@ -271,10 +280,12 @@ export function TimeSheet({ initial, commitment, nowMin, onFind, onAccept, onFee
             option={option}
             reason={option.why}
             variant="result"
+            surface="sheet"
+            who={who}
             state={acceptedId === option.id && !error ? (isPending ? "planning" : "planned") : "idle"}
             error={acceptedId === option.id || !acceptedId ? error : null}
             onPlan={() => accept(option)}
-            onSave={() => onSave(option.id)}
+            onSave={() => onSave(option.id, { surface: "sheet", who })}
             onNotForMe={(reason) => giveFeedback(option, reason)}
           />
         ))}

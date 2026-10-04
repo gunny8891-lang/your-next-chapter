@@ -7,6 +7,10 @@ import { getTodayWeather, weatherCoordinates } from "@/lib/nudges/weather";
 import { formatCost, formatTime, LOCATION_UNKNOWN } from "@/lib/itinerary/format";
 import { scheduleImageLookups } from "@/lib/someTime/imageLookups";
 import { getFeaturedOption } from "@/lib/someTime/recommend";
+import { completeExperienceAction, clearDailyStateAction, saveDailyStateAction } from "@/app/today/experienceActions";
+import { loadDailyState } from "@/lib/experience/dailyStateStore";
+import { loadReflections } from "@/lib/experience/reflections";
+import { londonToday } from "@/lib/opportunities/schedule";
 import { cleanFirstName, greetingFor } from "@/lib/someTime/format";
 import { londonClock } from "@/lib/someTime/window";
 import type { CategoryName } from "@/lib/categories";
@@ -83,12 +87,14 @@ export default async function TodayPage() {
   const { latitude, longitude } = weatherCoordinates(profile);
   // The weather and the featured idea are independent, so fetch them together. The
   // idea is a bonus: if anything about it fails, Today simply shows without it.
-  const [weather, featured] = await Promise.all([
+  const [weather, featured, dailyState, reflections] = await Promise.all([
     getTodayWeather(latitude, longitude),
     getFeaturedOption(supabase, user.id).catch((err) => {
       console.warn("today: could not build the featured idea:", err instanceof Error ? err.message : err);
       return null;
     }),
+    loadDailyState(supabase, user.id, londonToday()),
+    loadReflections(supabase, user.id, londonToday()),
   ]);
 
   if (featured) scheduleImageLookups([featured]);
@@ -108,6 +114,11 @@ export default async function TodayPage() {
       onAcceptTime={acceptTimeOptionAction}
       onFeedbackTime={feedbackTimeOptionAction}
       onSaveTime={saveIdeaAction}
+      dailyState={dailyState}
+      reflections={reflections}
+      onSaveDailyState={saveDailyStateAction}
+      onClearDailyState={clearDailyStateAction}
+      onAnswerReflection={completeExperienceAction}
     />
   );
 }

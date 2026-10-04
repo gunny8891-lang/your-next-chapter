@@ -5,6 +5,10 @@ import { Check, ChevronRight, Hourglass } from "lucide-react";
 import { CATEGORY_COLOR } from "@/lib/theme";
 import { Button, Sheet, WeatherLine } from "@/components/ui";
 import { ExperienceCard, type FeedbackReason } from "@/components/ExperienceCard";
+import { DailyStateStrip } from "@/components/DailyStateStrip";
+import { Reflections } from "@/components/Reflections";
+import type { DailyState } from "@/lib/experience/dailyState";
+import type { Reflection } from "@/lib/experience/reflections";
 import { TimeSheet, type TimeSheetInitial } from "@/components/TimeSheet";
 import { nextCommitment, type Commitment } from "@/lib/someTime/choices";
 import { isUnknownDetail } from "@/lib/itinerary/format";
@@ -43,7 +47,7 @@ function FeaturedIdea({ option, flow }: { option: TimeOption; flow: FlowActions 
     setError(null);
     setState("planning");
     // The same window the idea was chosen for, so it lands in the right part of the day.
-    const result = await flow.onAccept(option.id, { start: "now", duration: "half_day" }, option.foodStop?.id);
+    const result = await flow.onAccept(option.id, { start: "now", duration: "half_day" }, option.foodStop?.id, { surface: "today" });
     if (result.error) {
       setError(result.error);
       setState("idle");
@@ -53,7 +57,7 @@ function FeaturedIdea({ option, flow }: { option: TimeOption; flow: FlowActions 
   };
 
   const notForMe = (reason: FeedbackReason) => {
-    void flow.onFeedback(option.id, reason);
+    void flow.onFeedback(option.id, reason, { surface: "today" });
     setState("hidden");
   };
 
@@ -62,10 +66,11 @@ function FeaturedIdea({ option, flow }: { option: TimeOption; flow: FlowActions 
       option={option}
       reason={option.reason || option.why}
       variant="hero"
+      surface="today"
       state={state}
       error={error}
       onPlan={plan}
-      onSave={() => flow.onSave(option.id)}
+      onSave={() => flow.onSave(option.id, { surface: "today" })}
       onNotForMe={notForMe}
     />
   );
@@ -83,6 +88,11 @@ export function TodayView({
   onAcceptTime,
   onFeedbackTime,
   onSaveTime,
+  dailyState: initialDailyState,
+  reflections,
+  onSaveDailyState,
+  onClearDailyState,
+  onAnswerReflection,
 }: {
   greeting: string;
   firstName: string;
@@ -95,7 +105,14 @@ export function TodayView({
   onAcceptTime: FlowActions["onAccept"];
   onFeedbackTime: FlowActions["onFeedback"];
   onSaveTime: FlowActions["onSave"];
+  dailyState: DailyState | null;
+  reflections: Reflection[];
+  onSaveDailyState: (state: DailyState) => Promise<{ error: string | null }>;
+  onClearDailyState: () => Promise<{ error: string | null }>;
+  onAnswerReflection: React.ComponentProps<typeof Reflections>["onAnswer"];
 }) {
+  // How they said they are today, followed as it changes so the sheet can offer it.
+  const [dailyState, setDailyState] = useState<DailyState | null>(initialDailyState);
   const [statuses, setStatuses] = useState<Record<string, string>>(() =>
     Object.fromEntries(slots.filter((s) => s.item).map((s) => [s.item!.id, s.item!.status]))
   );
@@ -130,6 +147,10 @@ export function TodayView({
           <WeatherLine weather={weather} />
         </p>
       </header>
+
+      <DailyStateStrip initial={initialDailyState} onSave={onSaveDailyState} onClear={onClearDailyState} onChange={setDailyState} />
+
+      <Reflections items={reflections} onAnswer={onAnswerReflection} />
 
       <section className={styles.section} aria-labelledby="your-day">
         <h2 id="your-day" className={styles.label}>
@@ -199,6 +220,7 @@ export function TodayView({
             <TimeSheet
               initial={sheet.initial}
               commitment={sheet.commitment}
+              suggestedMood={dailyState?.intention ?? null}
               nowMin={sheet.nowMin}
               onClose={() => setSheet(null)}
               {...flowActions}
@@ -212,7 +234,7 @@ export function TodayView({
           For you today
         </h2>
         {featured ? (
-          <FeaturedIdea option={featured} flow={flowActions} />
+          <FeaturedIdea key={featured.id} option={featured} flow={flowActions} />
         ) : (
           // Late in the day, or nothing suitable nearby: say so, rather than leave the page ending in silence.
           <p className={styles.quiet}>

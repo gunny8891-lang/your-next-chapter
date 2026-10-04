@@ -1,9 +1,11 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Check, ChevronDown, Heart } from "lucide-react";
 import { Button, Card, Chip, Cover, Timeline } from "@/components/ui";
 import { doorToDoorMinutes, friendlyDuration, placeLabel, planLabelFor, priceBand } from "@/lib/someTime/format";
+import { trackSeen } from "@/components/trackExperience";
+import type { Surface } from "@/lib/experience/events";
 import type { TimeOption } from "@/lib/someTime/types";
 import styles from "@/components/ExperienceCard.module.css";
 
@@ -24,6 +26,9 @@ type Props = {
   reason: string;
   /** hero: the large card at the top of Today. result: one of the ideas in the sheet. */
   variant: "hero" | "result";
+  /** Where it appears, and who it is for: noted when it is shown and opened. */
+  surface: Surface;
+  who?: string;
   state: "idle" | "planning" | "planned";
   error?: string | null;
   onPlan: () => void;
@@ -41,8 +46,13 @@ type Props = {
  * Used both for the hero on Today and for each idea in "I've got some time", so
  * they always look and behave the same.
  */
-export function ExperienceCard({ option, reason, variant, state, error, saved: savedProp = false, onPlan, onSave, onUnsave, onNotForMe }: Props) {
+export function ExperienceCard({ option, reason, variant, surface, who, state, error, saved: savedProp = false, onPlan, onSave, onUnsave, onNotForMe }: Props) {
   const planId = useId();
+
+  // Noted once per visit: this idea was put in front of them.
+  useEffect(() => {
+    trackSeen("shown", option.id, surface, who);
+  }, [option.id, surface, who]);
   const [planOpen, setPlanOpen] = useState(false);
   // Whether it was already saved when it appeared is remembered once: a parent that tracks the
   // list updates `saved` the moment a save succeeds, and that must not hide the acknowledgement.
@@ -96,7 +106,10 @@ export function ExperienceCard({ option, reason, variant, state, error, saved: s
           className={styles.planToggle}
           aria-expanded={showPlan}
           aria-controls={planId}
-          onClick={() => setPlanOpen((v) => !v)}
+          onClick={() => {
+            if (!planOpen) trackSeen("opened", option.id, surface, who);
+            setPlanOpen((v) => !v);
+          }}
           disabled={state === "planned"}
         >
           {showPlan ? "Hide the plan" : "See the plan"}

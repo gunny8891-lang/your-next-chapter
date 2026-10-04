@@ -42,7 +42,7 @@ export function ExploreView({
   onFind: Flow["onFind"];
   onAccept: Flow["onAccept"];
   onFeedback: Flow["onFeedback"];
-  onSave: (activityId: string) => Promise<{ error: string | null }>;
+  onSave: (activityId: string, meta?: { surface?: string; who?: string }) => Promise<{ error: string | null }>;
   onUnsave: (activityId: string) => Promise<{ error: string | null }>;
 }) {
   const [mood, setMood] = useState<Mood | null>(null);
@@ -83,7 +83,7 @@ export function ExploreView({
   const plan = async (id: string, foodStopId?: string) => {
     setErrors((e) => ({ ...e, [id]: null }));
     setStates((s) => ({ ...s, [id]: "planning" }));
-    const res = await onAccept(id, { start: "now", duration: exploreDuration(new Date().getHours()) }, foodStopId);
+    const res = await onAccept(id, { start: "now", duration: exploreDuration(new Date().getHours()) }, foodStopId, { surface: "explore" });
     if (res.error) {
       setErrors((e) => ({ ...e, [id]: res.error }));
       setStates((s) => ({ ...s, [id]: "idle" }));
@@ -93,12 +93,12 @@ export function ExploreView({
   };
 
   const notForMe = (option: TimeOption, reason: FeedbackReason) => {
-    void onFeedback(option.id, reason);
+    void onFeedback(option.id, reason, { surface: "explore" });
     setResult((r) => (r ? { ...r, options: r.options.filter((o) => o.id !== option.id) } : r));
   };
 
   const save = async (option: TimeOption) => {
-    const res = await onSave(option.id);
+    const res = await onSave(option.id, { surface: "explore" });
     if (!res.error) setSavedList((list) => (list.some((s) => s.id === option.id) ? list : [toSaved(option), ...list]));
     return res;
   };
@@ -155,6 +155,7 @@ export function ExploreView({
               option={option}
               reason={option.why}
               variant="result"
+              surface="explore"
               state={states[option.id] ?? "idle"}
               error={errors[option.id]}
               saved={savedIds.has(option.id)}
