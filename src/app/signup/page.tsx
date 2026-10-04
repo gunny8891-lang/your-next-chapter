@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { signup } from "@/app/auth/actions";
-import { T } from "@/lib/theme";
+import { AuthLink, AuthLinks, AuthPage } from "@/components/AuthPage";
+import { Button, ErrorNote, Field } from "@/components/ui";
 
 export default async function SignupPage({
   searchParams,
@@ -9,53 +9,38 @@ export default async function SignupPage({
 }) {
   const { error, checkEmail } = await searchParams;
 
+  if (checkEmail) {
+    return (
+      <AuthPage title="Check your email" lead="We've sent you a link. Open it to finish signing up, and we'll take it from there.">
+        <AuthLinks>
+          <AuthLink href="/login">Back to log in</AuthLink>
+        </AuthLinks>
+      </AuthPage>
+    );
+  }
+
   return (
-    <div style={{ minHeight: "100vh", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <div style={{ width: "100%", maxWidth: 400, background: T.surface, border: `1px solid ${T.line}`, borderRadius: 16, padding: "32px 28px" }}>
-        <h1 style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 24, color: T.ink, margin: "0 0 24px" }}>
-          Start your next chapter
-        </h1>
+    <AuthPage title="Start your next chapter" lead="It takes about a minute. Then we'll have something good for today.">
+      <form action={signup}>
+        {error && <ErrorNote>{error}</ErrorNote>}
+        <Field label="Email" name="email" type="email" autoComplete="email" required />
+        <Field
+          label="Password"
+          name="password"
+          type="password"
+          autoComplete="new-password"
+          minLength={6}
+          hint="At least 6 characters"
+          required
+        />
+        <Button type="submit" fullWidth>
+          Create my account
+        </Button>
+      </form>
 
-        {checkEmail ? (
-          <p style={{ fontSize: 15, color: T.ink, lineHeight: 1.5 }}>
-            Almost there — check your email for a confirmation link to finish signing up.
-          </p>
-        ) : (
-          <>
-            {error && (
-              <p style={{ color: "#B0562F", fontSize: 14, marginBottom: 16 }}>{error}</p>
-            )}
-
-            <form action={signup} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <input
-                name="email"
-                type="email"
-                placeholder="Email"
-                required
-                style={{ padding: "12px 14px", borderRadius: 10, border: `1.5px solid ${T.line}`, fontSize: 15 }}
-              />
-              <input
-                name="password"
-                type="password"
-                placeholder="Password (min 6 characters)"
-                minLength={6}
-                required
-                style={{ padding: "12px 14px", borderRadius: 10, border: `1.5px solid ${T.line}`, fontSize: 15 }}
-              />
-              <button
-                type="submit"
-                style={{ padding: "13px", borderRadius: 10, border: "none", background: T.primary, color: "#fff", fontSize: 15, fontWeight: 600, cursor: "pointer", marginTop: 8 }}
-              >
-                Sign up
-              </button>
-            </form>
-
-            <p style={{ fontSize: 14, color: T.inkSoft, marginTop: 20, textAlign: "center" }}>
-              Already have an account? <Link href="/login" style={{ color: T.primary, fontWeight: 600 }}>Log in</Link>
-            </p>
-          </>
-        )}
-      </div>
-    </div>
+      <AuthLinks>
+        <AuthLink href="/login">Already have an account? Log in</AuthLink>
+      </AuthLinks>
+    </AuthPage>
   );
 }

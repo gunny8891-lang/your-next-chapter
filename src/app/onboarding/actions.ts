@@ -7,6 +7,7 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { geocodeLocation } from "@/lib/geo/geocode";
 import { generateAndSaveItinerary } from "@/lib/itinerary/generateAndSave";
 import { triggerDiscoveryForRegion } from "@/lib/discovery/regional";
+import { cleanFirstName } from "@/lib/someTime/format";
 import type { OnboardingAnswers } from "@/components/OnboardingFlow";
 
 const RADIUS_KM: Record<string, number> = {
@@ -23,12 +24,18 @@ const GOAL_TAG: Record<string, string> = {
   "Giving back locally": "give_back",
 };
 
-export async function saveOnboardingAction(answers: OnboardingAnswers) {
+export async function saveOnboardingAction(submitted: OnboardingAnswers) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  // The first name is for saying hello (it lives with the account, as on the Account
+  // page); it is not part of the answers kept about their preferences.
+  const { firstName: rawFirstName, ...answers } = submitted;
+  const firstName = cleanFirstName(rawFirstName);
+  if (firstName) await supabase.auth.updateUser({ data: { first_name: firstName } });
 
   const goalTag = answers.goal ? GOAL_TAG[answers.goal] ?? null : null;
 
@@ -62,5 +69,5 @@ export async function saveOnboardingAction(answers: OnboardingAnswers) {
     after(() => triggerDiscoveryForRegion(admin, user.id, answers.location!));
   }
 
-  redirect("/week");
+  redirect("/today");
 }

@@ -11,7 +11,7 @@ export default async function AdminAiCostsPage() {
   if (!user) redirect("/login");
 
   const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).single();
-  if (profile?.role !== "admin") redirect("/week");
+  if (profile?.role !== "admin") redirect("/today");
 
   const summary = await loadAiUsageSummary(supabase);
 

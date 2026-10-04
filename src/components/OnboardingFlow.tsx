@@ -1,33 +1,54 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { ArrowRight, Sun } from "lucide-react";
-import { T } from "@/lib/theme";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { Check, ChevronLeft } from "lucide-react";
+import { Button, Chip, Field } from "@/components/ui";
+import styles from "@/components/Onboarding.module.css";
 
-const ONBOARD_STEPS = [
+/**
+ * Five short questions, one at a time. The option wording is stored and mapped by
+ * saveOnboardingAction (radius, goal), so change it there too if it changes here.
+ */
+const STEPS = [
   {
-    q: "Hello — I'll get to know you in a short chat, then build your first week. Where should we start looking for things to do?",
+    field: "firstName",
+    type: "text" as const,
+    heading: "First, what should we call you?",
+    intro: "A few quick questions, then we'll have something good for today.",
+    label: "Your first name",
+    hint: "Just a first name is fine.",
+    placeholder: "",
+    autoComplete: "given-name",
+    optional: true,
+    suggestions: [] as string[],
+  },
+  {
     field: "location",
     type: "text" as const,
+    heading: "Where should we look for things to do?",
+    label: "Your town or area",
+    hint: "",
     placeholder: "e.g. Bath, Somerset",
+    autoComplete: "address-level2",
+    optional: false,
     suggestions: ["Richmond, London", "York", "Bristol"],
   },
   {
-    q: "Good. And roughly how far would you like to travel for a typical outing?",
     field: "radius",
     type: "options" as const,
+    heading: "How far are you happy to go for a good outing?",
     options: ["Walking distance only", "Up to 3 miles", "Up to 10 miles", "I'm happy to travel further"],
   },
   {
-    q: "What sounds most like you on a free afternoon?",
     field: "personality",
     type: "options" as const,
+    heading: "What does a good free afternoon look like?",
     options: ["A long walk, just me", "Coffee with one or two friends", "A group class or club", "A day trip somewhere new"],
   },
   {
-    q: "Last one — what would make this next chapter feel worthwhile?",
     field: "goal",
     type: "options" as const,
+    heading: "What would make this next chapter feel worthwhile?",
     options: ["Meeting new people", "Staying active", "Learning something new", "Giving back locally"],
   },
 ] as const;
@@ -39,136 +60,142 @@ export function OnboardingFlow({ onDone }: { onDone: (answers: OnboardingAnswers
   const [answers, setAnswers] = useState<OnboardingAnswers>({});
   const [textValue, setTextValue] = useState("");
   const [isPending, startTransition] = useTransition();
-  const current = ONBOARD_STEPS[step];
+  const current = STEPS[step];
 
-  const choose = (opt: string) => {
-    const next = { ...answers, [current.field]: opt };
+  // Each new question is announced: focus moves to its heading.
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, [step]);
+
+  const advance = (value: string) => {
+    const next = { ...answers, [current.field]: value };
     setAnswers(next);
     setTextValue("");
-    if (step < ONBOARD_STEPS.length - 1) {
+    if (step < STEPS.length - 1) {
       setTimeout(() => setStep(step + 1), 150);
     } else {
-      setTimeout(() => startTransition(() => onDone(next)), 400);
+      setTimeout(() => startTransition(() => onDone(next)), 300);
     }
   };
 
-  return (
-    <div style={{ minHeight: "100vh", background: T.bg, display: "flex", flexDirection: "column", alignItems: "center", padding: "48px 20px" }}>
-      <div style={{ width: "100%", maxWidth: 520 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 36 }}>
-          <div style={{ width: 34, height: 34, borderRadius: 8, background: T.primary, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Sun size={18} color={T.accentSoft} />
-          </div>
-          <span style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 19, color: T.primary, letterSpacing: 0.2 }}>Your Next Chapter</span>
-        </div>
+  const back = () => {
+    const previous = STEPS[step - 1];
+    setTextValue(previous.type === "text" ? (answers[previous.field] ?? "") : "");
+    setStep(step - 1);
+  };
 
-        <div style={{ display: "flex", gap: 6, marginBottom: 28 }}>
-          {ONBOARD_STEPS.map((_, i) => (
-            <div key={i} style={{ height: 4, flex: 1, borderRadius: 2, background: i <= step ? T.primary : T.line, transition: "background 0.3s" }} />
+  if (isPending) {
+    return (
+      <main className={styles.page}>
+        <div className={styles.inner}>
+          <p className={styles.brand}>Your Next Chapter</p>
+          <div className={`${styles.saving} ync-appear`} role="status">
+            <h1 className={styles.heading}>Getting your first ideas ready…</h1>
+            <p className={styles.intro}>This takes a moment. Thank you for your patience.</p>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className={styles.page}>
+      <div className={styles.inner}>
+        <p className={styles.brand}>Your Next Chapter</p>
+
+        <div
+          className={styles.progress}
+          role="progressbar"
+          aria-label="Your progress"
+          aria-valuemin={1}
+          aria-valuemax={STEPS.length}
+          aria-valuenow={step + 1}
+          aria-valuetext={`Question ${step + 1} of ${STEPS.length}`}
+        >
+          {STEPS.map((_, i) => (
+            <span key={i} className={i <= step ? styles.done : ""} />
           ))}
         </div>
 
-        <div style={{ background: T.surface, border: `1px solid ${T.line}`, borderRadius: 16, padding: "28px 26px", marginBottom: 20 }}>
-          <p style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 21, lineHeight: 1.5, color: T.ink, margin: 0 }}>
-            {isPending ? "Saving your answers…" : current.q}
-          </p>
-        </div>
+        <div key={step} className={`${styles.step} ync-appear`}>
+          <div className={styles.top}>
+            {step > 0 ? (
+              <button type="button" className={styles.back} onClick={back}>
+                <ChevronLeft size={18} aria-hidden="true" /> Back
+              </button>
+            ) : (
+              <span />
+            )}
+            <span className={styles.count}>
+              {step + 1} of {STEPS.length}
+            </span>
+          </div>
 
-        {current.type === "text" ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <div style={{ display: "flex", gap: 10 }}>
-              <input
-                autoFocus
-                disabled={isPending}
+          <h1 className={styles.heading} ref={headingRef} tabIndex={-1}>
+            {current.heading}
+          </h1>
+          {"intro" in current && current.intro && <p className={styles.intro}>{current.intro}</p>}
+
+          {current.type === "text" ? (
+            <form
+              className={styles.form}
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (textValue.trim() || current.optional) advance(textValue.trim());
+              }}
+            >
+              <Field
+                label={current.label}
+                name={current.field}
                 value={textValue}
                 onChange={(e) => setTextValue(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && textValue.trim()) choose(textValue.trim());
-                }}
                 placeholder={current.placeholder}
-                style={{
-                  flex: 1,
-                  fontSize: 17,
-                  padding: "16px 20px",
-                  borderRadius: 12,
-                  border: `1.5px solid ${T.line}`,
-                  background: T.surface,
-                  color: T.ink,
-                  outline: "none",
-                }}
+                hint={current.hint || undefined}
+                autoComplete={current.autoComplete}
+                maxLength={current.field === "firstName" ? 40 : 120}
               />
-              <button
-                disabled={isPending || !textValue.trim()}
-                onClick={() => choose(textValue.trim())}
-                style={{
-                  padding: "0 20px",
-                  borderRadius: 12,
-                  border: "none",
-                  background: textValue.trim() ? T.primary : T.line,
-                  color: "#fff",
-                  cursor: isPending || !textValue.trim() ? "default" : "pointer",
-                }}
-              >
-                <ArrowRight size={18} />
-              </button>
-            </div>
-
-            {current.suggestions && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {current.suggestions.map((s) => (
-                  <button
-                    key={s}
-                    disabled={isPending}
-                    onClick={() => setTextValue(s)}
-                    style={{
-                      fontSize: 14,
-                      padding: "8px 14px",
-                      borderRadius: 20,
-                      border: `1px solid ${T.line}`,
-                      background: T.surface,
-                      color: T.inkSoft,
-                      cursor: isPending ? "default" : "pointer",
-                    }}
-                  >
-                    {s}
-                  </button>
-                ))}
+              {current.suggestions.length > 0 && (
+                <div className={styles.chips} role="group" aria-label="Suggestions">
+                  {current.suggestions.map((s) => (
+                    <Chip key={s} selected={textValue === s} onClick={() => setTextValue(s)}>
+                      {s}
+                    </Chip>
+                  ))}
+                </div>
+              )}
+              <div className={styles.buttons}>
+                <Button type="submit" disabled={!current.optional && !textValue.trim()}>
+                  Continue
+                </Button>
+                {current.optional && (
+                  <Button variant="quiet" onClick={() => advance("")}>
+                    Skip for now
+                  </Button>
+                )}
               </div>
-            )}
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {current.options.map((opt) => (
-              <button
-                key={opt}
-                disabled={isPending}
-                onClick={() => choose(opt)}
-                style={{
-                  textAlign: "left",
-                  fontSize: 17,
-                  padding: "16px 20px",
-                  borderRadius: 12,
-                  border: `1.5px solid ${answers[current.field] === opt ? T.primary : T.line}`,
-                  background: answers[current.field] === opt ? T.primary : T.surface,
-                  color: answers[current.field] === opt ? "#fff" : T.ink,
-                  cursor: isPending ? "default" : "pointer",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  transition: "all 0.15s",
-                }}
-              >
-                {opt}
-                <ArrowRight size={16} style={{ opacity: 0.6 }} />
-              </button>
-            ))}
-          </div>
-        )}
-
-        <p style={{ fontSize: 13, color: T.inkSoft, marginTop: 20 }}>
-          Step {step + 1} of {ONBOARD_STEPS.length}
-        </p>
+            </form>
+          ) : (
+            <div className={styles.options} role="group" aria-label={current.heading}>
+              {current.options.map((opt) => {
+                const selected = answers[current.field] === opt;
+                return (
+                  <button
+                    key={opt}
+                    type="button"
+                    className={styles.option}
+                    aria-pressed={selected}
+                    onClick={() => advance(opt)}
+                  >
+                    <span>{opt}</span>
+                    {selected && <Check size={20} strokeWidth={2.25} aria-hidden="true" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </main>
   );
 }

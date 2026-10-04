@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { requestPasswordReset } from "@/app/auth/actions";
-import { T } from "@/lib/theme";
+import { AuthLink, AuthLinks, AuthPage } from "@/components/AuthPage";
+import { Button, Field } from "@/components/ui";
 
 export default async function ForgotPasswordPage({
   searchParams,
@@ -9,45 +9,28 @@ export default async function ForgotPasswordPage({
 }) {
   const { checkEmail } = await searchParams;
 
+  if (checkEmail) {
+    return (
+      <AuthPage title="Check your email" lead="If there's an account for that address, we've sent a link to set a new password.">
+        <AuthLinks>
+          <AuthLink href="/login">Back to log in</AuthLink>
+        </AuthLinks>
+      </AuthPage>
+    );
+  }
+
   return (
-    <div style={{ minHeight: "100vh", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <div style={{ width: "100%", maxWidth: 400, background: T.surface, border: `1px solid ${T.line}`, borderRadius: 16, padding: "32px 28px" }}>
-        <h1 style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 24, color: T.ink, margin: "0 0 24px" }}>
-          Reset your password
-        </h1>
+    <AuthPage title="Reset your password" lead="Tell us your email and we'll send you a link to choose a new one.">
+      <form action={requestPasswordReset}>
+        <Field label="Email" name="email" type="email" autoComplete="email" required />
+        <Button type="submit" fullWidth>
+          Send me the link
+        </Button>
+      </form>
 
-        {checkEmail ? (
-          <p style={{ fontSize: 15, color: T.ink, lineHeight: 1.5 }}>
-            If an account exists for that email, we&apos;ve sent a link to reset your password.
-          </p>
-        ) : (
-          <>
-            <p style={{ fontSize: 14, color: T.inkSoft, marginBottom: 20, lineHeight: 1.5 }}>
-              Enter your email and we&apos;ll send you a link to set a new password.
-            </p>
-
-            <form action={requestPasswordReset} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <input
-                name="email"
-                type="email"
-                placeholder="Email"
-                required
-                style={{ padding: "12px 14px", borderRadius: 10, border: `1.5px solid ${T.line}`, fontSize: 15 }}
-              />
-              <button
-                type="submit"
-                style={{ padding: "13px", borderRadius: 10, border: "none", background: T.primary, color: "#fff", fontSize: 15, fontWeight: 600, cursor: "pointer", marginTop: 8 }}
-              >
-                Send reset link
-              </button>
-            </form>
-          </>
-        )}
-
-        <p style={{ fontSize: 14, color: T.inkSoft, marginTop: 20, textAlign: "center" }}>
-          <Link href="/login" style={{ color: T.primary, fontWeight: 600 }}>Back to log in</Link>
-        </p>
-      </div>
-    </div>
+      <AuthLinks>
+        <AuthLink href="/login">Back to log in</AuthLink>
+      </AuthLinks>
+    </AuthPage>
   );
 }

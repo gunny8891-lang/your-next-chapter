@@ -11,7 +11,7 @@ export default async function AdminActivitiesPage() {
   if (!user) redirect("/login");
 
   const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).single();
-  if (profile?.role !== "admin") redirect("/week");
+  if (profile?.role !== "admin") redirect("/today");
 
   const { data: activities } = await supabase
     .from("activities")

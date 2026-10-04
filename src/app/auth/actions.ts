@@ -40,7 +40,7 @@ export async function login(formData: FormData) {
     redirect(`/login?error=${encodeURIComponent(error.message)}`);
   }
 
-  redirect("/week");
+  redirect("/today");
 }
 
 export async function requestPasswordReset(formData: FormData) {
@@ -74,7 +74,7 @@ export async function updatePassword(formData: FormData) {
     redirect(`/reset-password?error=${encodeURIComponent(error.message)}`);
   }
 
-  redirect("/week");
+  redirect("/today");
 }
 
 export async function logout() {

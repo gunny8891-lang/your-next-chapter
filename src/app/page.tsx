@@ -1,7 +1,14 @@
-import Link from "next/link";
-import { Sun } from "lucide-react";
+import Image from "next/image";
+import { Clock, Footprints, Heart } from "lucide-react";
 import { createClient } from "@/utils/supabase/server";
-import { T } from "@/lib/theme";
+import { Button } from "@/components/ui";
+import styles from "@/app/Landing.module.css";
+
+const POINTS = [
+  { icon: Clock, text: "An idea for the time you actually have, whether that's an hour or an afternoon." },
+  { icon: Footprints, text: "Planned from your door to home again: the walk, the lunch, the way back." },
+  { icon: Heart, text: "It learns what you enjoy, so each day's suggestions feel more like you." },
+];
 
 export default async function LandingPage() {
   const supabase = await createClient();
@@ -10,49 +17,52 @@ export default async function LandingPage() {
   } = await supabase.auth.getUser();
 
   return (
-    <div style={{ minHeight: "100vh", background: T.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <div style={{ width: "100%", maxWidth: 520, textAlign: "center" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 28 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 10, background: T.primary, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Sun size={20} color={T.accentSoft} />
-          </div>
-          <span style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 24, color: T.primary }}>Your Next Chapter</span>
-        </div>
+    <main className={styles.page}>
+      <div className={styles.photo}>
+        <Image
+          src="/images/fallback/woodland.jpg"
+          alt="A sunlit path through the woods"
+          fill
+          priority
+          sizes="(min-width: 900px) 50vw, 100vw"
+          className={styles.image}
+        />
+      </div>
 
-        <h1 style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: 34, lineHeight: 1.3, color: T.ink, margin: "0 0 16px" }}>
-          An AI concierge for making the most of retirement.
-        </h1>
-        <p style={{ fontSize: 17, color: T.inkSoft, lineHeight: 1.6, margin: "0 0 32px" }}>
-          Tell us a little about yourself, and we&apos;ll build you a personalised week — activities, people, and
-          places, chosen for you and refined every week.
+      <div className={styles.copy}>
+        <p className={styles.brand}>Your Next Chapter</p>
+        <h1 className={styles.title}>You have time. Here&apos;s something good to do with it.</h1>
+        <p className={styles.lead}>
+          Tell us a little about yourself, and every day you&apos;ll find a few ideas worth your time: walks, galleries,
+          lunches, classes, close to home and planned from start to finish.
         </p>
 
-        <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+        <div className={styles.actions}>
           {user ? (
-            <Link
-              href="/week"
-              style={{ padding: "14px 28px", borderRadius: 12, background: T.primary, color: "#fff", fontSize: 16, fontWeight: 600, textDecoration: "none" }}
-            >
-              Continue to your week
-            </Link>
+            <Button href="/today" variant="accent">
+              Continue to today
+            </Button>
           ) : (
             <>
-              <Link
-                href="/signup"
-                style={{ padding: "14px 28px", borderRadius: 12, background: T.primary, color: "#fff", fontSize: 16, fontWeight: 600, textDecoration: "none" }}
-              >
+              <Button href="/signup" variant="accent">
                 Get started
-              </Link>
-              <Link
-                href="/login"
-                style={{ padding: "14px 28px", borderRadius: 12, border: `1.5px solid ${T.line}`, color: T.ink, fontSize: 16, fontWeight: 600, textDecoration: "none" }}
-              >
+              </Button>
+              <Button href="/login" variant="secondary">
                 Log in
-              </Link>
+              </Button>
             </>
           )}
         </div>
+
+        <ul className={styles.points}>
+          {POINTS.map(({ icon: Icon, text }) => (
+            <li key={text}>
+              <Icon size={20} strokeWidth={1.75} aria-hidden="true" />
+              <span>{text}</span>
+            </li>
+          ))}
+        </ul>
       </div>
-    </div>
+    </main>
   );
 }

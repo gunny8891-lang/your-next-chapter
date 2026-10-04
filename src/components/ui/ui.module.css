@@ -224,3 +224,62 @@
   font-weight: 600;
   color: var(--color-ink);
 }
+
+/* ---- Field ---------------------------------------------------------- */
+
+.field {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.fieldLabel {
+  font-size: var(--text-small);
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.fieldHint {
+  font-size: var(--text-small);
+  color: var(--color-ink-soft);
+}
+
+.input {
+  width: 100%;
+  min-height: 52px;
+  padding: 0 var(--space-4);
+  border: 1.5px solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: var(--text-body);
+  transition: border-color var(--duration-quick) var(--ease-out);
+}
+
+.input::placeholder {
+  color: var(--color-ink-soft);
+  opacity: 0.8;
+}
+
+.input:hover:not(:disabled) {
+  border-color: var(--color-primary-soft);
+}
+
+.input:focus-visible {
+  border-color: var(--color-primary);
+  outline-offset: 0;
+  border-radius: var(--radius-control);
+}
+
+.input[aria-invalid="true"] {
+  border-color: var(--color-error);
+}
+
+.input:disabled {
+  opacity: 0.6;
+}
+
+.fieldError {
+  font-size: var(--text-small);
+  color: var(--color-error);
+}

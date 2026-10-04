@@ -1,0 +1,69 @@
+.page {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 100vh;
+  padding: var(--space-8) var(--space-4) var(--space-12);
+}
+
+.inner {
+  display: grid;
+  gap: var(--space-6);
+  width: 100%;
+  max-width: 440px;
+}
+
+.brand {
+  justify-self: center;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 22px;
+  color: var(--color-primary);
+}
+
+.card form {
+  display: grid;
+  gap: var(--space-5);
+  margin-top: var(--space-6);
+}
+
+.title {
+  font-size: 28px;
+  color: var(--color-ink);
+}
+
+.lead {
+  margin-top: var(--space-2);
+  color: var(--color-ink-soft);
+}
+
+.links {
+  display: grid;
+  justify-items: center;
+  margin-top: var(--space-4);
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--space-2);
+  font-size: var(--text-small);
+  font-weight: 600;
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (min-width: 768px) {
+  .page {
+    align-items: center;
+    padding-top: var(--space-12);
+  }
+
+  .title {
+    font-size: 32px;
+  }
+}
