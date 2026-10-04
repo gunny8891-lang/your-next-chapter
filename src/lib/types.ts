@@ -31,16 +31,6 @@ export type ChatMessageView = {
   content: string;
 };
 
-export type SurpriseOption = {
-  id: string;
-  title: string;
-  category: CategoryName;
-  address: string | null;
-  priceEstimate: number | null;
-  bookingUrl: string | null;
-  why: string;
-};
-
 export type SurpriseView = {
   id: string;
   title: string;

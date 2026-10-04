@@ -7,6 +7,7 @@ import { Button, Sheet, WeatherLine } from "@/components/ui";
 import { ExperienceCard, type FeedbackReason } from "@/components/ExperienceCard";
 import { TimeSheet, type TimeSheetInitial } from "@/components/TimeSheet";
 import { nextCommitment, type Commitment } from "@/lib/someTime/choices";
+import { isUnknownDetail } from "@/lib/itinerary/format";
 import { placeLabel } from "@/lib/someTime/format";
 import type { ItineraryItemView } from "@/lib/types";
 import type { TodayWeather } from "@/lib/nudges/weather";
@@ -164,7 +165,7 @@ export function TodayView({
                   <p className={styles.itemMeta}>
                     <span style={{ color: CATEGORY_COLOR[item.category], fontWeight: 600 }}>{item.category}</span>
                     {place ? ` · ${place}` : ""}
-                    {item.cost && item.cost !== "Price TBC" ? ` · ${item.cost}` : ""}
+                    {item.cost && !isUnknownDetail(item.cost) ? ` · ${item.cost}` : ""}
                   </p>
                   {status === "pending" && (
                     <div className={styles.itemActions}>

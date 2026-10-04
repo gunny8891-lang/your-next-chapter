@@ -179,7 +179,7 @@ export function AccountSettingsForm({
         <p className={styles.plain}>
           {subscription
             ? `${subscription.plan} plan, ${subscription.status}${subscription.renewal_date ? `, renews ${subscription.renewal_date}` : ""}.`
-            : "You haven't subscribed. Managing a subscription is coming soon."}
+            : "You haven't subscribed."}
         </p>
       </section>
 

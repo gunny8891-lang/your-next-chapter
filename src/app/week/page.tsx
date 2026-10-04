@@ -5,7 +5,7 @@ import { updateItineraryItemAction, respondSurpriseAction } from "@/app/week/act
 import { generateWeekItineraryAction } from "@/app/week/itineraryActions";
 import { getSwapAlternativesAction, applySwapAction } from "@/app/week/swapActions";
 import { DEMO_ITEMS, DEMO_SURPRISE } from "@/lib/demoData";
-import { formatCost, formatTime } from "@/lib/itinerary/format";
+import { formatCost, formatTime, LOCATION_UNKNOWN } from "@/lib/itinerary/format";
 import { computeBehavioralRationale, formatBehavioralRationale, getRecentWindowStartIso } from "@/lib/memory/rationale";
 import type { CategoryName } from "@/lib/categories";
 import type { ItineraryItemView, SurpriseView } from "@/lib/types";
@@ -85,7 +85,7 @@ export default async function WeekPage() {
           title: activity.title,
           category: activity.category as CategoryName,
           time: formatTime(activity.date_time, row.slot),
-          location: activity.address ?? "Location TBC",
+          location: activity.address ?? LOCATION_UNKNOWN,
           cost: formatCost(activity.price_estimate),
           why: row.rationale_text ?? "",
           status: row.member_action as ItineraryItemView["status"],
@@ -102,7 +102,7 @@ export default async function WeekPage() {
       title: activity.title,
       category: activity.category as CategoryName,
       time: formatTime(activity.date_time, "afternoon"),
-      location: activity.address ?? "Location TBC",
+      location: activity.address ?? LOCATION_UNKNOWN,
       cost: formatCost(activity.price_estimate),
       why: activity.description ?? "",
       bookingUrl: activity.booking_url,

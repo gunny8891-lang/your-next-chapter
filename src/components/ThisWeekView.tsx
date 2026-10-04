@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { Check, Gift } from "lucide-react";
 import { DAYS } from "@/lib/categories";
+import { isUnknownDetail } from "@/lib/itinerary/format";
 import { CATEGORY_COLOR } from "@/lib/theme";
 import { placeLabel } from "@/lib/someTime/format";
 import { Button, Card, EmptyState, Page, PageHeader } from "@/components/ui";
@@ -23,9 +24,6 @@ const FULL_DAY: Record<string, string> = {
   Sat: "Saturday",
   Sun: "Sunday",
 };
-
-/** What the database stores when it does not know: not worth showing as a fact. */
-const UNKNOWN = new Set(["Price TBC", "Location TBC"]);
 
 export function ThisWeekView({
   locationLabel,
@@ -193,7 +191,7 @@ export function ThisWeekView({
             {dayItems.map((item) => {
               const status = statuses[item.id];
               const place = placeLabel(item.location);
-              const meta = [place, UNKNOWN.has(item.cost) ? null : item.cost].filter(Boolean).join(" · ");
+              const meta = [place, isUnknownDetail(item.cost) ? null : item.cost].filter(Boolean).join(" · ");
               return (
                 <li key={item.id}>
                   <button
@@ -235,7 +233,7 @@ export function ThisWeekView({
           </span>
           <span className={styles.itemTitle}>{surprise.title}</span>
           <span className={styles.itemMeta}>
-            {[placeLabel(surprise.location), UNKNOWN.has(surprise.cost) ? null : surprise.cost].filter(Boolean).join(" · ")}
+            {[placeLabel(surprise.location), isUnknownDetail(surprise.cost) ? null : surprise.cost].filter(Boolean).join(" · ")}
           </span>
           {surpriseStatus === "accepted" && (
             <span className={styles.going}>

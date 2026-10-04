@@ -4,7 +4,7 @@ import { TodayView, type TodaySlot } from "@/components/TodayView";
 import { updateItineraryItemAction } from "@/app/week/actions";
 import { getTimeOptionsAction, acceptTimeOptionAction, feedbackTimeOptionAction, saveIdeaAction } from "@/app/today/timeActions";
 import { getTodayWeather, weatherCoordinates } from "@/lib/nudges/weather";
-import { formatCost, formatTime } from "@/lib/itinerary/format";
+import { formatCost, formatTime, LOCATION_UNKNOWN } from "@/lib/itinerary/format";
 import { scheduleImageLookups } from "@/lib/someTime/imageLookups";
 import { getFeaturedOption } from "@/lib/someTime/recommend";
 import { cleanFirstName, greetingFor } from "@/lib/someTime/format";
@@ -67,7 +67,7 @@ export default async function TodayPage() {
       title: activity.title,
       category: activity.category as CategoryName,
       time: formatTime(activity.date_time, row.slot),
-      location: activity.address ?? "Location TBC",
+      location: activity.address ?? LOCATION_UNKNOWN,
       cost: formatCost(activity.price_estimate),
       why: row.rationale_text ?? "",
       status: row.member_action as ItineraryItemView["status"],

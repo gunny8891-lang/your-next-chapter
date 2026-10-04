@@ -2,14 +2,12 @@
 
 import { Banknote, Check, Clock, MapPin, RefreshCw } from "lucide-react";
 import { Button, Cover, Sheet } from "@/components/ui";
+import { isUnknownDetail } from "@/lib/itinerary/format";
 import { CATEGORY_COLOR } from "@/lib/theme";
 import type { ItineraryItemView, SurpriseView } from "@/lib/types";
 import styles from "@/components/WeekSheets.module.css";
 
 type Item = ItineraryItemView | NonNullable<SurpriseView>;
-
-/** What the database stores when it does not know: not worth showing as a fact. */
-const UNKNOWN = new Set(["Price TBC", "Location TBC"]);
 
 /** One planned thing, opened from the week: what it is, why it was chosen, and what to do about it. */
 export function ItemSheet({
@@ -27,7 +25,7 @@ export function ItemSheet({
     { icon: Clock, text: item.time },
     { icon: MapPin, text: item.location },
     { icon: Banknote, text: item.cost },
-  ].filter((d) => d.text && !UNKNOWN.has(d.text));
+  ].filter((d) => d.text && !isUnknownDetail(d.text));
 
   return (
     <Sheet label={item.title} onClose={onClose}>

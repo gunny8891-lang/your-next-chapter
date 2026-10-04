@@ -17,7 +17,7 @@ const display = Fraunces({
 
 export const metadata: Metadata = {
   title: "Your Next Chapter",
-  description: "An AI-powered retirement concierge — a personalised weekly plan of activities, people, and places.",
+  description: "You have time. Here's something good to do with it: ideas for the time you have, planned from door to home again.",
 };
 
 export const viewport: Viewport = {
