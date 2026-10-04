@@ -3,11 +3,26 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import type { MemberAction } from "@/lib/types";
+import { londonToday } from "@/lib/opportunities/schedule";
+import { loadDailyState } from "@/lib/experience/dailyStateStore";
+import { buildContext, recordExperience, type ExperienceEvent } from "@/lib/experience/events";
 
-const SIGNAL_FOR_ACTION: Record<Exclude<MemberAction, "pending">, { source: string; signal_type: string }> = {
+/**
+ * What each choice teaches the (older) preference log. Skipping a planned thing is NOT a
+ * dislike: it means "not this time" (they may be busy, tired, away), so it writes no
+ * taste signal at all; the experience log records that it happened, and nothing more.
+ */
+const SIGNAL_FOR_ACTION: Record<Exclude<MemberAction, "pending">, { source: string; signal_type: string } | null> = {
   accepted: { source: "accept", signal_type: "liked" },
-  skipped: { source: "skip", signal_type: "disliked" },
+  skipped: null,
   swapped: { source: "swap", signal_type: "too_similar" },
+};
+
+/** The experience a choice in My Week is: yes is "planned"; "not this time" and "something else" are taste-neutral. */
+const EVENT_FOR_ACTION: Record<Exclude<MemberAction, "pending">, Omit<ExperienceEvent, "activityId">> = {
+  accepted: { type: "planned", surface: "week" },
+  skipped: { type: "dismissed", reason: "didnt_go", surface: "week" },
+  swapped: { type: "dismissed", reason: "didnt_go", surface: "week" },
 };
 
 export async function updateItineraryItemAction(itemId: string, action: "accepted" | "swapped" | "skipped") {
@@ -29,12 +44,17 @@ export async function updateItineraryItemAction(itemId: string, action: "accepte
   await supabase.from("itinerary_items").update({ member_action: action }).eq("id", itemId);
 
   const signal = SIGNAL_FOR_ACTION[action];
-  await supabase.from("preference_signals").insert({
-    member_id: user.id,
-    source: signal.source,
-    activity_id: existing.activity_id,
-    signal_type: signal.signal_type,
-  });
+  if (signal) {
+    await supabase.from("preference_signals").insert({
+      member_id: user.id,
+      source: signal.source,
+      activity_id: existing.activity_id,
+      signal_type: signal.signal_type,
+    });
+  }
+
+  const state = await loadDailyState(supabase, user.id, londonToday());
+  await recordExperience(supabase, user.id, [{ ...EVENT_FOR_ACTION[action], activityId: existing.activity_id, context: buildContext(state) }]);
 
   revalidatePath("/week");
 }

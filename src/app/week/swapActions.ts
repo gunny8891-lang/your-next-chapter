@@ -4,6 +4,9 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { fetchRankedOpportunities } from "@/lib/opportunities/engine";
 import type { SwapAlternative } from "@/lib/types";
+import { londonToday } from "@/lib/opportunities/schedule";
+import { loadDailyState } from "@/lib/experience/dailyStateStore";
+import { buildContext, recordExperience } from "@/lib/experience/events";
 
 const MAX_ALTERNATIVES = 4;
 
@@ -77,6 +80,14 @@ export async function applySwapAction(itemId: string, newActivityId: string): Pr
     activity_id: existing.activity_id,
     signal_type: "too_similar",
   });
+
+  // The one they chose is planned; the one they swapped away from was not wanted this time (nothing about taste).
+  const state = await loadDailyState(supabase, user.id, londonToday());
+  const context = buildContext(state);
+  await recordExperience(supabase, user.id, [
+    { activityId: newActivityId, type: "planned", surface: "week", context },
+    { activityId: existing.activity_id, type: "dismissed", reason: "didnt_go", surface: "week", context },
+  ]);
 
   revalidatePath("/week");
   return { error: null };
