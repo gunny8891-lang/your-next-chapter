@@ -207,14 +207,19 @@ export function TodayView({
         )}
       </section>
 
-      {featured && (
-        <section className={styles.section} aria-labelledby="for-you">
-          <h2 id="for-you" className={styles.label}>
-            For you today
-          </h2>
+      <section className={styles.section} aria-labelledby="for-you">
+        <h2 id="for-you" className={styles.label}>
+          For you today
+        </h2>
+        {featured ? (
           <FeaturedIdea option={featured} flow={flowActions} />
-        </section>
-      )}
+        ) : (
+          // Late in the day, or nothing suitable nearby: say so, rather than leave the page ending in silence.
+          <p className={styles.quiet}>
+            Nothing more to suggest for today. If you&apos;d like to look again, tap &ldquo;I&apos;ve got some time&rdquo;.
+          </p>
+        )}
+      </section>
 
       {/* Place data is OpenStreetMap's, under a licence that asks for this credit; photographs carry their own. */}
       <p className={styles.credits}>

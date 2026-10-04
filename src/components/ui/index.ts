@@ -13,3 +13,4 @@ export { Page, PageHeader, SectionTitle } from "@/components/ui/Page";
 export { SelectField, TextareaField, CheckboxField } from "@/components/ui/Field";
 export { IconButton } from "@/components/ui/IconButton";
 export { Notice } from "@/components/ui/Notice";
+export { PageSkeleton } from "@/components/ui/PageSkeleton";
