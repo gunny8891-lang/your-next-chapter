@@ -8,4 +8,6 @@ export type PlaceImage = {
   /** The file's page, where the author and licence are recorded in full. */
   sourceUrl: string;
   license: string;
+  /** A stand-in picture of the kind of thing it is, not of this place (see fallback.ts). No credit, and decorative. */
+  generic?: boolean;
 };

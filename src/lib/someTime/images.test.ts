@@ -37,6 +37,24 @@ describe("attachImages", () => {
     expect(o.image?.alt).toBe("A photograph of pub");
   });
 
+  const generic: PlaceImage = { src: "/images/fallback/woodland.jpg", alt: "", credit: "", sourceUrl: "", license: "CC0", generic: true };
+
+  it("keeps the generic picture for the kind of thing it is over the place to eat's photograph", async () => {
+    held.clear();
+    held.set("pub", image("pub"));
+    const walk = { ...option("park", "pub"), image: generic };
+    const [o] = await attachImages(supabase, [walk]);
+    expect(o.image).toBe(generic);
+  });
+
+  it("replaces the generic picture with a real photograph of the place", async () => {
+    held.clear();
+    held.set("park", image("park"));
+    const [o] = await attachImages(supabase, [{ ...option("park", null), image: generic }]);
+    expect(o.image?.alt).toBe("A photograph of park");
+    expect(o.image?.generic).toBeUndefined();
+  });
+
   it("leaves an idea with no photograph as it was", async () => {
     held.clear();
     const options = [option("park", null)];

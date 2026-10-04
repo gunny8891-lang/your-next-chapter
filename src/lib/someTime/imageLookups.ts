@@ -5,13 +5,13 @@ import type { TimeOption } from "@/lib/someTime/types";
 
 /**
  * After the response has gone, looks for photographs of the places just shown
- * that have none, so the next time they appear they have one. Never delays or
+ * that have none of their own (a generic picture does not count), so the next time they appear they have one. Never delays or
  * fails the response: this is a bonus, and any problem is only logged. Only for
  * request handlers (Server Actions, pages): `after` needs a request to hang on.
  */
 export function scheduleImageLookups(options: TimeOption[]): void {
   const ids = options
-    .flatMap((o) => (o.image ? [] : [o.id, ...(o.foodStop ? [o.foodStop.id] : [])]))
+    .flatMap((o) => (o.image && !o.image.generic ? [] : [o.id, ...(o.foodStop ? [o.foodStop.id] : [])]))
     .filter((id, i, all) => all.indexOf(id) === i);
   if (ids.length === 0) return;
   try {

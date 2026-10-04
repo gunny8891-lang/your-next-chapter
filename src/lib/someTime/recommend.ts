@@ -22,6 +22,7 @@ import {
   type PromptContext,
   type ShortlistEntry,
 } from "@/lib/someTime/prompt";
+import { fallbackImageFor } from "@/lib/imagery/fallback";
 import { attachImages } from "@/lib/someTime/images";
 import type { TimeRequest } from "@/lib/someTime/request";
 import {
@@ -132,7 +133,8 @@ function toTimeOption(entry: ShortlistEntry, why: string, includeFood: boolean, 
     isFood: isFoodVenue(c),
     happeningToday: eventDate(c) !== null,
     foodStop: stop ? toFoodStopOption(stop) : null,
-    image: null, // attached afterwards, from a separate read (see attachImages)
+    // A calm stand-in by kind of activity; a real photograph replaces it afterwards (see attachImages).
+    image: fallbackImageFor(c.tags),
   };
 }
 
