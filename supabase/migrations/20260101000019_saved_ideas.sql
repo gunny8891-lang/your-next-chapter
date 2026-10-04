@@ -37,3 +37,10 @@ where source = 'explicit_feedback'
   and activity_id is not null
 group by member_id, activity_id
 on conflict do nothing;
+
+-- Explicit grants, as in every other table migration here: row-level security only
+-- filters rows, and Postgres still requires the table-level privilege before a role
+-- can touch the table at all. Members add and remove their own rows; the backend
+-- (service role) needs full access.
+grant select, insert, delete on public.saved_ideas to authenticated;
+grant all on public.saved_ideas to service_role;
