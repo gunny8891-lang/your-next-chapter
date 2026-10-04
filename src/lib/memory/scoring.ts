@@ -2,6 +2,8 @@ import { CATEGORIES } from "@/lib/itinerary/schema";
 
 export type PreferenceSignalRow = {
   signal_type: string;
+  /** Where it came from (accept, skip, swap, explicit_feedback, surprise_me_response): a skipped plan is not a dislike. */
+  source?: string | null;
   activity_id: string | null;
   created_at: string;
   activities: { category: string; tags: string[] } | null;
@@ -12,7 +14,15 @@ export type AffinityScores = {
   tagScores: Record<string, number>;
   activityScores: Record<string, number>;
   recentCategoryCounts: Record<string, number>;
+  /**
+   * Interests the member told us they have. What they do can tilt against one, but
+   * only so far (see PROTECTED_FLOOR): behaviour never silently overwrites what they said.
+   */
+  protectedTags?: string[];
 };
+
+/** However strongly behaviour counts against a tag they listed as an interest, it counts for no more than this. */
+export const PROTECTED_FLOOR = -1.5;
 
 /**
  * MVP weighted scoring per spec section 6.1 (Memory Agent) — a simple
@@ -81,7 +91,12 @@ export function scoreActivity(
   affinity: AffinityScores
 ): number {
   const categoryScore = affinity.categoryScores[activity.category] ?? 0;
-  const tagScore = activity.tags.reduce((sum, tag) => sum + (affinity.tagScores[tag] ?? 0), 0);
+  const protectedTags = affinity.protectedTags ? new Set(affinity.protectedTags) : null;
+  const tagScore = activity.tags.reduce((sum, tag) => {
+    let s = affinity.tagScores[tag] ?? 0;
+    if (s < 0 && protectedTags?.has(tag.toLowerCase())) s = Math.max(s, PROTECTED_FLOOR);
+    return sum + s;
+  }, 0);
   const activityScore = affinity.activityScores[activity.id] ?? 0;
   return categoryScore + tagScore + activityScore * 1.5 + (activity.rating ?? 0);
 }

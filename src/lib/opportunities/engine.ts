@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { computeAffinity, scoreActivity, type AffinityScores, type PreferenceSignalRow } from "@/lib/memory/scoring";
+import { scoreActivity, type AffinityScores } from "@/lib/memory/scoring";
+import { computeLearnedAffinity, LEARNING_WINDOW_DAYS, type LearningEvent, type LearningSignal } from "@/lib/memory/learning";
 import { filterByDistance } from "@/lib/geo/filterByDistance";
 import { isStillAvailable } from "@/lib/opportunities/availability";
 import { applyFoodVenueMode, type FoodVenueMode } from "@/lib/opportunities/kinds";
@@ -82,7 +83,7 @@ export async function fetchRankedOpportunities(
 ): Promise<{ candidates: OpportunityCandidate[]; affinity: AffinityScores }> {
   const { data: profile } = await supabase
     .from("member_profiles")
-    .select("location_lat, location_lng, travel_radius_km")
+    .select("location_lat, location_lng, travel_radius_km, interests")
     .eq("user_id", memberId)
     .maybeSingle();
 
@@ -118,15 +119,34 @@ export async function fetchRankedOpportunities(
     ? inRange.filter((a) => !options.excludeActivityIds!.has(a.id))
     : inRange;
 
-  const fourWeeksAgo = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString();
-  const { data: signals } = await supabase
-    .from("preference_signals")
-    .select("signal_type, activity_id, created_at, activities(category, tags)")
-    .eq("member_id", memberId)
-    .gte("created_at", fourWeeksAgo)
-    .order("created_at", { ascending: false })
-    .limit(50);
-  const affinity = computeAffinity((signals ?? []) as unknown as PreferenceSignalRow[]);
+  // What they actually do, over the last year, read as the one source of what they like. The
+  // experience log is the rich record; the older signals fill in history from before it existed
+  // (and anywhere that does not write to the log yet), without counting anything twice.
+  const since = new Date(Date.now() - LEARNING_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const [{ data: signals }, { data: events, error: eventsError }] = await Promise.all([
+    supabase
+      .from("preference_signals")
+      .select("signal_type, source, activity_id, created_at, activities(category, tags)")
+      .eq("member_id", memberId)
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(1000),
+    supabase
+      .from("experience_events")
+      .select("activity_id, event_type, outcome, reason, context, created_at, activities(category, tags)")
+      .eq("member_id", memberId)
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(3000),
+  ]);
+  // A failed read of the log (the table not there, a hiccup) must not take recommendations down: learn from the signals alone.
+  if (eventsError) console.warn("engine: could not read the experience log:", eventsError.message);
+  const learned = computeLearnedAffinity(
+    eventsError ? [] : ((events ?? []) as unknown as LearningEvent[]),
+    (signals ?? []) as unknown as LearningSignal[]
+  );
+  // What they told us they like is protected: behaviour can tilt against it, but only so far.
+  const affinity: AffinityScores = { ...learned, protectedTags: (profile?.interests ?? []).map((i: string) => i.trim().toLowerCase()).filter(Boolean) };
 
   const candidates = [...eligible].sort((a, b) => scoreActivity(b, affinity) - scoreActivity(a, affinity));
 
