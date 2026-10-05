@@ -1,5 +1,7 @@
-import { Body, Container, Head, Heading, Hr, Html, Preview, Section, Text, Button } from "@react-email/components";
+import { Body, Container, Head, Heading, Html, Preview, Section, Text, Button } from "@react-email/components";
 import { T, CATEGORY_COLOR } from "@/lib/theme";
+import { EmailFooterBlock } from "@/lib/email/EmailFooterBlock";
+import type { EmailFooter } from "@/lib/email/footer";
 
 export type NudgeActivity = {
   title: string;
@@ -22,10 +24,12 @@ export function NudgeEmail({
   message,
   activity,
   siteUrl,
+  footer,
 }: {
   message: string;
   activity: NudgeActivity;
   siteUrl: string;
+  footer: EmailFooter;
 }) {
   return (
     <Html>
@@ -97,10 +101,7 @@ export function NudgeEmail({
             Ask your concierge
           </Button>
 
-          <Hr style={{ borderColor: T.line, margin: "28px 0 16px" }} />
-          <Text style={{ fontSize: 12, color: T.inkSoft, margin: 0 }}>
-            Your Next Chapter · You&apos;ll get at most one of these a week.
-          </Text>
+          <EmailFooterBlock footer={footer} />
         </Container>
       </Body>
     </Html>

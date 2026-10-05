@@ -56,6 +56,8 @@ export function AccountSettingsForm({
   onSave,
   onDeleteAccount,
   onClearLearning,
+  emailPrefs,
+  onSaveEmailPrefs,
   calendar,
   calendarNotice,
   onDisconnectCalendar,
@@ -71,6 +73,8 @@ export function AccountSettingsForm({
   onSave: (formData: FormData) => Promise<void>;
   onDeleteAccount: () => Promise<void>;
   onClearLearning: () => Promise<{ error: string | null }>;
+  emailPrefs: { weeklyPlan: boolean; reminders: boolean };
+  onSaveEmailPrefs: (prefs: { weeklyPlan: boolean; reminders: boolean }) => Promise<{ error: string | null }>;
   /** Null when Google Calendar is not switched on: the section then does not appear. */
   calendar: { connected: boolean } | null;
   calendarNotice?: string;
@@ -81,6 +85,21 @@ export function AccountSettingsForm({
   const [goals, setGoals] = useState<string[]>(profile.goals);
   const [clearStep, setClearStep] = useState<"idle" | "confirm" | "busy" | "done">("idle");
   const [clearError, setClearError] = useState<string | null>(null);
+  const [weeklyPlanEmail, setWeeklyPlanEmail] = useState(emailPrefs.weeklyPlan);
+  const [remindersEmail, setRemindersEmail] = useState(emailPrefs.reminders);
+  const [emailStep, setEmailStep] = useState<"idle" | "busy" | "saved">("idle");
+  const [emailError, setEmailError] = useState<string | null>(null);
+
+  const saveEmailPrefs = async () => {
+    setEmailStep("busy");
+    setEmailError(null);
+    const res = await onSaveEmailPrefs({ weeklyPlan: weeklyPlanEmail, reminders: remindersEmail });
+    if (res.error) {
+      setEmailError(res.error);
+      setEmailStep("idle");
+    } else setEmailStep("saved");
+  };
+
   const [calendarConnected, setCalendarConnected] = useState(calendar?.connected ?? false);
   const [calendarBusy, setCalendarBusy] = useState(false);
   const [calendarError, setCalendarError] = useState<string | null>(null);
@@ -243,6 +262,34 @@ export function AccountSettingsForm({
             </div>
           </div>
         )}
+      </section>
+
+      <section aria-labelledby="emails-title" id="emails" className={styles.section}>
+        <SectionTitle id="emails-title">Emails</SectionTitle>
+        <p className={styles.plain}>Choose which emails you would like. Emails about your account, such as confirming your address or resetting a password, always arrive.</p>
+        {emailError && <ErrorNote>{emailError}</ErrorNote>}
+        {emailStep === "saved" && <Notice>Saved.</Notice>}
+        <div className={styles.checks}>
+          <CheckboxField
+            label="My weekly plan, on Sunday evening"
+            checked={weeklyPlanEmail}
+            onChange={(e) => {
+              setWeeklyPlanEmail(e.target.checked);
+              setEmailStep("idle");
+            }}
+          />
+          <CheckboxField
+            label="The occasional reminder, at most once a week"
+            checked={remindersEmail}
+            onChange={(e) => {
+              setRemindersEmail(e.target.checked);
+              setEmailStep("idle");
+            }}
+          />
+        </div>
+        <Button variant="secondary" loading={emailStep === "busy"} onClick={saveEmailPrefs}>
+          Save email choices
+        </Button>
       </section>
 
       {calendar && (

@@ -97,7 +97,7 @@ export const DATA_CATEGORIES: DataCategory[] = [
     id: "messages",
     title: "Reminders and emails we send you",
     what: "A record of the reminders we have sent, and your email address held by our email provider while they deliver them.",
-    why: "To send you your weekly plan and the occasional timely thought, and to avoid repeating ourselves.",
+    why: "To send you your weekly plan and the occasional timely thought (at most one a week), and to avoid repeating ourselves. You can switch either off with the link at the bottom of the email, or in Account. Account emails, such as a password reset, are separate and always sent.",
     tables: ["nudges"],
   },
   {

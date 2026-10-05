@@ -18,6 +18,7 @@ type ActivityRow = {
 type MemberRow = {
   user_id: string;
   location_text: string | null;
+  email_weekly_plan: boolean;
   users: { email: string } | { email: string }[] | null;
 };
 
@@ -35,7 +36,7 @@ export async function GET(request: Request) {
   }
 
   const admin = createAdminClient();
-  const { data: members } = await admin.from("member_profiles").select("user_id, location_text, users(email)");
+  const { data: members } = await admin.from("member_profiles").select("user_id, location_text, email_weekly_plan, users(email)");
 
   const results: { memberId: string; error: string | null }[] = [];
 
@@ -92,8 +93,14 @@ export async function GET(request: Request) {
       };
     })();
 
+    // The week is still planned in the app; only the email is skipped for someone who has switched it off.
+    if (member.email_weekly_plan === false) {
+      results.push({ memberId: member.user_id, error: null });
+      continue;
+    }
+
     try {
-      await sendWeeklyDigestEmail(email, member.location_text?.replace("Near ", "") || "This week", items, surprise);
+      await sendWeeklyDigestEmail(email, member.user_id, member.location_text?.replace("Near ", "") || "This week", items, surprise);
       results.push({ memberId: member.user_id, error: null });
     } catch (err) {
       results.push({ memberId: member.user_id, error: err instanceof Error ? err.message : "Email send failed" });

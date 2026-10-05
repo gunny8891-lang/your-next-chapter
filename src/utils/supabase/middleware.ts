@@ -40,7 +40,8 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/forgot-password") ||
     request.nextUrl.pathname.startsWith("/reset-password");
   // The privacy notice and terms must be readable before anyone has an account.
-  const isLegalRoute = request.nextUrl.pathname === "/privacy" || request.nextUrl.pathname === "/terms";
+  // The unsubscribe page too: someone stopping an email may have no password to hand.
+  const isLegalRoute = ["/privacy", "/terms", "/unsubscribe"].includes(request.nextUrl.pathname);
   const isPublicRoute = request.nextUrl.pathname === "/" || isAuthRoute || isLegalRoute;
 
   if (!user && !isPublicRoute) {

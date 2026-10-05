@@ -9,6 +9,7 @@ import { londonToday } from "@/lib/opportunities/schedule";
 type MemberRow = {
   user_id: string;
   interests: string[];
+  email_reminders: boolean;
   users: { email: string; status: string } | { email: string; status: string }[] | null;
 };
 
@@ -30,7 +31,7 @@ export async function GET(request: Request) {
   const purgedDailyStates = await purgeOldDailyStates(admin, londonToday());
   const { data: members } = await admin
     .from("member_profiles")
-    .select("user_id, interests, users(email, status)");
+    .select("user_id, interests, email_reminders, users(email, status)");
 
   const results: { memberId: string; sent: boolean; reason?: string; error?: string }[] = [];
 
@@ -38,6 +39,12 @@ export async function GET(request: Request) {
     const user = usersOf(member.users);
     if (!user || user.status !== "active") {
       results.push({ memberId: member.user_id, sent: false, error: "Not an active member" });
+      continue;
+    }
+
+    // They have switched reminders off: no point finding, writing or paying for one.
+    if (member.email_reminders === false) {
+      results.push({ memberId: member.user_id, sent: false, error: "Opted out of reminders" });
       continue;
     }
 
@@ -57,7 +64,7 @@ export async function GET(request: Request) {
         candidate.person
       );
 
-      await sendNudgeEmail(user.email, message, {
+      await sendNudgeEmail(user.email, member.user_id, message, {
         title: candidate.activity.title,
         category: candidate.activity.category,
         address: candidate.activity.address,

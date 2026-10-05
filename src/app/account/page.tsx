@@ -8,6 +8,7 @@ import { AccountSettingsForm } from "@/components/AccountSettingsForm";
 import { cleanFirstName } from "@/lib/someTime/format";
 import { updateProfileAction, deleteAccountAction } from "@/app/account/actions";
 import { clearLearningAction } from "@/app/account/learningActions";
+import { saveEmailPreferencesAction } from "@/app/account/emailActions";
 
 export const metadata = { title: "Account" };
 
@@ -25,7 +26,7 @@ export default async function AccountPage({
 
   const { data: profile } = await supabase
     .from("member_profiles")
-    .select("location_text, travel_radius_km, budget_band, dietary_preferences, mobility_notes, drives, uses_public_transport, interests, goals")
+    .select("location_text, travel_radius_km, budget_band, dietary_preferences, mobility_notes, drives, uses_public_transport, interests, goals, email_weekly_plan, email_reminders")
     .eq("user_id", user.id)
     .maybeSingle();
   if (!profile) redirect("/onboarding");
@@ -54,6 +55,8 @@ export default async function AccountPage({
       onSave={updateProfileAction}
       onDeleteAccount={deleteAccountAction}
       onClearLearning={clearLearningAction}
+      emailPrefs={{ weeklyPlan: profile.email_weekly_plan !== false, reminders: profile.email_reminders !== false }}
+      onSaveEmailPrefs={saveEmailPreferencesAction}
       calendar={calendar}
       calendarNotice={calendarNotice}
       onDisconnectCalendar={disconnectCalendarAction}
