@@ -8,9 +8,9 @@ import { OPERATOR } from "@/lib/legal/details";
 
 // Resend's shared test sender works without domain verification, but only delivers to the
 // address the Resend account itself was opened with. Once the company's domain is verified
-// there, set EMAIL_FROM (for example: Your Next Chapter <hello@yourdomain.co.uk>) and every
+// there, set EMAIL_FROM (for example: Lark Hour <hello@yourdomain.co.uk>) and every
 // email switches to it with no code change.
-const TEST_SENDER = "Your Next Chapter <onboarding@resend.dev>";
+const TEST_SENDER = "Lark Hour <onboarding@resend.dev>";
 
 export function senderSettings(env: Record<string, string | undefined> = process.env): { from: string; replyTo: string | undefined } {
   return {

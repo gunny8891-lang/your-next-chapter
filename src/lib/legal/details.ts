@@ -7,7 +7,7 @@
  * address and its contact mailbox exist, then have the wording reviewed by a solicitor.
  */
 export const OPERATOR = {
-  /** Registered company name, e.g. "Your Next Chapter Ltd". */
+  /** Registered company name, e.g. "Lark Hour Ltd". */
   companyName: null as string | null,
   /** Companies House number. */
   companyNumber: null as string | null,

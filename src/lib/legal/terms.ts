@@ -15,7 +15,7 @@ export function termsSections(operator: Record<OperatorField, string | null> = O
       id: "agreement",
       title: "What this is",
       blocks: [
-        { p: `Your Next Chapter is a service from ${company} that suggests things to do with your time, close to home, and plans them from your door to home again. By creating an account you agree to these terms. How we look after your information is in our privacy notice.` },
+        { p: `Lark Hour is a service from ${company} that suggests things to do with your time, close to home, and plans them from your door to home again. By creating an account you agree to these terms. How we look after your information is in our privacy notice.` },
         { p: "The service is new and still being developed. It may change, and some parts may not always be available." },
       ],
     },

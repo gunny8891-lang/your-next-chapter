@@ -89,7 +89,7 @@ export function OnboardingFlow({ onDone }: { onDone: (answers: OnboardingAnswers
     return (
       <main className={styles.page}>
         <div className={styles.inner}>
-          <p className={styles.brand}>Your Next Chapter</p>
+          <p className={styles.brand}>Lark Hour</p>
           <div className={`${styles.saving} ync-appear`} role="status">
             <h1 className={styles.heading}>Getting your first ideas ready…</h1>
             <p className={styles.intro}>This takes a moment. Thank you for your patience.</p>
@@ -102,7 +102,7 @@ export function OnboardingFlow({ onDone }: { onDone: (answers: OnboardingAnswers
   return (
     <main className={styles.page}>
       <div className={styles.inner}>
-        <p className={styles.brand}>Your Next Chapter</p>
+        <p className={styles.brand}>Lark Hour</p>
 
         <div
           className={styles.progress}

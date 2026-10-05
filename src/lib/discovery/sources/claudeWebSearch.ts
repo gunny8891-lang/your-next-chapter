@@ -50,7 +50,7 @@ async function findActivitiesForRegion(apiKey: string, regionLabel: string, memb
   const usageContext = { userId: memberId, feature: "discovery_claude_web_search" };
 
   const system = `You find real, current local activities suitable for retirees (walks, talks, classes, \
-volunteering, social groups, visits) near a given region, for "Your Next Chapter", a retirement concierge app. \
+volunteering, social groups, visits) near a given region, for "Lark Hour", a retirement concierge app. \
 Search for things like: the local council's health walks or "what's on" page, the local U3A (University of the \
 Third Age) branch, National Trust properties nearby, and local Age UK volunteering opportunities. Also search for \
 places a grandparent could take a grandchild — soft play centres, parks, playgrounds, family-friendly museums or \

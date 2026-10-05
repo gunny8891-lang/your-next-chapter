@@ -28,7 +28,7 @@ export function EmailFooterBlock({ footer }: { footer: EmailFooter }) {
           Privacy notice
         </a>
       </Text>
-      <Text style={small}>Your Next Chapter{footer.senderLine ? ` · ${footer.senderLine}` : ""}</Text>
+      <Text style={small}>Lark Hour{footer.senderLine ? ` · ${footer.senderLine}` : ""}</Text>
     </>
   );
 }

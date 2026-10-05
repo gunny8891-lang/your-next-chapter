@@ -450,7 +450,7 @@ export function selectPlaces(
 
 const defaultFetchJson: FetchJson = async (url) => {
   const res = await fetch(url, {
-    headers: { "User-Agent": "YourNextChapter/1.0 (retirement concierge app)" },
+    headers: { "User-Agent": "LarkHour/1.0 (retirement concierge app)" },
     signal: AbortSignal.timeout(20_000),
   });
   if (!res.ok) return null;

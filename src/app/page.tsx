@@ -31,7 +31,7 @@ export default async function LandingPage() {
       </div>
 
       <div className={styles.copy}>
-        <p className={styles.brand}>Your Next Chapter</p>
+        <p className={styles.brand}>Lark Hour</p>
         <h1 className={styles.title}>You have time. Here&apos;s something good to do with it.</h1>
         <p className={styles.lead}>
           Tell us a little about yourself, and every day you&apos;ll find a few ideas worth your time: walks, galleries,

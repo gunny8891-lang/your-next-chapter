@@ -47,7 +47,7 @@ function buildPrompt(
     })
     .join("\n");
 
-  const system = `You are the Itinerary Agent for "Your Next Chapter", an AI retirement concierge. \
+  const system = `You are the Itinerary Agent for "Lark Hour", an AI retirement concierge. \
 Build a balanced weekly plan of 5-7 activities for a member, chosen only from the candidate activities provided. \
 Rules: aim for at least 4 of the 7 categories (Move, Connect, Learn, Explore, Give Back, Wellness, Joy), \
 never pick more than 2 items from the same category, weigh the member's affinity scores and category gaps below \

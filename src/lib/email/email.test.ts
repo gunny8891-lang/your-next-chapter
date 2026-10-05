@@ -96,7 +96,7 @@ describe("the footer", () => {
 describe("the sender", () => {
   it("is the test sender until the company's own address is set, then switches by setting alone", () => {
     expect(senderSettings({}).from).toMatch(/onboarding@resend\.dev/);
-    expect(senderSettings({ EMAIL_FROM: "Your Next Chapter <hello@example.test>" }).from).toBe("Your Next Chapter <hello@example.test>");
+    expect(senderSettings({ EMAIL_FROM: "Lark Hour <hello@example.test>" }).from).toBe("Lark Hour <hello@example.test>");
   });
 
   it("sends replies to the address given", () => {

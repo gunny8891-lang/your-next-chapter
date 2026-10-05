@@ -3,7 +3,7 @@ import type { PlaceImage } from "@/lib/imagery/types";
 
 const API = "https://commons.wikimedia.org/w/api.php";
 // Wikimedia asks every client to say who it is and how to reach them.
-const USER_AGENT = "YourNextChapter/1.0 (https://your-next-chapter-orcin.vercel.app; contact: gunny8891@gmail.com)";
+const USER_AGENT = "LarkHour/1.0 (https://your-next-chapter-orcin.vercel.app; contact: hello@larkhour.com)";
 const REQUEST_TIMEOUT_MS = 8000;
 /** A place's photo is searched for within this radius of it, in metres. */
 const GEO_RADIUS_M = 400;

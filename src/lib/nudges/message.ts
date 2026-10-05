@@ -28,7 +28,7 @@ since they last logged seeing them. Suggest this activity as a warm, natural occ
 ${person?.name ?? "them"} by name. Never use words like "lonely" or "alone", and never imply anything negative \
 about their social life — this is simply a nudge toward something they already said they wanted.`;
 
-  const system = `You are writing a single short, warm, specific nudge message for a member of "Your Next Chapter", \
+  const system = `You are writing a single short, warm, specific nudge message for a member of "Lark Hour", \
 an AI retirement concierge. One or two sentences, second person, no exclamation-mark overload, no generic \
 "hope you're well" filler. Reference the specific activity by name. Respond with ONLY the message text — no \
 quotes, no markdown, no subject line.`;

@@ -12,7 +12,7 @@ export function AuthPage({ title, lead, children }: { title: string; lead?: stri
     <main className={styles.page}>
       <div className={styles.inner}>
         <Link href="/" className={styles.brand}>
-          Your Next Chapter
+          Lark Hour
         </Link>
         <Card padding="lg" className={`${styles.card} ync-appear`}>
           <h1 className={styles.title}>{title}</h1>

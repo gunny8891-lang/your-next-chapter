@@ -11,7 +11,7 @@ async function queryNominatim(query: string): Promise<Coordinates | null> {
   const url = `${NOMINATIM_URL}?format=json&limit=1&countrycodes=gb&q=${encodeURIComponent(query)}`;
 
   const res = await fetch(url, {
-    headers: { "User-Agent": "YourNextChapter/1.0 (retirement concierge app)" },
+    headers: { "User-Agent": "LarkHour/1.0 (retirement concierge app)" },
   });
   if (!res.ok) return null;
 

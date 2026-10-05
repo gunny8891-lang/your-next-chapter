@@ -16,8 +16,8 @@ const display = Fraunces({
 });
 
 export const metadata: Metadata = {
-  // Each screen names itself ("My week · Your Next Chapter"): that is what the browser tab, history and a screen reader announce.
-  title: { default: "Your Next Chapter", template: "%s · Your Next Chapter" },
+  // Each screen names itself ("My week · Lark Hour"): that is what the browser tab, history and a screen reader announce.
+  title: { default: "Lark Hour", template: "%s · Lark Hour" },
   description: "You have time. Here's something good to do with it: ideas for the time you have, planned from door to home again.",
 };
 

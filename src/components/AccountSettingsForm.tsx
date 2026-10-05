@@ -300,7 +300,7 @@ export function AccountSettingsForm({
           {(calendarNotice === "error" || calendarNotice === "unavailable") && <ErrorNote>We couldn&apos;t connect your calendar just now. Please try again.</ErrorNote>}
           {calendarError && <ErrorNote>{calendarError}</ErrorNote>}
           <p className={styles.plain}>
-            Add your planned outings to Google Calendar. We make a separate calendar called &ldquo;Your Next Chapter&rdquo; and can only add to and change that one. We can&apos;t see anything else in your
+            Add your planned outings to Google Calendar. We make a separate calendar called &ldquo;Lark Hour&rdquo; and can only add to and change that one. We can&apos;t see anything else in your
             calendar.
           </p>
           {calendarConnected ? (

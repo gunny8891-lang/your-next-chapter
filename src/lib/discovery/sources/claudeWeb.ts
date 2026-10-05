@@ -101,7 +101,7 @@ export function createClaudeWebSource(): DiscoverySource {
 
       for (const page of TARGET_PAGES) {
         try {
-          const response = await fetch(page.url, { headers: { "User-Agent": "YourNextChapterDiscoveryBot/1.0" } });
+          const response = await fetch(page.url, { headers: { "User-Agent": "LarkHourDiscoveryBot/1.0" } });
           if (!response.ok) continue;
           const html = await response.text();
           const pageText = stripHtmlToText(html).slice(0, MAX_PAGE_TEXT_CHARS);

@@ -17,7 +17,7 @@ export const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 export const GOOGLE_REVOKE_URL = "https://oauth2.googleapis.com/revoke";
 export const GOOGLE_CALENDAR_API = "https://www.googleapis.com/calendar/v3";
 export const CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.app.created";
-export const APP_CALENDAR_NAME = "Your Next Chapter";
+export const APP_CALENDAR_NAME = "Lark Hour";
 
 export type GoogleConfig = { clientId: string; clientSecret: string; tokenKey: string };
 

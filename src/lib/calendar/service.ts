@@ -153,7 +153,7 @@ export async function removeItemFromCalendar(memberId: string, itemId: string, {
 
 /**
  * Disconnects: withdraws our access at Google, then forgets the credential and what we
- * remembered about events. The "Your Next Chapter" calendar and its events stay in the
+ * remembered about events. The "Lark Hour" calendar and its events stay in the
  * member's Google account, theirs to keep or delete there.
  */
 export async function disconnectCalendar(memberId: string, { admin, config, fetchFn = fetch }: Omit<Deps, "member">): Promise<void> {

@@ -49,7 +49,7 @@ export function LegalPage({
     <main className={styles.page}>
       <div className={styles.inner}>
         <Link href="/" className={styles.brand}>
-          Your Next Chapter
+          Lark Hour
         </Link>
 
         <header className={styles.header}>

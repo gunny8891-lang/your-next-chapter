@@ -25,7 +25,7 @@ export default async function SignupPage({
   }
 
   return (
-    <AuthPage title="Start your next chapter" lead="It takes about a minute. Then we'll have something good for today.">
+    <AuthPage title="Welcome to Lark Hour" lead="It takes about a minute. Then we'll have something good for today.">
       <form action={signup}>
         {error && <ErrorNote>{authErrorMessage(error)}</ErrorNote>}
         <Field label="Email" name="email" type="email" autoComplete="email" required />

@@ -28,7 +28,7 @@ export function ShellFrame({ active, children }: { active: TabId | null; childre
       <header className={styles.topbar}>
         <div className={styles.topInner}>
           <Link href="/today" className={styles.brand}>
-            Your Next Chapter
+            Lark Hour
           </Link>
 
           <nav className={styles.tabs} aria-label="Main">

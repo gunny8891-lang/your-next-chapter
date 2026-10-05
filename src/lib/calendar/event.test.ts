@@ -107,7 +107,7 @@ describe("the rest of the event", () => {
     expect(e.location).toBe("Richmond, TW9 3AB");
     expect(e.description).toContain("You enjoy gardens.");
     expect(e.description).toContain("https://example.test/book");
-    expect(e.description).toContain("Your Next Chapter");
+    expect(e.description).toContain("Lark Hour");
   });
 
   it("leaves the place out when it is not known", () => {

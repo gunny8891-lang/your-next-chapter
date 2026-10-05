@@ -95,7 +95,7 @@ export function buildCalendarEvent(item: ItemForCalendar): CalendarEventBody | n
   if (item.why) lines.push(item.why);
   if (item.bookingUrl) lines.push(`More information or booking: ${item.bookingUrl}`);
   if (!hasOwnTime) lines.push(`Planned for ${item.day} ${item.slot}. The time here is a suggestion: adjust it to suit you.`);
-  lines.push("Added from Your Next Chapter.");
+  lines.push("Added from Lark Hour.");
 
   const location = item.address && !isUnknownDetail(item.address) ? item.address : undefined;
   return {

@@ -125,7 +125,7 @@ describe("the calendar", () => {
     expect(await createAppCalendar("at", f.fn)).toBe("cal-1");
     expect(f.calls[0].url).toBe("https://www.googleapis.com/calendar/v3/calendars");
     expect(f.calls[0].headers.Authorization).toBe("Bearer at");
-    expect(JSON.parse(f.calls[0].body)).toEqual({ summary: "Your Next Chapter", timeZone: "Europe/London" });
+    expect(JSON.parse(f.calls[0].body)).toEqual({ summary: "Lark Hour", timeZone: "Europe/London" });
   });
 
   it("adds an event to that calendar and returns its id", async () => {

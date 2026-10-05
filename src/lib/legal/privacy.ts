@@ -207,7 +207,7 @@ export function privacySections(operator: Record<OperatorField, string | null> =
       id: "who",
       title: "Who we are",
       blocks: [
-        { p: `Your Next Chapter is run by ${company}, a company registered in England and Wales (number ${companyNumber}), whose registered office is ${address}.` },
+        { p: `Lark Hour is run by ${company}, a company registered in England and Wales (number ${companyNumber}), whose registered office is ${address}.` },
         { p: `We decide how and why your personal information is used, which makes us the “controller” under UK data protection law.${ico} For anything in this notice, write to ${contact}.` },
       ],
     },
@@ -299,7 +299,7 @@ export function privacySections(operator: Record<OperatorField, string | null> =
     {
       id: "age",
       title: "Who this is for",
-      blocks: [{ p: "Your Next Chapter is for adults. We do not knowingly collect information from anyone under 18." }],
+      blocks: [{ p: "Lark Hour is for adults. We do not knowingly collect information from anyone under 18." }],
     },
     {
       id: "changes",
