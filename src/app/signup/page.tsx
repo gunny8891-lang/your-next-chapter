@@ -3,6 +3,7 @@ import { signup } from "@/app/auth/actions";
 import { AuthLink, AuthLinks, AuthPage } from "@/components/AuthPage";
 import { Button, ErrorNote, Field } from "@/components/ui";
 import styles from "@/components/AuthPage.module.css";
+import { authErrorMessage } from "@/lib/auth/messages";
 
 export const metadata = { title: "Sign up" };
 
@@ -26,7 +27,7 @@ export default async function SignupPage({
   return (
     <AuthPage title="Start your next chapter" lead="It takes about a minute. Then we'll have something good for today.">
       <form action={signup}>
-        {error && <ErrorNote>{error}</ErrorNote>}
+        {error && <ErrorNote>{authErrorMessage(error)}</ErrorNote>}
         <Field label="Email" name="email" type="email" autoComplete="email" required />
         <Field
           label="Password"

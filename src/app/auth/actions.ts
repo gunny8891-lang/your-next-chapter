@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
+import { classifyAuthError } from "@/lib/auth/messages";
 
 async function getSiteUrl() {
   const h = await headers();
@@ -23,7 +24,9 @@ export async function signup(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/signup?error=${encodeURIComponent(error.message)}`);
+    // The provider’s wording is for us, not the member: log it, and send only a code.
+    console.warn("signup failed:", error.code ?? error.status, error.message);
+    redirect(`/signup?error=${classifyAuthError(error)}`);
   }
 
   redirect("/signup?checkEmail=1");
@@ -37,7 +40,8 @@ export async function login(formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    redirect(`/login?error=${encodeURIComponent(error.message)}`);
+    console.warn("login failed:", error.code ?? error.status, error.message);
+    redirect(`/login?error=${classifyAuthError(error)}`);
   }
 
   redirect("/today");
@@ -66,12 +70,13 @@ export async function updatePassword(formData: FormData) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    redirect("/login?error=Your reset link has expired, please request a new one");
+    redirect("/login?error=link_expired");
   }
 
   const { error } = await supabase.auth.updateUser({ password });
   if (error) {
-    redirect(`/reset-password?error=${encodeURIComponent(error.message)}`);
+    console.warn("password update failed:", error.code ?? error.status, error.message);
+    redirect(`/reset-password?error=${classifyAuthError(error)}`);
   }
 
   redirect("/today");

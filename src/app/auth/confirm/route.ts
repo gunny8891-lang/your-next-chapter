@@ -16,5 +16,5 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.redirect(`${origin}/login?error=Could not confirm your email, please try again`);
+  return NextResponse.redirect(`${origin}/login?error=confirm_failed`);
 }

@@ -1,6 +1,7 @@
 import { login } from "@/app/auth/actions";
 import { AuthLink, AuthLinks, AuthPage } from "@/components/AuthPage";
 import { Button, ErrorNote, Field } from "@/components/ui";
+import { authErrorMessage } from "@/lib/auth/messages";
 
 export const metadata = { title: "Log in" };
 
@@ -14,7 +15,7 @@ export default async function LoginPage({
   return (
     <AuthPage title="Welcome back">
       <form action={login}>
-        {error && <ErrorNote>{error}</ErrorNote>}
+        {error && <ErrorNote>{authErrorMessage(error)}</ErrorNote>}
         <Field label="Email" name="email" type="email" autoComplete="email" required />
         <Field label="Password" name="password" type="password" autoComplete="current-password" required />
         <Button type="submit" fullWidth>
