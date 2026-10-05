@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { Clock, Footprints, Heart } from "lucide-react";
 import { createClient } from "@/utils/supabase/server";
 import { Button } from "@/components/ui";
@@ -62,6 +63,11 @@ export default async function LandingPage() {
             </li>
           ))}
         </ul>
+
+        <nav aria-label="Legal" className={styles.legal}>
+          <Link href="/privacy">Privacy notice</Link>
+          <Link href="/terms">Terms of use</Link>
+        </nav>
       </div>
     </main>
   );

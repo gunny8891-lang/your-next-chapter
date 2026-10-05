@@ -75,6 +75,23 @@
   color: var(--color-sage);
 }
 
+/* Quiet links at the foot of the page, with comfortable touch targets. */
+.legal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-5);
+}
+
+.legal a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: var(--text-small);
+  color: var(--color-ink-soft);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 @media (min-width: 900px) {
   .page {
     flex-direction: row;

@@ -19,6 +19,10 @@ export function AuthPage({ title, lead, children }: { title: string; lead?: stri
           {lead && <p className={styles.lead}>{lead}</p>}
           {children}
         </Card>
+        <nav aria-label="Legal" className={styles.legal}>
+          <Link href="/privacy">Privacy notice</Link>
+          <Link href="/terms">Terms of use</Link>
+        </nav>
       </div>
     </main>
   );

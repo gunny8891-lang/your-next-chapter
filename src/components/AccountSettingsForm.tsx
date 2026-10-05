@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { Button, Card, CheckboxField, ErrorNote, Field, Notice, Page, PageHeader, SectionTitle, SelectField, TextareaField } from "@/components/ui";
 import { AdminLinks } from "@/components/AdminLinks";
@@ -222,6 +223,13 @@ export function AccountSettingsForm({
             </div>
           </div>
         )}
+      </section>
+
+      <section aria-labelledby="legal" className={styles.section}>
+        <SectionTitle id="legal">Privacy and terms</SectionTitle>
+        <p className={styles.plain}>
+          Read our <Link href="/privacy" className={styles.textLink}>privacy notice</Link> for what we keep and why, and our <Link href="/terms" className={styles.textLink}>terms of use</Link>.
+        </p>
       </section>
 
       <form action={logout} className={styles.section}>

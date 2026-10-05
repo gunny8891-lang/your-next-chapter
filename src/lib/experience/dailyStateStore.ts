@@ -37,8 +37,11 @@ export async function clearDailyState(supabase: SupabaseClient, memberId: string
   return { error: error?.message ?? null };
 }
 
+/** How many days a Daily State is kept. The privacy notice says this number, and a test holds the two together. */
+export const DAILY_STATE_KEEP_DAYS = 7;
+
 /** The nightly clean-up: Daily States older than a week are deleted. They only ever shaped their own day. */
-export async function purgeOldDailyStates(admin: SupabaseClient, today: string, keepDays = 7): Promise<number> {
+export async function purgeOldDailyStates(admin: SupabaseClient, today: string, keepDays = DAILY_STATE_KEEP_DAYS): Promise<number> {
   const cutoff = new Date(new Date(`${today}T12:00:00Z`).getTime() - keepDays * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const { data, error } = await admin.from("daily_states").delete().lt("state_date", cutoff).select("member_id");
   if (error) {

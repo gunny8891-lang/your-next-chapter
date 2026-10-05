@@ -67,3 +67,31 @@
     font-size: 32px;
   }
 }
+
+.legal {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2) var(--space-5);
+}
+
+.legal a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: var(--text-small);
+  color: var(--color-ink-soft);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.agree {
+  font-size: var(--text-small);
+  line-height: 1.5;
+  color: var(--color-ink-soft);
+}
+
+.agree a {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

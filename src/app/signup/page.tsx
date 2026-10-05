@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { signup } from "@/app/auth/actions";
 import { AuthLink, AuthLinks, AuthPage } from "@/components/AuthPage";
 import { Button, ErrorNote, Field } from "@/components/ui";
+import styles from "@/components/AuthPage.module.css";
 
 export const metadata = { title: "Sign up" };
 
@@ -38,6 +40,9 @@ export default async function SignupPage({
         <Button type="submit" fullWidth>
           Create my account
         </Button>
+        <p className={styles.agree}>
+          By creating an account you agree to our <Link href="/terms">terms of use</Link>. Our <Link href="/privacy">privacy notice</Link> explains what we keep and why.
+        </p>
       </form>
 
       <AuthLinks>

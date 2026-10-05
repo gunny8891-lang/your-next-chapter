@@ -39,7 +39,9 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/auth") ||
     request.nextUrl.pathname.startsWith("/forgot-password") ||
     request.nextUrl.pathname.startsWith("/reset-password");
-  const isPublicRoute = request.nextUrl.pathname === "/" || isAuthRoute;
+  // The privacy notice and terms must be readable before anyone has an account.
+  const isLegalRoute = request.nextUrl.pathname === "/privacy" || request.nextUrl.pathname === "/terms";
+  const isPublicRoute = request.nextUrl.pathname === "/" || isAuthRoute || isLegalRoute;
 
   if (!user && !isPublicRoute) {
     const redirectUrl = request.nextUrl.clone();
