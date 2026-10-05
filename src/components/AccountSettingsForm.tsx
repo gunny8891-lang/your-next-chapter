@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { CalendarCheck } from "lucide-react";
 import { Button, Card, CheckboxField, ErrorNote, Field, Notice, Page, PageHeader, SectionTitle, SelectField, TextareaField } from "@/components/ui";
 import { AdminLinks } from "@/components/AdminLinks";
 import { logout } from "@/app/auth/actions";
@@ -55,6 +56,9 @@ export function AccountSettingsForm({
   onSave,
   onDeleteAccount,
   onClearLearning,
+  calendar,
+  calendarNotice,
+  onDisconnectCalendar,
 }: {
   email: string;
   firstName: string;
@@ -67,12 +71,28 @@ export function AccountSettingsForm({
   onSave: (formData: FormData) => Promise<void>;
   onDeleteAccount: () => Promise<void>;
   onClearLearning: () => Promise<{ error: string | null }>;
+  /** Null when Google Calendar is not switched on: the section then does not appear. */
+  calendar: { connected: boolean } | null;
+  calendarNotice?: string;
+  onDisconnectCalendar: () => Promise<{ error: string | null }>;
 }) {
   const [confirmText, setConfirmText] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [goals, setGoals] = useState<string[]>(profile.goals);
   const [clearStep, setClearStep] = useState<"idle" | "confirm" | "busy" | "done">("idle");
   const [clearError, setClearError] = useState<string | null>(null);
+  const [calendarConnected, setCalendarConnected] = useState(calendar?.connected ?? false);
+  const [calendarBusy, setCalendarBusy] = useState(false);
+  const [calendarError, setCalendarError] = useState<string | null>(null);
+
+  const disconnectCalendar = async () => {
+    setCalendarBusy(true);
+    setCalendarError(null);
+    const res = await onDisconnectCalendar();
+    if (res.error) setCalendarError(res.error);
+    else setCalendarConnected(false);
+    setCalendarBusy(false);
+  };
 
   const clearLearning = async () => {
     setClearStep("busy");
@@ -224,6 +244,36 @@ export function AccountSettingsForm({
           </div>
         )}
       </section>
+
+      {calendar && (
+        <section aria-labelledby="calendar-title" id="calendar" className={styles.section}>
+          <SectionTitle id="calendar-title">Google Calendar</SectionTitle>
+          {calendarNotice === "connected" && <Notice>Connected. You can now add outings to your calendar from My Week.</Notice>}
+          {calendarNotice === "declined" && <Notice tone="info">No problem: nothing was connected.</Notice>}
+          {(calendarNotice === "error" || calendarNotice === "unavailable") && <ErrorNote>We couldn&apos;t connect your calendar just now. Please try again.</ErrorNote>}
+          {calendarError && <ErrorNote>{calendarError}</ErrorNote>}
+          <p className={styles.plain}>
+            Add your planned outings to Google Calendar. We make a separate calendar called &ldquo;Your Next Chapter&rdquo; and can only add to and change that one. We can&apos;t see anything else in your
+            calendar.
+          </p>
+          {calendarConnected ? (
+            <>
+              <p className={styles.plain}>
+                <CalendarCheck size={18} aria-hidden="true" style={{ verticalAlign: "-3px", marginRight: 6 }} />
+                Connected.
+              </p>
+              <Button variant="secondary" loading={calendarBusy} onClick={disconnectCalendar}>
+                Disconnect
+              </Button>
+              <p className={styles.plain}>The calendar and the outings already in it stay in your Google account, and you can delete them there.</p>
+            </>
+          ) : (
+            <Button href="/api/calendar/connect" prefetch={false} variant="secondary">
+              Connect Google Calendar
+            </Button>
+          )}
+        </section>
+      )}
 
       <section aria-labelledby="legal" className={styles.section}>
         <SectionTitle id="legal">Privacy and terms</SectionTitle>

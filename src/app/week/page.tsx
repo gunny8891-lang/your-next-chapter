@@ -1,5 +1,9 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
+import { googleConfig } from "@/lib/calendar/google";
+import { isConnected } from "@/lib/calendar/service";
+import { addToCalendarAction, removeFromCalendarAction } from "@/app/calendar/actions";
 import { ThisWeekView } from "@/components/ThisWeekView";
 import { updateItineraryItemAction, respondSurpriseAction } from "@/app/week/actions";
 import { generateWeekItineraryAction } from "@/app/week/itineraryActions";
@@ -116,6 +120,14 @@ export default async function WeekPage() {
   const items = isDemo ? DEMO_ITEMS : realItems;
   const surprise = isDemo ? DEMO_SURPRISE : realSurprise;
 
+  // Google Calendar: shown only once it has been switched on (the keys are set). Read problems just mean "not connected".
+  let calendar: { connected: boolean; onCalendarIds: string[] } | null = null;
+  if (googleConfig()) {
+    const connected = await isConnected(createAdminClient(), user.id);
+    const { data: linked } = connected ? await supabase.from("calendar_events").select("itinerary_item_id") : { data: [] };
+    calendar = { connected, onCalendarIds: (linked ?? []).map((r) => r.itinerary_item_id as string) };
+  }
+
   return (
     <ThisWeekView
       locationLabel={profile.location_text?.replace("Near ", "") || "This week"}
@@ -128,6 +140,9 @@ export default async function WeekPage() {
       onGenerate={generateWeekItineraryAction}
       onGetSwapAlternatives={getSwapAlternativesAction}
       onApplySwap={applySwapAction}
+      calendar={calendar}
+      onAddToCalendar={addToCalendarAction}
+      onRemoveFromCalendar={removeFromCalendarAction}
     />
   );
 }

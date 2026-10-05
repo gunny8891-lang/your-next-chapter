@@ -1,12 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { fetchRankedOpportunities } from "@/lib/opportunities/engine";
 import type { SwapAlternative } from "@/lib/types";
 import { londonToday } from "@/lib/opportunities/schedule";
 import { loadDailyState } from "@/lib/experience/dailyStateStore";
 import { buildContext, recordExperience } from "@/lib/experience/events";
+import { dropFromCalendarIfAny } from "@/lib/calendar/sync";
 
 const MAX_ALTERNATIVES = 4;
 
@@ -73,6 +75,8 @@ export async function applySwapAction(itemId: string, newActivityId: string): Pr
     })
     .eq("id", itemId);
   if (error) return { error: error.message };
+  // The item now holds something else, so the calendar entry for the old one goes.
+  after(() => dropFromCalendarIfAny(user.id, itemId));
 
   await supabase.from("preference_signals").insert({
     member_id: user.id,

@@ -1,7 +1,8 @@
 "use client";
 
-import { Banknote, Check, Clock, MapPin, RefreshCw } from "lucide-react";
-import { Button, Cover, Sheet } from "@/components/ui";
+import { useState } from "react";
+import { Banknote, CalendarCheck, CalendarPlus, Check, Clock, MapPin, RefreshCw } from "lucide-react";
+import { Button, Cover, ErrorNote, Sheet } from "@/components/ui";
 import { isUnknownDetail } from "@/lib/itinerary/format";
 import { CATEGORY_COLOR } from "@/lib/theme";
 import type { ItineraryItemView, SurpriseView } from "@/lib/types";
@@ -9,15 +10,69 @@ import styles from "@/components/WeekSheets.module.css";
 
 type Item = ItineraryItemView | NonNullable<SurpriseView>;
 
+/** What the sheet needs to offer "add to my calendar" for a planned item. Absent when the feature is not switched on. */
+export type CalendarOffer = {
+  connected: boolean;
+  added: boolean;
+  /** Each returns an error message, or null when it worked. */
+  onAdd: () => Promise<string | null>;
+  onRemove: () => Promise<string | null>;
+};
+
+function CalendarControl({ offer }: { offer: CalendarOffer }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const run = async (action: () => Promise<string | null>) => {
+    setBusy(true);
+    setError(null);
+    setError(await action());
+    setBusy(false);
+  };
+
+  if (!offer.connected) {
+    return (
+      <div className={styles.actions}>
+        <Button href="/account#calendar" variant="secondary" fullWidth>
+          <CalendarPlus size={18} aria-hidden="true" /> Connect Google Calendar
+        </Button>
+        <p className={styles.hint}>So you can add outings to your calendar.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.actions}>
+      {error && <ErrorNote>{error}</ErrorNote>}
+      {offer.added ? (
+        <>
+          <p className={styles.calendarDone}>
+            <CalendarCheck size={18} aria-hidden="true" /> On your Google Calendar
+          </p>
+          <Button variant="quiet" loading={busy} onClick={() => run(offer.onRemove)}>
+            Remove from calendar
+          </Button>
+        </>
+      ) : (
+        <Button variant="secondary" fullWidth loading={busy} onClick={() => run(offer.onAdd)}>
+          <CalendarPlus size={18} aria-hidden="true" /> Add to my calendar
+        </Button>
+      )}
+    </div>
+  );
+}
+
 /** One planned thing, opened from the week: what it is, why it was chosen, and what to do about it. */
 export function ItemSheet({
   item,
   status,
+  calendar,
   onClose,
   onAction,
 }: {
   item: Item;
   status: string | null | undefined;
+  calendar?: CalendarOffer | null;
   onClose: () => void;
   onAction: (action: "accepted" | "swapped" | "skipped") => void;
 }) {
@@ -54,7 +109,8 @@ export function ItemSheet({
         )}
 
         {status === "accepted" ? (
-          item.bookingUrl ? (
+          <>
+          {item.bookingUrl ? (
             <div className={styles.actions}>
               <Button href={item.bookingUrl} target="_blank" rel="noopener noreferrer" fullWidth>
                 Book this
@@ -63,7 +119,9 @@ export function ItemSheet({
             </div>
           ) : (
             <p className={styles.hint}>You&apos;re going. There&apos;s no booking link for this one yet.</p>
-          )
+          )}
+          {calendar && <CalendarControl offer={calendar} />}
+          </>
         ) : (
           <div className={styles.actions}>
             <Button fullWidth onClick={() => onAction("accepted")}>

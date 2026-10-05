@@ -87,6 +87,13 @@ export const DATA_CATEGORIES: DataCategory[] = [
     tables: ["people", "goals"],
   },
   {
+    id: "calendar",
+    title: "Your Google Calendar, only if you connect it",
+    what: "If you choose to connect Google Calendar, we keep the access Google gives us (locked with encryption, so it cannot be read from our database), the identity of the calendar we made for you, and a note of which outings we have added to it.",
+    why: "To add the outings you ask for to your calendar, and to take them off again if you change your plans. We cannot see anything else in your Google Calendar: only the separate calendar we create.",
+    tables: ["calendar_connections", "calendar_events"],
+  },
+  {
     id: "messages",
     title: "Reminders and emails we send you",
     what: "A record of the reminders we have sent, and your email address held by our email provider while they deliver them.",
@@ -146,6 +153,12 @@ export const PROVIDERS: Provider[] = [
     hosts: [],
   },
   {
+    name: "Google",
+    role: "Google Calendar, if you connect it.",
+    receives: "Your sign-in with Google when you connect, and then the title, time, place and a short note of each outing you ask us to add, in a calendar of ours that appears in your own. Nothing is sent unless you press “Add to my calendar”. We cannot read the rest of your calendar.",
+    hosts: ["accounts.google.com", "oauth2.googleapis.com", "www.googleapis.com"],
+  },
+  {
     name: "Open-Meteo",
     role: "The weather forecast.",
     receives: "Your location, rounded to about a kilometre. Nothing that says who you are.",
@@ -175,6 +188,7 @@ export const RETENTION: { what: string; howLong: string }[] = [
   { what: "How you say you feel today", howLong: `${DAILY_STATE_KEEP_DAYS} days, then it is deleted automatically.` },
   { what: "What we have learned about what you enjoy", howLong: "Until you clear it (Account, “Clear what we’ve learned”) or delete your account." },
   { what: "Everything else you have given us, and your conversations", howLong: "Until you delete your account. Deleting it removes it all from our live systems straight away. Copies in our database provider’s backups are overwritten on their normal cycle." },
+  { what: "Your Google Calendar connection", howLong: "Until you disconnect it (Account) or delete your account, when we also withdraw our access at Google. The calendar we made, and the outings in it, stay in your Google account for you to keep or delete." },
   { what: "Technical usage records", howLong: "Kept without your identity once your account is deleted, because they hold nothing about you beyond cost and size." },
 ];
 

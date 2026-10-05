@@ -1,11 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import type { MemberAction } from "@/lib/types";
 import { londonToday } from "@/lib/opportunities/schedule";
 import { loadDailyState } from "@/lib/experience/dailyStateStore";
 import { buildContext, recordExperience, type ExperienceEvent } from "@/lib/experience/events";
+import { dropFromCalendarIfAny } from "@/lib/calendar/sync";
 
 /**
  * What each choice teaches the (older) preference log. Skipping a planned thing is NOT a
@@ -42,6 +44,8 @@ export async function updateItineraryItemAction(itemId: string, action: "accepte
   if (!existing) return;
 
   await supabase.from("itinerary_items").update({ member_action: action }).eq("id", itemId);
+  // No longer a plan: take it off the member’s calendar, if it was ever put there.
+  if (action !== "accepted") after(() => dropFromCalendarIfAny(user.id, itemId));
 
   const signal = SIGNAL_FOR_ACTION[action];
   if (signal) {

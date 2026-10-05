@@ -7,7 +7,7 @@ import { isUnknownDetail } from "@/lib/itinerary/format";
 import { CATEGORY_COLOR } from "@/lib/theme";
 import { placeLabel } from "@/lib/someTime/format";
 import { Button, Card, EmptyState, Page, PageHeader } from "@/components/ui";
-import { ItemSheet } from "@/components/ItemSheet";
+import { ItemSheet, type CalendarOffer } from "@/components/ItemSheet";
 import { SwapSheet } from "@/components/SwapSheet";
 import { GenerateWeekButton } from "@/components/GenerateWeekButton";
 import type { ItineraryItemView, SurpriseView, MemberAction, SwapAlternative } from "@/lib/types";
@@ -36,6 +36,9 @@ export function ThisWeekView({
   onGenerate,
   onGetSwapAlternatives,
   onApplySwap,
+  calendar,
+  onAddToCalendar,
+  onRemoveFromCalendar,
 }: {
   locationLabel: string;
   /** "Mon".."Sun": today in London, so the week opens on it. */
@@ -48,6 +51,10 @@ export function ThisWeekView({
   onGenerate: () => Promise<{ error: string | null; usedFallback?: boolean }>;
   onGetSwapAlternatives: (itemId: string) => Promise<{ error: string | null; alternatives: SwapAlternative[] }>;
   onApplySwap: (itemId: string, newActivityId: string) => Promise<{ error: string | null }>;
+  /** Null when Google Calendar is not switched on, so nothing about it shows. */
+  calendar?: { connected: boolean; onCalendarIds: string[] } | null;
+  onAddToCalendar?: (itemId: string) => Promise<{ error: string | null }>;
+  onRemoveFromCalendar?: (itemId: string) => Promise<{ error: string | null }>;
 }) {
   const itemsByDay = useMemo(() => {
     const map: Record<string, ItineraryItemView[]> = {};
@@ -65,6 +72,7 @@ export function ThisWeekView({
   );
   const [surpriseStatus, setSurpriseStatus] = useState<"accepted" | "dismissed" | null>(surprise?.response ?? null);
   const [openItemId, setOpenItemId] = useState<string | null>(null);
+  const [onCalendar, setOnCalendar] = useState<Set<string>>(() => new Set(calendar?.onCalendarIds ?? []));
   const [swapItemId, setSwapItemId] = useState<string | null>(null);
   const [swapAlternatives, setSwapAlternatives] = useState<SwapAlternative[]>([]);
   const [swapLoading, setSwapLoading] = useState(false);
@@ -73,6 +81,14 @@ export function ThisWeekView({
 
   const openingSurprise = openItemId === "surprise";
   const openItem = openingSurprise ? surprise : (items.find((i) => i.id === openItemId) ?? null);
+
+  // The server takes a changed plan off the calendar; this keeps what the sheet shows in step.
+  const dropFromCalendarView = (itemId: string) =>
+    setOnCalendar((current) => {
+      const next = new Set(current);
+      next.delete(itemId);
+      return next;
+    });
 
   const handleAction = (action: "accepted" | "swapped" | "skipped") => {
     if (openingSurprise && surprise) {
@@ -103,6 +119,7 @@ export function ThisWeekView({
 
     if (openItem) {
       setStatuses((s) => ({ ...s, [openItem.id]: action }));
+      if (action !== "accepted") dropFromCalendarView(openItem.id);
       startTransition(() => {
         onItemAction(openItem.id, action);
       });
@@ -113,10 +130,36 @@ export function ThisWeekView({
   const handleChooseAlternative = (alt: SwapAlternative) => {
     if (!swapItemId) return;
     setStatuses((s) => ({ ...s, [swapItemId]: "pending" }));
+    dropFromCalendarView(swapItemId);
     startTransition(() => {
       onApplySwap(swapItemId, alt.id);
     });
     setSwapItemId(null);
+  };
+
+  // Offered only for a real, planned item, and only when the feature is switched on.
+  const calendarOfferFor = (itemId: string): CalendarOffer | null => {
+    if (!calendar || !onAddToCalendar || !onRemoveFromCalendar || openingSurprise || !isRealItem(itemId)) return null;
+    const change = (on: boolean) => setOnCalendar((current) => {
+      const next = new Set(current);
+      if (on) next.add(itemId);
+      else next.delete(itemId);
+      return next;
+    });
+    return {
+      connected: calendar.connected,
+      added: onCalendar.has(itemId),
+      onAdd: async () => {
+        const result = await onAddToCalendar(itemId);
+        if (!result.error) change(true);
+        return result.error;
+      },
+      onRemove: async () => {
+        const result = await onRemoveFromCalendar(itemId);
+        if (!result.error) change(false);
+        return result.error;
+      },
+    };
   };
 
   const dayItems = itemsByDay[activeDay] ?? [];
@@ -247,6 +290,7 @@ export function ThisWeekView({
         <ItemSheet
           item={openItem}
           status={openingSurprise ? surpriseStatus : statuses[openItem.id]}
+          calendar={calendarOfferFor(openItem.id)}
           onClose={() => setOpenItemId(null)}
           onAction={handleAction}
         />

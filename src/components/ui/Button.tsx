@@ -15,7 +15,7 @@ type Common = {
 };
 
 type AsButton = Common & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> & { href?: undefined };
-type AsLink = Common & { href: string; target?: string; rel?: string };
+type AsLink = Common & { href: string; target?: string; rel?: string; /** Off for a link that starts something (a sign-in redirect) rather than showing a page. */ prefetch?: false };
 
 export type ButtonProps = AsButton | AsLink;
 
@@ -28,9 +28,9 @@ function classes({ variant = "primary", size = "md", fullWidth }: Common): strin
 /** One button for the whole app. Large by default (48px) so it is easy to hit; renders a link when given an href. */
 export function Button(props: ButtonProps) {
   if (props.href !== undefined) {
-    const { href, target, rel, children } = props;
+    const { href, target, rel, prefetch, children } = props;
     return (
-      <Link href={href} target={target} rel={rel} className={classes(props)}>
+      <Link href={href} target={target} rel={rel} prefetch={prefetch} className={classes(props)}>
         {children}
       </Link>
     );

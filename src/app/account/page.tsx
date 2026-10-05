@@ -1,5 +1,9 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
+import { googleConfig } from "@/lib/calendar/google";
+import { isConnected } from "@/lib/calendar/service";
+import { disconnectCalendarAction } from "@/app/calendar/actions";
 import { AccountSettingsForm } from "@/components/AccountSettingsForm";
 import { cleanFirstName } from "@/lib/someTime/format";
 import { updateProfileAction, deleteAccountAction } from "@/app/account/actions";
@@ -10,9 +14,9 @@ export const metadata = { title: "Account" };
 export default async function AccountPage({
   searchParams,
 }: {
-  searchParams: Promise<{ saved?: string; deleteError?: string; planError?: string }>;
+  searchParams: Promise<{ saved?: string; deleteError?: string; planError?: string; calendar?: string }>;
 }) {
-  const { saved, deleteError, planError } = await searchParams;
+  const { saved, deleteError, planError, calendar: calendarNotice } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -34,6 +38,9 @@ export default async function AccountPage({
 
   const { data: userRow } = await supabase.from("users").select("role").eq("id", user.id).single();
 
+  // Shown only once Google Calendar has been switched on (the keys are set).
+  const calendar = googleConfig() ? { connected: await isConnected(createAdminClient(), user.id) } : null;
+
   return (
     <AccountSettingsForm
       email={user.email ?? ""}
@@ -47,6 +54,9 @@ export default async function AccountPage({
       onSave={updateProfileAction}
       onDeleteAccount={deleteAccountAction}
       onClearLearning={clearLearningAction}
+      calendar={calendar}
+      calendarNotice={calendarNotice}
+      onDisconnectCalendar={disconnectCalendarAction}
     />
   );
 }

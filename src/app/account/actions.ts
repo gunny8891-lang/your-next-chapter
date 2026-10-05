@@ -9,6 +9,8 @@ import { geocodeLocation } from "@/lib/geo/geocode";
 import { cleanFirstName } from "@/lib/someTime/format";
 import { generateAndSaveItinerary } from "@/lib/itinerary/generateAndSave";
 import { triggerDiscoveryForRegion } from "@/lib/discovery/regional";
+import { googleConfig } from "@/lib/calendar/google";
+import { disconnectCalendar } from "@/lib/calendar/service";
 
 function parseTagList(value: FormDataEntryValue | null): string[] {
   return String(value ?? "")
@@ -97,6 +99,11 @@ export async function deleteAccountAction() {
   // table (member_profiles, preference_signals, itineraries, etc.) per the
   // "on delete cascade" constraints in the schema migrations.
   const admin = createAdminClient();
+
+  // Withdraw our access to their Google account before the record of it is gone. Best effort: it must not stop the deletion.
+  const calendarConfig = googleConfig();
+  if (calendarConfig) await disconnectCalendar(user.id, { admin, config: calendarConfig }).catch(() => undefined);
+
   const { error } = await admin.auth.admin.deleteUser(user.id);
   if (error) {
     redirect(`/account?deleteError=${encodeURIComponent(error.message)}`);
