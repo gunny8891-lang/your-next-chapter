@@ -1,5 +1,7 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { assertWithinMemberLimits } from "@/lib/ai/limits";
+import { createAdminClient } from "@/utils/supabase/admin";
 
 // $ per 1M tokens, current standard (non-intro) rates. Cache read/write tokens
 // aren't priced here — no call site in this app uses prompt caching yet, so
@@ -69,8 +71,21 @@ export async function callClaude(
   client: Anthropic,
   supabase: SupabaseClient,
   context: UsageContext,
-  params: Anthropic.MessageCreateParamsNonStreaming
+  params: Anthropic.MessageCreateParamsNonStreaming,
+  /** Injectable so the limit can be tested without a database; by default it reads the usage log. */
+  checkLimits: (userId: string, feature: string) => Promise<void> = (userId, feature) => assertWithinMemberLimits(createAdminClient(), userId, feature)
 ): Promise<Anthropic.Message> {
+  // A member-billed call that would go over a daily limit is refused here, before it is made
+  // or logged. UsageLimitError is for the caller to catch and degrade (see usage limits).
+  if (context.userId) {
+    try {
+      await checkLimits(context.userId, context.feature);
+    } catch (err) {
+      if (err instanceof Error && err.name === "UsageLimitError") throw err;
+      // Anything else (no service key configured, a read failing) must not stop the member: allow the call.
+      console.warn("usage limits: could not check (allowing the call):", err instanceof Error ? err.message : err);
+    }
+  }
   const startedAt = Date.now();
   try {
     const response = await client.messages.create(params);

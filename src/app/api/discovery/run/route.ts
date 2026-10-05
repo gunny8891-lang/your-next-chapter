@@ -4,6 +4,7 @@ import { runDiscoveryAgent } from "@/lib/discovery/run";
 import { searchRegionsThrottled } from "@/lib/discovery/regional";
 import { ensureOpenStreetMapPlacesForRegions } from "@/lib/discovery/osmPlaces";
 import { enrichDueImages } from "@/lib/imagery/store";
+import { searchAllowed } from "@/lib/ai/limits";
 import { createTicketmasterSource, RICHMOND_AREA } from "@/lib/discovery/sources/ticketmaster";
 import { memberAreas } from "@/lib/discovery/areas";
 import { createClaudeWebSource } from "@/lib/discovery/sources/claudeWeb";
@@ -65,8 +66,10 @@ export async function GET(request: Request) {
   let regionalError: string | null = null;
   // The free place layer runs alongside the paid search rather than after it,
   // since the search alone can take most of the function's time limit.
+  // The same system-wide daily search budget that holds member-triggered searches holds this one.
+  const searchBudget = await searchAllowed(admin, null);
   const [regionalSettled, places, images] = await Promise.all([
-    searchRegionsThrottled(admin, regions, { maxSearches: MAX_REGIONAL_SEARCHES_PER_RUN, force }).then(
+    searchRegionsThrottled(admin, regions, { maxSearches: searchBudget.allowed ? MAX_REGIONAL_SEARCHES_PER_RUN : 0, force }).then(
       (summary) => ({ summary, error: null as string | null }),
       // Fails closed — if the throttle can't be consulted, nothing is searched.
       (err: unknown) => ({ summary: null, error: err instanceof Error ? err.message : "Regional search failed" })
@@ -80,5 +83,5 @@ export async function GET(request: Request) {
   regional = regionalSettled.summary;
   regionalError = regionalSettled.error;
 
-  return NextResponse.json({ results, regional, regionalError, places, images, ticketmasterSkipped });
+  return NextResponse.json({ results, regional, regionalError, places, images, ticketmasterSkipped, searchBudget });
 }

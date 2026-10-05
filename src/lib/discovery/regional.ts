@@ -6,6 +6,7 @@ import {
   type PendingGeocode,
 } from "@/lib/discovery/run";
 import { createClaudeWebSearchSource } from "@/lib/discovery/sources/claudeWebSearch";
+import { searchAllowed } from "@/lib/ai/limits";
 import { ensureOpenStreetMapPlaces } from "@/lib/discovery/osmPlaces";
 import { memberAreas } from "@/lib/discovery/areas";
 import { createTicketmasterSource } from "@/lib/discovery/sources/ticketmaster";
@@ -43,6 +44,8 @@ type Options = {
   force?: boolean;
   now?: Date;
   runSearch?: RunSearch;
+  /** The member whose sign-up or location change started this, so the cost is attributed to them. */
+  memberId?: string;
   /** Injectable for the same reason as runSearch. */
   geocode?: (address: string) => Promise<Coordinates | null>;
 };
@@ -68,7 +71,7 @@ export async function searchRegionsThrottled(
   const maxSearches = options.maxSearches ?? 1;
   const nowIso = () => (options.now ?? new Date()).toISOString();
   const runSearch: RunSearch =
-    options.runSearch ?? ((region) => persistDiscovery(supabase, [createClaudeWebSearchSource([region])]));
+    options.runSearch ?? ((region) => persistDiscovery(supabase, [createClaudeWebSearchSource([region], { memberId: options.memberId })]));
 
   const labelByKey = new Map<string, string>();
   for (const label of regions) {
@@ -221,8 +224,12 @@ export async function triggerDiscoveryForRegion(
     // The free place layer runs alongside the paid search, not after it: a
     // regional search can take ~4.5 of the 5 minutes available, so queueing
     // this behind it could get both cut off.
+    // The paid search (about $1.30) is the one thing here that costs real money, so it runs only
+    // within the per-member and system-wide daily budget. The free places and events do not.
+    const budget = await searchAllowed(supabase, memberId);
+    if (!budget.allowed) console.warn(`discovery: not searching "${region}" for member ${memberId.slice(0, 8)} (${budget.reason}); the nightly job will reach it when it is due`);
     const [summary, places, events] = await Promise.all([
-      searchRegionsThrottled(supabase, [region], { maxSearches: 1 }),
+      searchRegionsThrottled(supabase, [region], { maxSearches: budget.allowed ? 1 : 0, memberId }),
       ensureOpenStreetMapPlaces(supabase, region),
       fetchTicketmasterNear(supabase, memberId).catch(() => 0),
     ]);

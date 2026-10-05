@@ -42,10 +42,12 @@ type ExtractedItem = {
  * by default; run.ts auto-activates a candidate without a human pass only when
  * it has both a genuine per-event booking URL and a resolved location.
  */
-async function findActivitiesForRegion(apiKey: string, regionLabel: string): Promise<RawActivityCandidate[]> {
+async function findActivitiesForRegion(apiKey: string, regionLabel: string, memberId: string | null): Promise<RawActivityCandidate[]> {
   const client = new Anthropic({ apiKey });
   const admin = createAdminClient();
-  const usageContext = { userId: null, feature: "discovery_claude_web_search" };
+  // Attributed to the member whose sign-up or location change started it (null for the nightly job), so
+  // the per-member limit can see it. Spend is never member-capped here: see searchAllowed.
+  const usageContext = { userId: memberId, feature: "discovery_claude_web_search" };
 
   const system = `You find real, current local activities suitable for retirees (walks, talks, classes, \
 volunteering, social groups, visits) near a given region, for "Your Next Chapter", a retirement concierge app. \
@@ -128,7 +130,7 @@ could take a grandchild for a family-friendly outing (soft play, parks, playgrou
     });
 }
 
-export function createClaudeWebSearchSource(regions: string[]): DiscoverySource {
+export function createClaudeWebSearchSource(regions: string[], options: { memberId?: string | null } = {}): DiscoverySource {
   return {
     name: "claude-web-search",
     async fetchCandidates(): Promise<RawActivityCandidate[]> {
@@ -139,7 +141,7 @@ export function createClaudeWebSearchSource(regions: string[]): DiscoverySource 
       let lastError: unknown = null;
       for (const region of regions) {
         try {
-          results.push(...(await findActivitiesForRegion(apiKey, region)));
+          results.push(...(await findActivitiesForRegion(apiKey, region, options.memberId ?? null)));
         } catch (err) {
           lastError = err;
           continue;

@@ -30,8 +30,11 @@ export async function sendChatMessageAction(
   let reply: string;
   try {
     reply = await answerChatQuestion(supabase, user.id, trimmed, (historyRows ?? []) as ChatHistoryMessage[]);
-  } catch {
-    reply = "Sorry, I'm having trouble answering right now — please try again in a moment.";
+  } catch (err) {
+    reply =
+      err instanceof Error && err.name === "UsageLimitError"
+        ? "We've talked a great deal today, and I'd like to leave something for tomorrow. Please ask me again then. Your ideas on Today and Explore are still here for you."
+        : "Sorry, I'm having trouble answering right now — please try again in a moment.";
   }
 
   await supabase.from("chat_messages").insert({ member_id: user.id, role: "assistant", content: reply });
