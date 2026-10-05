@@ -153,6 +153,12 @@ export const PROVIDERS: Provider[] = [
     hosts: [],
   },
   {
+    name: "Zoho Mail",
+    role: "Our inbox, for when you write to us at hello@larkhour.com or reply to one of our emails.",
+    receives: "Whatever you send us: your email address, and what you write. It is kept in Zoho’s data centre in Europe, and used only to read and answer you.",
+    hosts: [],
+  },
+  {
     name: "Google",
     role: "Google Calendar, if you connect it.",
     receives: "Your sign-in with Google when you connect, and then the title, time, place and a short note of each outing you ask us to add, in a calendar of ours that appears in your own. Nothing is sent unless you press “Add to my calendar”. We cannot read the rest of your calendar.",
