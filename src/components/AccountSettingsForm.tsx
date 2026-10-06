@@ -322,6 +322,17 @@ export function AccountSettingsForm({
         </section>
       )}
 
+      <section aria-labelledby="feedback" className={styles.section}>
+        <SectionTitle id="feedback">Tell us what you think</SectionTitle>
+        <p className={styles.plain}>
+          Lark Hour is new, and what you tell us shapes it. If something is confusing, broken or missing, or an idea was a good one, write to{" "}
+          <a href="mailto:hello@larkhour.com?subject=Lark%20Hour%20feedback" className={styles.textLink}>
+            hello@larkhour.com
+          </a>
+          . A real person reads every message.
+        </p>
+      </section>
+
       <section aria-labelledby="legal" className={styles.section}>
         <SectionTitle id="legal">Privacy and terms</SectionTitle>
         <p className={styles.plain}>
