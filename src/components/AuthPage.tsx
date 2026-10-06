@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Card } from "@/components/ui";
+import { Wordmark } from "@/components/Wordmark";
 import styles from "@/components/AuthPage.module.css";
 
 /**
@@ -12,7 +13,7 @@ export function AuthPage({ title, lead, children }: { title: string; lead?: stri
     <main className={styles.page}>
       <div className={styles.inner}>
         <Link href="/" className={styles.brand}>
-          Lark Hour
+          <Wordmark size={40} />
         </Link>
         <Card padding="lg" className={`${styles.card} ync-appear`}>
           <h1 className={styles.title}>{title}</h1>

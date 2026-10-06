@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Notice } from "@/components/ui";
+import { Wordmark } from "@/components/Wordmark";
 import { LEGAL_LAST_UPDATED, OPERATOR_FIELD_LABELS, missingOperatorDetails } from "@/lib/legal/details";
 import type { Block, Section } from "@/lib/legal/privacy";
 import styles from "@/components/LegalPage.module.css";
@@ -49,7 +50,7 @@ export function LegalPage({
     <main className={styles.page}>
       <div className={styles.inner}>
         <Link href="/" className={styles.brand}>
-          Lark Hour
+          <Wordmark size={32} />
         </Link>
 
         <header className={styles.header}>

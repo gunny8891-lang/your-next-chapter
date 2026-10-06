@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Check, ChevronLeft } from "lucide-react";
 import { Button, Chip, Field } from "@/components/ui";
+import { Wordmark } from "@/components/Wordmark";
 import styles from "@/components/Onboarding.module.css";
 
 /**
@@ -89,7 +90,9 @@ export function OnboardingFlow({ onDone }: { onDone: (answers: OnboardingAnswers
     return (
       <main className={styles.page}>
         <div className={styles.inner}>
-          <p className={styles.brand}>Lark Hour</p>
+          <p className={styles.brand}>
+            <Wordmark size={32} />
+          </p>
           <div className={`${styles.saving} ync-appear`} role="status">
             <h1 className={styles.heading}>Getting your first ideas ready…</h1>
             <p className={styles.intro}>This takes a moment. Thank you for your patience.</p>
@@ -102,7 +105,9 @@ export function OnboardingFlow({ onDone }: { onDone: (answers: OnboardingAnswers
   return (
     <main className={styles.page}>
       <div className={styles.inner}>
-        <p className={styles.brand}>Lark Hour</p>
+        <p className={styles.brand}>
+          <Wordmark size={32} />
+        </p>
 
         <div
           className={styles.progress}

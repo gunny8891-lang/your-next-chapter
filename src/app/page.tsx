@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Clock, Footprints, Heart } from "lucide-react";
 import { createClient } from "@/utils/supabase/server";
 import { Button } from "@/components/ui";
+import { Wordmark } from "@/components/Wordmark";
 import styles from "@/app/Landing.module.css";
 
 const POINTS = [
@@ -31,7 +32,9 @@ export default async function LandingPage() {
       </div>
 
       <div className={styles.copy}>
-        <p className={styles.brand}>Lark Hour</p>
+        <p className={styles.brand}>
+          <Wordmark size={40} />
+        </p>
         <h1 className={styles.title}>You have time. Here&apos;s something good to do with it.</h1>
         <p className={styles.lead}>
           Tell us a little about yourself, and every day you&apos;ll find a few ideas worth your time: walks, galleries,

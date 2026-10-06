@@ -18,6 +18,7 @@
 .brand {
   display: inline-flex;
   align-items: center;
+  gap: 10px;
   justify-self: start;
   min-height: 44px;
   font-family: var(--font-display), Georgia, serif;

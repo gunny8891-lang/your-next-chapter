@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BookOpen, CalendarDays, Compass, MessageCircle, Sun, User } from "lucide-react";
 import { activeTab, showsShell, TABS, type TabId } from "@/components/shell";
+import { Wordmark } from "@/components/Wordmark";
 import styles from "@/components/AppShell.module.css";
 
 const TAB_ICON: Record<TabId, typeof Sun> = {
@@ -28,7 +29,7 @@ export function ShellFrame({ active, children }: { active: TabId | null; childre
       <header className={styles.topbar}>
         <div className={styles.topInner}>
           <Link href="/today" className={styles.brand}>
-            Lark Hour
+            <Wordmark size={28} />
           </Link>
 
           <nav className={styles.tabs} aria-label="Main">

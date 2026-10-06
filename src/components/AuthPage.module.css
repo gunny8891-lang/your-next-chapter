@@ -17,6 +17,7 @@
   justify-self: center;
   display: inline-flex;
   align-items: center;
+  gap: 12px;
   min-height: 44px;
   font-family: var(--font-display), Georgia, serif;
   font-size: 22px;
