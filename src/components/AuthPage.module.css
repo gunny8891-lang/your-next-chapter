@@ -85,13 +85,7 @@
   text-underline-offset: 3px;
 }
 
-.agree {
-  font-size: var(--text-small);
-  line-height: 1.5;
-  color: var(--color-ink-soft);
-}
-
-.agree a {
+.agreeLink {
   color: var(--color-primary);
   text-decoration: underline;
   text-underline-offset: 3px;

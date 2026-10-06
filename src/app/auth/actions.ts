@@ -3,7 +3,9 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { classifyAuthError } from "@/lib/auth/messages";
+import { isNewAccount, recordAcceptance } from "@/lib/legal/acceptance";
 
 async function getSiteUrl() {
   const h = await headers();
@@ -15,9 +17,13 @@ async function getSiteUrl() {
 export async function signup(formData: FormData) {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
+
+  // The form's box is `required`, but a form can be posted without it: no account without the agreement.
+  if (formData.get("accept") !== "on") redirect("/signup?error=terms_not_accepted");
+
   const supabase = await createClient();
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: { emailRedirectTo: `${await getSiteUrl()}/auth/confirm` },
@@ -27,6 +33,13 @@ export async function signup(formData: FormData) {
     // The provider’s wording is for us, not the member: log it, and send only a code.
     console.warn("signup failed:", error.code ?? error.status, error.message);
     redirect(`/signup?error=${classifyAuthError(error)}`);
+  }
+
+  // Keep the record of what they agreed to and when. A failure here must not undo a sign-up that
+  // worked (and the member cannot do anything about it), so it is logged for us rather than shown.
+  if (isNewAccount(data.user)) {
+    const recorded = await recordAcceptance(createAdminClient(), data.user.id);
+    if (recorded.error) console.warn("could not record the terms agreement:", recorded.error);
   }
 
   redirect("/signup?checkEmail=1");

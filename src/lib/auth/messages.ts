@@ -15,6 +15,7 @@ export type AuthErrorCode =
   | "weak_password"
   | "invalid_email"
   | "signups_closed"
+  | "terms_not_accepted"
   | "bad_credentials"
   | "unconfirmed"
   | "link_expired"
@@ -27,6 +28,7 @@ const MESSAGES: Record<AuthErrorCode, string> = {
   weak_password: "That password is too easy to guess. Please choose one with at least 6 characters, ideally a mix of letters and numbers.",
   invalid_email: "That doesn't look like a valid email address. Please check it and try again.",
   signups_closed: "We aren't able to open new accounts at the moment. Please try again later.",
+  terms_not_accepted: "Please tick the box to say you agree to our terms of use, then create your account.",
   bad_credentials: "That email and password don't match. Please check them and try again.",
   unconfirmed: "Please open the link we emailed you to confirm your address, then log in.",
   link_expired: "That link has expired. Please ask for a new one.",

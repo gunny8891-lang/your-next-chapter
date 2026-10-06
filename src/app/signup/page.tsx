@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { signup } from "@/app/auth/actions";
 import { AuthLink, AuthLinks, AuthPage } from "@/components/AuthPage";
-import { Button, ErrorNote, Field } from "@/components/ui";
+import { Button, CheckboxField, ErrorNote, Field } from "@/components/ui";
 import styles from "@/components/AuthPage.module.css";
 import { authErrorMessage } from "@/lib/auth/messages";
 
@@ -38,12 +38,26 @@ export default async function SignupPage({
           hint="At least 6 characters"
           required
         />
+        <CheckboxField
+          name="accept"
+          required
+          label={
+            <>
+              I agree to the{" "}
+              <Link href="/terms" target="_blank" rel="noopener" className={styles.agreeLink}>
+                terms of use
+              </Link>{" "}
+              and have read the{" "}
+              <Link href="/privacy" target="_blank" rel="noopener" className={styles.agreeLink}>
+                privacy notice
+              </Link>
+              , which explains what we keep and why.
+            </>
+          }
+        />
         <Button type="submit" fullWidth>
           Create my account
         </Button>
-        <p className={styles.agree}>
-          By creating an account you agree to our <Link href="/terms">terms of use</Link>. Our <Link href="/privacy">privacy notice</Link> explains what we keep and why.
-        </p>
       </form>
 
       <AuthLinks>

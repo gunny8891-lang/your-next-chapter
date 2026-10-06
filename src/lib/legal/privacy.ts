@@ -38,6 +38,13 @@ export const DATA_CATEGORIES: DataCategory[] = [
     tables: ["users"],
   },
   {
+    id: "agreement",
+    title: "Your agreement to our terms",
+    what: "A note that you agreed to our terms of use and read this privacy notice when you created your account: which version of each, and the date and time. Nothing else is kept with it, such as your IP address.",
+    why: "To be able to show what you agreed to, and to ask you again if the wording changes in a way that matters.",
+    tables: ["legal_acceptances"],
+  },
+  {
     id: "profile",
     title: "About you",
     what: "Where you live (the town or postcode you give us), how far you are happy to travel, how you usually get about, your budget, your interests and what you hope the next chapter will bring, and your answers during set-up.",
