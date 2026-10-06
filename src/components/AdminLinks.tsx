@@ -12,6 +12,9 @@ export function AdminLinks() {
         <Button href="/admin/ai-costs" variant="secondary">
           Running costs
         </Button>
+        <Button href="/admin/members" variant="secondary">
+          Members
+        </Button>
       </div>
     </section>
   );
