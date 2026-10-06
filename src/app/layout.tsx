@@ -15,10 +15,19 @@ const display = Fraunces({
   subsets: ["latin"],
 });
 
+const DESCRIPTION = "You have time. Here's something good to do with it: ideas for the time you have, planned from door to home again.";
+
 export const metadata: Metadata = {
+  // Makes the share image and other links in the page head absolute web addresses.
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://www.larkhour.com"),
   // Each screen names itself ("My week · Lark Hour"): that is what the browser tab, history and a screen reader announce.
   title: { default: "Lark Hour", template: "%s · Lark Hour" },
-  description: "You have time. Here's something good to do with it: ideas for the time you have, planned from door to home again.",
+  description: DESCRIPTION,
+  applicationName: "Lark Hour",
+  openGraph: { type: "website", siteName: "Lark Hour", locale: "en_GB", title: "Lark Hour", description: DESCRIPTION },
+  twitter: { card: "summary_large_image", title: "Lark Hour", description: DESCRIPTION },
+  // Opened from the home screen it looks like an app, with its own name under the icon.
+  appleWebApp: { capable: true, title: "Lark Hour", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

@@ -120,7 +120,7 @@ const NOT_RECIPIENTS: Record<string, string> = {
   "www.openstreetmap.org": "attribution links shown to the member",
   "commons.wikimedia.org/wiki": "credit links shown to the member",
   "operations.osmfoundation.org": "a documentation link in a comment",
-  "your-next-chapter-orcin.vercel.app": "the app's own address, in the identifying header sent to Wikimedia",
+  "www.larkhour.com": "the app's own address: page metadata, the sitemap, and the identifying header sent to Wikimedia",
   "search.local": "a placeholder, never requested",
   "www.nationaltrust.org.uk": "a public page the discovery job reads for places, nothing about members",
   "www.richmond.gov.uk": "a public page the discovery job reads for places, nothing about members",
