@@ -11,6 +11,7 @@ import { completeExperienceAction, clearDailyStateAction, saveDailyStateAction }
 import { loadDailyState } from "@/lib/experience/dailyStateStore";
 import { loadReflections } from "@/lib/experience/reflections";
 import { londonToday, londonWeekStart } from "@/lib/opportunities/schedule";
+import { visibleSlots } from "@/lib/experience/daySlots";
 import { cleanFirstName, greetingFor } from "@/lib/someTime/format";
 import { londonClock } from "@/lib/someTime/window";
 import type { CategoryName } from "@/lib/categories";
@@ -100,7 +101,11 @@ export default async function TodayPage() {
 
   if (featured) scheduleImageLookups([featured]);
 
-  const slots: TodaySlot[] = SLOT_ORDER.map((slot) => ({ slot, item: itemBySlot[slot] ?? null }));
+  // A free part of the day that has already gone is not offered (see daySlots.ts); one with something planned stays.
+  const slots: TodaySlot[] = visibleSlots(
+    SLOT_ORDER.map((slot) => ({ slot, item: itemBySlot[slot] ?? null })),
+    londonClock(new Date()).minutes
+  );
 
   return (
     <TodayView

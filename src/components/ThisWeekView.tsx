@@ -174,6 +174,8 @@ export function ThisWeekView({
 
   const dayItems = itemsByDay[activeDay] ?? [];
   const dayName = FULL_DAY[activeDay] ?? activeDay;
+  // A day that has already gone is not "free so far": nothing was planned for it. (Not shown when looking at next week, where `today` is empty.)
+  const dayHasPassed = (DAYS as readonly string[]).indexOf(today) > 0 && (DAYS as readonly string[]).indexOf(activeDay) < (DAYS as readonly string[]).indexOf(today);
 
   return (
     <Page>
@@ -240,7 +242,7 @@ export function ThisWeekView({
               ) : undefined
             }
           >
-            {activeDay === today ? "A free day. Perhaps there's something you'd enjoy." : `${dayName} is free so far.`}
+            {activeDay === today ? "A free day. Perhaps there's something you'd enjoy." : dayHasPassed ? `Nothing was planned for ${dayName}.` : `${dayName} is free so far.`}
           </EmptyState>
         ) : (
           <ul className={styles.list}>

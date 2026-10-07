@@ -49,6 +49,11 @@
   list-style: none;
 }
 
+.dayDone {
+  padding: var(--space-4) 0;
+  color: var(--color-ink-soft);
+}
+
 .row {
   display: grid;
   grid-template-columns: 84px 1fr;

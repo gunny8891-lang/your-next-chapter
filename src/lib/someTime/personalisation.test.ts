@@ -194,7 +194,8 @@ describe("a bad day is not a dislike", () => {
 
     // The affinity is exactly what it was: nothing was learned against walking.
     const afterwards = signal ? [...liked, signalOn(woodlandWalk, signal, 0)] : liked;
-    expect(walkingScore(afterwards)).toBe(walkingScore(liked));
+    // Compared to many decimal places, not exactly: both scores are recency-weighted from the clock, which can tick between the two calls.
+    expect(walkingScore(afterwards)).toBeCloseTo(walkingScore(liked), 6);
   });
 
   it("the same refusal on an ordinary day does count against it", () => {

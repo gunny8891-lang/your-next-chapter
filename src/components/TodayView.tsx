@@ -156,6 +156,7 @@ export function TodayView({
         <h2 id="your-day" className={styles.label}>
           Your day
         </h2>
+        {slots.length === 0 && <p className={styles.dayDone}>That is the day done. Fresh ideas will be here tomorrow.</p>}
         <ul className={styles.dayList}>
           {slots.map(({ slot, item }) => {
             const slotLabel = SLOT_LABEL[slot] ?? slot;
