@@ -85,10 +85,10 @@ export function ChangeMindOptions({
       </p>
       <div className={styles.secondary}>
         <Button variant="secondary" onClick={() => onAction("swapped")}>
-          <RefreshCw size={16} aria-hidden="true" /> Something else
+          <RefreshCw size={16} aria-hidden="true" /> Find something else
         </Button>
         <Button variant="quiet" onClick={() => onAction("skipped")}>
-          Not this time
+          Just take it off my plan
         </Button>
         <Button variant="quiet" onClick={onKeep}>
           Keep it

@@ -9,6 +9,7 @@ import { placeLabel } from "@/lib/someTime/format";
 import { Button, Card, EmptyState, Page, PageHeader } from "@/components/ui";
 import { ItemSheet, type CalendarOffer } from "@/components/ItemSheet";
 import { SwapSheet } from "@/components/SwapSheet";
+import { SkippedPrompt } from "@/components/SkippedPrompt";
 import { GenerateWeekButton } from "@/components/GenerateWeekButton";
 import type { ItineraryItemView, SurpriseView, MemberAction, SwapAlternative } from "@/lib/types";
 import styles from "@/components/ThisWeek.module.css";
@@ -90,6 +91,22 @@ export function ThisWeekView({
       return next;
     });
 
+  // Opens the alternatives picker for an item: from "Something else" in its sheet, or from the
+  // "find something else" prompt under an outing the member turned down.
+  const beginSwap = (itemId: string) => {
+    setOpenItemId(null);
+    setSwapItemId(itemId);
+    setSwapAlternatives([]);
+    setSwapError(null);
+    setSwapLoading(true);
+    startTransition(async () => {
+      const result = await onGetSwapAlternatives(itemId);
+      setSwapLoading(false);
+      if (result.error) setSwapError(result.error);
+      else setSwapAlternatives(result.alternatives);
+    });
+  };
+
   const handleAction = (action: "accepted" | "swapped" | "skipped") => {
     if (openingSurprise && surprise) {
       const response = action === "accepted" ? "accepted" : "dismissed";
@@ -103,17 +120,7 @@ export function ThisWeekView({
 
     if (openItem && action === "swapped" && isRealItem(openItem.id)) {
       // Real items get an alternatives picker instead of an immediate swap.
-      setOpenItemId(null);
-      setSwapItemId(openItem.id);
-      setSwapAlternatives([]);
-      setSwapError(null);
-      setSwapLoading(true);
-      startTransition(async () => {
-        const result = await onGetSwapAlternatives(openItem.id);
-        setSwapLoading(false);
-        if (result.error) setSwapError(result.error);
-        else setSwapAlternatives(result.alternatives);
-      });
+      beginSwap(openItem.id);
       return;
     }
 
@@ -258,6 +265,7 @@ export function ThisWeekView({
                       {item.behaviorNote && <span className={styles.note}>{item.behaviorNote}</span>}
                     </span>
                   </button>
+                  {status === "skipped" && isRealItem(item.id) && <SkippedPrompt time={item.time} onFind={() => beginSwap(item.id)} />}
                 </li>
               );
             })}

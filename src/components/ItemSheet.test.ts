@@ -13,11 +13,21 @@ function render(onCalendar: boolean) {
 }
 
 describe("changing your mind after saying yes", () => {
-  it("offers the two ways out they had the first time, and a way to keep it", () => {
+  it("leads with finding something else, then offers to just drop it, and a way to keep it", () => {
     const html = render(false);
-    expect(html).toContain("Something else");
-    expect(html).toContain("Not this time");
-    expect(html).toContain("Keep it");
+    expect(html.indexOf("Find something else")).toBeGreaterThan(-1);
+    expect(html.indexOf("Find something else")).toBeLessThan(html.indexOf("Just take it off my plan"));
+    expect(html.indexOf("Just take it off my plan")).toBeLessThan(html.indexOf("Keep it"));
+  });
+
+  it("sends 'find something else' to the swap picker and 'take it off' to a skip", () => {
+    const calls: string[] = [];
+    const html = renderToStaticMarkup(createElement(ChangeMindOptions, { onAction: (a) => calls.push(a), onKeep: noop, onCalendar: false }));
+    expect(html).toContain("Find something else");
+    const source = readFileSync(join(process.cwd(), "src", "components", "ItemSheet.tsx"), "utf8");
+    expect(source).toMatch(/onAction\("swapped"\)\}>\s*<RefreshCw[^>]*\/> Find something else/);
+    expect(source).toMatch(/onAction\("skipped"\)\}>\s*Just take it off my plan/);
+    expect(calls).toEqual([]);
   });
 
   it("says it will also come off the Google Calendar, but only when it is on there", () => {

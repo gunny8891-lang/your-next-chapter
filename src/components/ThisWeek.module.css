@@ -118,8 +118,22 @@
   cursor: pointer;
 }
 
-.list li:last-child .item {
+.list li:last-child {
   border-bottom: 1px solid var(--color-line);
+}
+
+/* Under an outing that was turned down: the slot is free, and the way to fill it. */
+.freePrompt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0 0 var(--space-4) calc(84px + var(--space-4));
+}
+
+.freePrompt p {
+  font-size: var(--text-small);
+  color: var(--color-ink-soft);
 }
 
 .item:hover .itemTitle {
