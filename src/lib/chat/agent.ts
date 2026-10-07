@@ -6,6 +6,7 @@ import { getCurrentWeekStart } from "@/lib/itinerary/generateAndSave";
 import { callClaude } from "@/lib/ai/client";
 import { AI_MODELS } from "@/lib/ai/models";
 import { careGuidance, type CareAssessment } from "@/lib/chat/care";
+import { PLAIN_WORDS_RULE } from "@/lib/ai/plainWords";
 
 const MODEL = AI_MODELS.smart;
 const MAX_CANDIDATES_SENT_TO_LLM = 30;
@@ -87,7 +88,8 @@ Hard rules:
 - Only ever mention a specific activity, date, time, or location if it appears verbatim in one of the two lists above. Never invent an activity, venue, or time.
 - If nothing in the lists answers the question, say so plainly and suggest checking back later — do not make something up.
 - This app does not yet have social/companion-matching data (e.g. "who else is free"). If asked something like that, say honestly that you can't see other members' availability yet, and offer to help find an activity instead.
-- Keep it short. This audience wants a clear, direct answer, not an essay.${careGuidance(care)}`;
+- Keep it short. This audience wants a clear, direct answer, not an essay.
+- ${PLAIN_WORDS_RULE}${careGuidance(care)}`;
 }
 
 export async function answerChatQuestion(

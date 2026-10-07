@@ -5,6 +5,7 @@ import { MOOD_LABEL, type TimeRequest } from "@/lib/someTime/request";
 import type { Evaluated, FoodStop } from "@/lib/someTime/score";
 import { clockLabel, durationLabel, type TimeWindow } from "@/lib/someTime/window";
 import { describeDailyState, type DailyState } from "@/lib/experience/dailyState";
+import { PLAIN_WORDS_RULE } from "@/lib/ai/plainWords";
 
 export const MAX_OPTIONS = 3;
 const MAX_WHY_CHARS = 420;
@@ -64,6 +65,8 @@ words from the candidate's own line; no exclamation marks. Only mention a meal o
 How to write each "why": one or two warm sentences (under 45 words) in the second person, no exclamation marks. Say why it suits THEM \
 using the supplied reasons, profile and context, and mention one practical detail (for example when it closes, or that \
 it is a short walk). Do not state anything about a place that is not in its line below.
+
+${PLAIN_WORDS_RULE}
 
 Venues: a candidate marked "a venue only" is a theatre or cinema building. Nothing says anything is on there today. Never describe a show, a film, a performance or "a night out" there as if one exists, and never call the outing "an evening of theatre" or similar. Say it is worth checking what's on before going.
 

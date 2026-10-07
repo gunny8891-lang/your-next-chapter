@@ -7,6 +7,7 @@ import { fetchRankedOpportunities, selectBalanced, type OpportunityCandidate } f
 import { alignToEvents, describeWhen, fitsDates, getCurrentWeekStart, londonToday, weekDates } from "@/lib/opportunities/schedule";
 import { callClaude } from "@/lib/ai/client";
 import { AI_MODELS } from "@/lib/ai/models";
+import { PLAIN_WORDS_RULE } from "@/lib/ai/plainWords";
 
 const MODEL = AI_MODELS.smart;
 const MAX_CANDIDATES_SENT_TO_LLM = 40;
@@ -58,7 +59,7 @@ suitable for a grandparent to take a grandchild to, when a genuinely suitable on
 never force one in if nothing suitable is available. If a candidate activity is a genuine, specific step toward one \
 of the member's "My Chapter" aspirations below, say so plainly in that item's rationale (e.g. "You mentioned wanting \
 to learn photography — this beginner walk is a great low-pressure way to start.") — only when the connection is \
-real, never a stretch. A candidate marked "WHEN" is a one-off event at that exact day and time: if you choose it, schedule it on that day. One marked "available until" can go on any day up to that date. Respond with ONLY valid JSON matching this exact shape, no prose, no markdown fences: \
+real, never a stretch. ${PLAIN_WORDS_RULE} A candidate marked "WHEN" is a one-off event at that exact day and time: if you choose it, schedule it on that day. One marked "available until" can go on any day up to that date. Respond with ONLY valid JSON matching this exact shape, no prose, no markdown fences: \
 {"items": [{"day": "Mon"|"Tue"|"Wed"|"Thu"|"Fri"|"Sat"|"Sun", "slot": "morning"|"afternoon"|"evening", "activity_id": "<id from candidates>", "rationale": "<one sentence, second person, warm tone>"}]}`;
 
   const user = `${weekContext}

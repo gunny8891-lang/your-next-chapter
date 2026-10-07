@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CategoryName } from "@/lib/categories";
 import { callClaude } from "@/lib/ai/client";
+import { containsJargon } from "@/lib/ai/plainWords";
 import { AI_MODELS } from "@/lib/ai/models";
 import { summarizeAffinity, type AffinityScores } from "@/lib/memory/scoring";
 import { fetchRankedOpportunities, type OpportunityCandidate } from "@/lib/opportunities/engine";
@@ -205,7 +206,14 @@ export async function buildRecommendations(inputs: RecommendInputs): Promise<{ o
     const reply = await inputs.ask(SYSTEM_PROMPT, buildUserPrompt(promptContext, shortlist));
     const choices = parseChoices(reply, new Set(byId.keys()), idsWithFood);
     if (choices.length > 0) {
-      return { options: choices.map((ch) => toTimeOption(byId.get(ch.id)!, ch.why, ch.withFood, ch.title)), notice };
+      return {
+        options: choices.map((ch) => {
+          const entry = byId.get(ch.id)!;
+          // An explanation that talks like the app's internals ("a category you have not touched") is replaced by one built from the facts.
+          return toTimeOption(entry, containsJargon(ch.why) ? fallbackWhy(entry.evaluated) : ch.why, ch.withFood, ch.title);
+        }),
+        notice,
+      };
     }
     console.warn("some_time: the model's reply had no usable options; using the scored fallback");
   } catch (err) {
