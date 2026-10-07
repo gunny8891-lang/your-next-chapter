@@ -16,7 +16,7 @@ describe("which paths the sign-in check runs on", () => {
   });
 
   it("still runs on every screen and route a member or a job uses", () => {
-    for (const path of ["/", "/today", "/week", "/explore", "/chapter", "/chat", "/account", "/admin/ai-costs", "/login", "/signup", "/auth/confirm", "/privacy", "/terms", "/unsubscribe", "/api/jobs/daily-nudges", "/api/calendar/connect"]) {
+    for (const path of ["/", "/today", "/week", "/explore", "/chapter", "/chat", "/account", "/admin/ai-costs", "/login", "/signup", "/auth/confirm", "/privacy", "/terms", "/unsubscribe", "/agree", "/api/jobs/daily-nudges", "/api/calendar/connect"]) {
       expect(checked(path), path).toBe(true);
     }
   });

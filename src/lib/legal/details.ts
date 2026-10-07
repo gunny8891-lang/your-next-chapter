@@ -20,14 +20,14 @@ export const OPERATOR = {
 };
 
 /** When the wording of both pages was last changed. Update it with the text. */
-export const LEGAL_LAST_UPDATED = "6 October 2026";
+export const LEGAL_LAST_UPDATED = "7 October 2026";
 
 /**
  * The same date as LEGAL_LAST_UPDATED, as YYYY-MM-DD: the version of the wording a member
  * agrees to at sign-up, kept with their agreement (legal_acceptances). Change it together
  * with the text and LEGAL_LAST_UPDATED; a test checks the two say the same day.
  */
-export const LEGAL_VERSION = "2026-10-06";
+export const LEGAL_VERSION = "2026-10-07";
 
 export type OperatorField = keyof typeof OPERATOR;
 

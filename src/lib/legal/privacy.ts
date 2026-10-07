@@ -40,7 +40,7 @@ export const DATA_CATEGORIES: DataCategory[] = [
   {
     id: "agreement",
     title: "Your agreement to our terms",
-    what: "A note that you agreed to our terms of use and read this privacy notice when you created your account: which version of each, and the date and time. Nothing else is kept with it, such as your IP address.",
+    what: "A note that you agreed to our terms of use and read this privacy notice, when you created your account or later if we asked you to agree to updated wording: which version of each, and the date and time. Nothing else is kept with it, such as your IP address.",
     why: "To be able to show what you agreed to, and to ask you again if the wording changes in a way that matters.",
     tables: ["legal_acceptances"],
   },
