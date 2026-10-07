@@ -8,6 +8,7 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { geocodeLocation } from "@/lib/geo/geocode";
 import { cleanFirstName } from "@/lib/someTime/format";
 import { generateAndSaveItinerary } from "@/lib/itinerary/generateAndSave";
+import { planInputsChanged } from "@/lib/account/planInputs";
 import { triggerDiscoveryForRegion } from "@/lib/discovery/regional";
 import { googleConfig } from "@/lib/calendar/google";
 import { disconnectCalendar } from "@/lib/calendar/service";
@@ -36,7 +37,7 @@ export async function updateProfileAction(formData: FormData) {
 
   const { data: existing } = await supabase
     .from("member_profiles")
-    .select("location_text, location_lat, location_lng")
+    .select("location_text, location_lat, location_lng, travel_radius_km, budget_band, dietary_preferences, mobility_notes, drives, uses_public_transport, interests, goals")
     .eq("user_id", user.id)
     .single();
 
@@ -52,28 +53,29 @@ export async function updateProfileAction(formData: FormData) {
     locationLng = geocoded?.lng ?? null;
   }
 
+  const submitted = {
+    location_text: newLocationText,
+    travel_radius_km: radiusRaw ? Number(radiusRaw) : null,
+    budget_band: ["low", "medium", "high"].includes(budgetRaw) ? budgetRaw : null,
+    dietary_preferences: String(formData.get("dietary_preferences") ?? "").trim() || null,
+    mobility_notes: String(formData.get("mobility_notes") ?? "").trim() || null,
+    drives: formData.get("drives") === "on",
+    uses_public_transport: formData.get("uses_public_transport") === "on",
+    interests: parseTagList(formData.get("interests")),
+    goals: parseTagList(formData.get("goals")),
+  };
+
   await supabase
     .from("member_profiles")
-    .update({
-      location_text: newLocationText,
-      location_lat: locationLat,
-      location_lng: locationLng,
-      travel_radius_km: radiusRaw ? Number(radiusRaw) : null,
-      budget_band: ["low", "medium", "high"].includes(budgetRaw) ? budgetRaw : null,
-      dietary_preferences: String(formData.get("dietary_preferences") ?? "").trim() || null,
-      mobility_notes: String(formData.get("mobility_notes") ?? "").trim() || null,
-      drives: formData.get("drives") === "on",
-      uses_public_transport: formData.get("uses_public_transport") === "on",
-      interests: parseTagList(formData.get("interests")),
-      goals: parseTagList(formData.get("goals")),
-    })
+    .update({ ...submitted, location_lat: locationLat, location_lng: locationLng })
     .eq("user_id", user.id);
 
-  // Regenerate this week's plan immediately so a location (or any other
-  // preference) change is reflected right away, rather than waiting for
-  // Sunday's batch job.
+  // Build a fresh plan for the week only if something that decides what goes in it changed. Saving a new
+  // name, or saving without changing anything, leaves the week exactly as the member left it. Even when
+  // it does rebuild, outings they have already said yes to are kept (see generateAndSave.ts).
   const admin = createAdminClient();
-  const generated = await generateAndSaveItinerary(admin, user.id);
+  const rebuild = planInputsChanged(existing, submitted);
+  const generated = rebuild ? await generateAndSaveItinerary(admin, user.id) : { error: null };
 
   // A new location won't have any real candidates yet if the Discovery Agent
   // has never searched it — kick that off now instead of waiting for the
@@ -85,7 +87,7 @@ export async function updateProfileAction(formData: FormData) {
 
   revalidatePath("/account");
   revalidatePath("/week");
-  redirect(`/account?saved=1${generated.error ? `&planError=${encodeURIComponent(generated.error)}` : ""}`);
+  redirect(`/account?saved=1${rebuild ? "&planRebuilt=1" : ""}${generated.error ? `&planError=${encodeURIComponent(generated.error)}` : ""}`);
 }
 
 export async function deleteAccountAction() {

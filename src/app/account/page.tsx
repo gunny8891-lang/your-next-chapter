@@ -15,9 +15,9 @@ export const metadata = { title: "Account" };
 export default async function AccountPage({
   searchParams,
 }: {
-  searchParams: Promise<{ saved?: string; deleteError?: string; planError?: string; calendar?: string }>;
+  searchParams: Promise<{ saved?: string; deleteError?: string; planError?: string; planRebuilt?: string; calendar?: string }>;
 }) {
-  const { saved, deleteError, planError, calendar: calendarNotice } = await searchParams;
+  const { saved, deleteError, planError, planRebuilt, calendar: calendarNotice } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -50,6 +50,7 @@ export default async function AccountPage({
       subscription={subscription}
       isAdmin={userRow?.role === "admin"}
       saved={saved === "1"}
+      planRebuilt={planRebuilt === "1"}
       planError={planError}
       deleteError={deleteError}
       onSave={updateProfileAction}

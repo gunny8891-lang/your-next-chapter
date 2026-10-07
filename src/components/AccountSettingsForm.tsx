@@ -52,6 +52,7 @@ export function AccountSettingsForm({
   subscription,
   isAdmin,
   saved,
+  planRebuilt,
   planError,
   deleteError,
   onSave,
@@ -69,6 +70,8 @@ export function AccountSettingsForm({
   subscription: Subscription;
   isAdmin: boolean;
   saved: boolean;
+  /** True when saving also built a fresh plan for the week (only when something that shapes it changed). */
+  planRebuilt?: boolean;
   planError?: string;
   deleteError?: string;
   onSave: (formData: FormData) => Promise<void>;
@@ -135,7 +138,7 @@ export function AccountSettingsForm({
 
       {saved && !planError && (
         <div className={styles.notice}>
-          <Notice>Your details are saved and this week has been refreshed to match.</Notice>
+          <Notice>{planRebuilt ? "Your details are saved and we've built a fresh plan for this week. Outings you'd already said yes to are still there." : "Your details are saved."}</Notice>
         </div>
       )}
       {saved && planError && (

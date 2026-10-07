@@ -16,4 +16,4 @@ export const LOCATION_HINT_SETUP = "A town or a postcode is enough. There's no n
 
 /** In Account, where changing it has a consequence the member should know about. */
 export const LOCATION_HINT_ACCOUNT =
-  "A town or a postcode is enough: there's no need for your full address. We use it to find ideas near you. Changing it builds a fresh plan for this week.";
+  "A town or a postcode is enough: there's no need for your full address. We use it to find ideas near you. Changing it builds a fresh plan for this week; outings you've already said yes to stay.";
