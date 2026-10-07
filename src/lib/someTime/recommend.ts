@@ -5,7 +5,7 @@ import { callClaude } from "@/lib/ai/client";
 import { AI_MODELS } from "@/lib/ai/models";
 import { summarizeAffinity, type AffinityScores } from "@/lib/memory/scoring";
 import { fetchRankedOpportunities, type OpportunityCandidate } from "@/lib/opportunities/engine";
-import { foodKindOf, isFoodVenue } from "@/lib/opportunities/kinds";
+import { foodKindOf, isFoodVenue, isPerformanceVenue } from "@/lib/opportunities/kinds";
 import { humanReason } from "@/lib/someTime/copy";
 import { settingOf } from "@/lib/someTime/format";
 import { buildPlan, estimateCost, fallbackExperienceTitle, titleFitsPlan } from "@/lib/someTime/experience";
@@ -31,6 +31,7 @@ import {
   diversify,
   evaluateCandidate,
   findFoodStop,
+  moodFits,
   type Evaluated,
   type FoodStop,
   type MemberContext,
@@ -39,6 +40,7 @@ import {
 } from "@/lib/someTime/score";
 import type { FoodStopOption, TimeOption, TimeResult } from "@/lib/someTime/types";
 import { clockLabel, resolveWindow, type TimeWindow } from "@/lib/someTime/window";
+import type { Mood } from "@/lib/someTime/request";
 
 /** How many scored candidates the model sees. Enough for variety, small enough to keep the call cheap. */
 const SHORTLIST_SIZE = 8;
@@ -111,9 +113,11 @@ function toTimeOption(entry: ShortlistEntry, why: string, includeFood: boolean, 
   const c = e.candidate;
   const stop = includeFood ? foodStop : null;
   const plan = buildPlan(e, stop);
+  // A theatre or cinema with no show listed is a place to check, not a promised performance.
+  const checkWhatsOn = isPerformanceVenue(c) && e.eventStartMin === null;
   // The model's name for the outing, if it is honest about the plan; otherwise one built from the facts.
   const experienceTitle =
-    modelTitle && titleFitsPlan(modelTitle, stop !== null, isFoodVenue(c)) ? modelTitle : fallbackExperienceTitle(e, stop);
+    modelTitle && titleFitsPlan(modelTitle, stop !== null, isFoodVenue(c), checkWhatsOn) ? modelTitle : fallbackExperienceTitle(e, stop);
   return {
     id: c.id,
     title: c.title,
@@ -136,6 +140,7 @@ function toTimeOption(entry: ShortlistEntry, why: string, includeFood: boolean, 
     travelMinutes: e.travelMinutes,
     isFood: isFoodVenue(c),
     happeningToday: eventDate(c) !== null,
+    checkWhatsOn,
     foodStop: stop ? toFoodStopOption(stop) : null,
     // A calm stand-in by kind of activity; a real photograph replaces it afterwards (see attachImages).
     image: fallbackImageFor(c.tags),
@@ -154,8 +159,12 @@ export async function buildRecommendations(inputs: RecommendInputs): Promise<{ o
   const request = requestWithDailyState(inputs.request, dailyState);
   const scoring: ScoringInput = { window, request, member, affinity, history, pleasantWeather: inputs.pleasantWeather, daylight: inputs.daylight, dailyState };
 
+  // A mood they CHOSE for this request is a requirement, not a nudge: an idea that does not fit it is left out. (A
+  // mood that only comes from how they said they feel today stays a gentle preference, so Today is never left bare.)
+  const chosenMood = inputs.request.mood;
   const foodVenues = inputs.candidates.filter(isFoodVenue);
   const evaluated = primaryPool(inputs.candidates, request, window)
+    .filter((c) => moodFits(chosenMood, c))
     .map((c) => evaluateCandidate(c, scoring))
     .filter((e): e is Evaluated => e !== null);
 
@@ -167,9 +176,11 @@ export async function buildRecommendations(inputs: RecommendInputs): Promise<{ o
   if (shortlist.length === 0) {
     return {
       options: [],
-      notice: "Nothing nearby fits that stretch of time right now. Try a little longer, or a different mood.",
+      notice: moodNotice(chosenMood, 0) ?? "Nothing nearby fits that stretch of time right now. Try a little longer, or a different mood.",
     };
   }
+  // With a chosen mood and fewer ideas than usual, say so plainly rather than let it look like a mistake.
+  const notice = moodNotice(chosenMood, shortlist.length);
 
   const byId = new Map(shortlist.map((s) => [s.evaluated.candidate.id, s]));
   const idsWithFood = new Set(shortlist.filter((s) => s.foodStop).map((s) => s.evaluated.candidate.id));
@@ -194,7 +205,7 @@ export async function buildRecommendations(inputs: RecommendInputs): Promise<{ o
     const reply = await inputs.ask(SYSTEM_PROMPT, buildUserPrompt(promptContext, shortlist));
     const choices = parseChoices(reply, new Set(byId.keys()), idsWithFood);
     if (choices.length > 0) {
-      return { options: choices.map((ch) => toTimeOption(byId.get(ch.id)!, ch.why, ch.withFood, ch.title)), notice: null };
+      return { options: choices.map((ch) => toTimeOption(byId.get(ch.id)!, ch.why, ch.withFood, ch.title)), notice };
     }
     console.warn("some_time: the model's reply had no usable options; using the scored fallback");
   } catch (err) {
@@ -206,7 +217,19 @@ export async function buildRecommendations(inputs: RecommendInputs): Promise<{ o
   const options = shortlist
     .slice(0, MAX_OPTIONS)
     .map((s) => toTimeOption(s, fallbackWhy(s.evaluated), s.foodStop !== null && window.availableMinutes >= 90));
-  return { options, notice: null };
+  return { options, notice };
+}
+
+const MOOD_WORD: Partial<Record<Mood, string>> = { outdoors: "outdoors", active: "active", social: "sociable", culture: "cultural", relaxed: "relaxed", food: "food" };
+
+/** The honest line for a chosen mood that little nearby fits; null when there is plenty, or no mood was chosen. */
+export function moodNotice(mood: Mood | null, fitting: number): string | null {
+  const word = mood ? MOOD_WORD[mood] : undefined;
+  if (!word) return null;
+  const a = /^[aeiou]/i.test(word) ? "an" : "a";
+  if (fitting === 0) return `Nothing nearby suits ${a} ${word} mood just now. Try "Surprise me", or a different mood.`;
+  if (fitting < MAX_OPTIONS) return `That's everything nearby that suits ${a} ${word} mood right now. "Surprise me" will show more.`;
+  return null;
 }
 
 // ---------------------------------------------------------------------------

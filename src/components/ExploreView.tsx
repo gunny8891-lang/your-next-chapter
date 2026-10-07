@@ -166,6 +166,8 @@ export function ExploreView({
             />
           ))}
 
+          {result && result.options.length > 0 && result.notice && <p className={styles.notice}>{result.notice}</p>}
+
           {result && result.options.length > 0 && mood && (
             <Button variant="secondary" onClick={() => find(mood, shown)} disabled={isPending}>
               Show me different ideas

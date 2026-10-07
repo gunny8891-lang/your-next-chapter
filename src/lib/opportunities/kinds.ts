@@ -21,6 +21,17 @@ export function foodKindOf(tags: string[]): FoodKind | null {
   return null;
 }
 
+/**
+ * Theatres and cinemas are listed as places, not as shows: nothing in the catalogue says what is on there tonight.
+ * Describing a visit as "an evening of theatre" would promise a performance we cannot see, so for these the member
+ * is told to check what is on (unless the entry is itself a dated event).
+ */
+export const PERFORMANCE_VENUE_TAGS = ["theatre", "cinema"];
+
+export function isPerformanceVenue(a: { tags: string[] }): boolean {
+  return a.tags.some((t) => PERFORMANCE_VENUE_TAGS.includes(t));
+}
+
 export type FoodVenueMode = "exclude" | "include" | "only";
 
 /** Pure: applies a caller's choice about food and drink places to a candidate list. */

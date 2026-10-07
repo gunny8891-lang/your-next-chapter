@@ -272,7 +272,7 @@ export function TimeSheet({ initial, commitment, suggestedMood, nowMin, onFind, 
             <Clock size={14} aria-hidden="true" /> {result.windowLabel}
           </p>
         )}
-        {result && result.notice && result.options.length === 0 && <p>{result.notice}</p>}
+        {result && result.notice && <p>{result.notice}</p>}
 
         {result?.options.map((option) => (
           <ExperienceCard

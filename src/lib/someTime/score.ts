@@ -172,6 +172,19 @@ export function moodBonus(mood: Mood | null, c: Pick<OpportunityCandidate, "cate
   }
 }
 
+/**
+ * The smallest mood bonus that counts as "this is what they asked for". A mood is only a small nudge to the score, so
+ * where little nearby fits it, anything else can fill the gaps (a leisure centre for "culture"). When a member has CHOSEN a
+ * mood, an idea that does not fit it is left out instead, and we say honestly that there is less to show.
+ */
+const MOOD_FIT_MIN: Partial<Record<Mood, number>> = { outdoors: 3, active: 3, social: 1.5, culture: 3, relaxed: 2, food: 4 };
+
+export function moodFits(mood: Mood | null, c: Pick<OpportunityCandidate, "category" | "tags"> & { title?: string }): boolean {
+  if (!mood) return true;
+  const min = MOOD_FIT_MIN[mood];
+  return min === undefined || moodBonus(mood, c) >= min;
+}
+
 function whoBonus(who: TimeRequest["who"], c: Pick<OpportunityCandidate, "tags">): number {
   const has = (...tags: string[]) => tags.some((t) => c.tags.includes(t));
   if (who === "partner") return has("theatre", "cinema", "gardens", "museum", "restaurant", "afternoon-tea", "cafe") ? 1 : 0;

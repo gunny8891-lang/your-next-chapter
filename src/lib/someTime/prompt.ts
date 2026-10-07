@@ -1,4 +1,4 @@
-import { foodKindOf } from "@/lib/opportunities/kinds";
+import { foodKindOf, isPerformanceVenue } from "@/lib/opportunities/kinds";
 import { humanReason } from "@/lib/someTime/copy";
 import { cleanTitle } from "@/lib/someTime/experience";
 import { MOOD_LABEL, type TimeRequest } from "@/lib/someTime/request";
@@ -65,6 +65,8 @@ How to write each "why": one or two warm sentences (under 45 words) in the secon
 using the supplied reasons, profile and context, and mention one practical detail (for example when it closes, or that \
 it is a short walk). Do not state anything about a place that is not in its line below.
 
+Venues: a candidate marked "a venue only" is a theatre or cinema building. Nothing says anything is on there today. Never describe a show, a film, a performance or "a night out" there as if one exists, and never call the outing "an evening of theatre" or similar. Say it is worth checking what's on before going.
+
 Food: a candidate may list "then nearby" — a café, pub, restaurant or tea room close by that fits the time of day. Set \
 "with_food" to true only for a candidate that lists one AND where finishing there makes sense for the time and mood; \
 otherwise false. Never set it true without a "then nearby" entry.
@@ -81,10 +83,11 @@ function candidateLine({ evaluated: e, foodStop }: ShortlistEntry): string {
     const open = foodStop.openUntil != null ? `, open until ${clockLabel(foodStop.openUntil)}` : "";
     food = ` | then nearby: ${foodStop.candidate.title} (${kind ? KIND_LABEL[kind] : "food"}, ${foodStop.distanceMeters} m away, ${foodStop.meal}${open})`;
   }
+  const venueOnly = isPerformanceVenue(c) && e.eventStartMin === null ? " | NOTE: a venue only: no show or film is listed for it" : "";
   return (
     `- id=${c.id} | ${c.title} | ${c.category} | ${e.facts.join(", ")} | ` +
     `leave ${clockLabel(e.leaveMin)}, arrive ${clockLabel(e.arriveMin)}, home about ${clockLabel(e.homeMin)} | ` +
-    `tags=[${c.tags.filter((t) => t !== "food-venue").slice(0, 6).join(", ")}]${description}${scored}${food}`
+    `tags=[${c.tags.filter((t) => t !== "food-venue").slice(0, 6).join(", ")}]${description}${scored}${food}${venueOnly}`
   );
 }
 

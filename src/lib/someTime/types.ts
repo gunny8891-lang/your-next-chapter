@@ -63,6 +63,8 @@ export type TimeOption = {
   isFood: boolean;
   /** A one-off event actually on today, as opposed to a place or an ongoing thing. */
   happeningToday: boolean;
+  /** A theatre or cinema with no show listed: the card says to check what is on before going. */
+  checkWhatsOn: boolean;
   foodStop: FoodStopOption | null;
   /** Roughly what it costs per person, from what we know; null when we know nothing about price. */
   estimatedCost: number | null;

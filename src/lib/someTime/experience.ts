@@ -1,5 +1,5 @@
 import type { CategoryName } from "@/lib/categories";
-import { foodKindOf, isFoodVenue } from "@/lib/opportunities/kinds";
+import { foodKindOf, isFoodVenue, isPerformanceVenue } from "@/lib/opportunities/kinds";
 import { friendlyDuration, placeLabel } from "@/lib/someTime/format";
 import { typicalSpend } from "@/lib/someTime/food";
 import type { Evaluated, FoodStop } from "@/lib/someTime/score";
@@ -57,6 +57,8 @@ export function activityNoun(tags: string[], category: string, title: string): s
 export function fallbackExperienceTitle(main: Evaluated, food: FoodStop | null): string {
   const c = main.candidate;
   if (main.eventStartMin !== null) return c.title;
+  // A theatre or cinema with nothing listed: do not promise a performance, point at the place.
+  if (isPerformanceVenue(c)) return `See what's on at ${c.title}${food ? `, then ${food.meal}` : ""}`;
 
   const noun = activityNoun(c.tags, c.category, c.title);
   const then = food ? `, then ${food.meal}` : "";
@@ -78,6 +80,8 @@ export function cleanTitle(raw: unknown): string | null {
   return title;
 }
 
+const PERFORMANCE_WORDS = /\b(shows?|performances?|concerts?|screenings?|gigs?|matinees?|productions?|films?|plays?)\b|\b(evening|night|afternoon|day) (of|at the) (theatre|cinema|film|music|comedy|drama)\b|\bnight out\b|\btrip to the (theatre|cinema)\b/i;
+
 const MEAL_WORDS = /\b(lunch|dinner|breakfast|brunch|coffee|tea|pub|caf[eé]|drinks?|meal|supper|bite)\b/i;
 
 /**
@@ -85,7 +89,9 @@ const MEAL_WORDS = /\b(lunch|dinner|breakfast|brunch|coffee|tea|pub|caf[eé]|dri
  * drink if the plan actually includes one (the model is told so, but a promise is
  * worth checking).
  */
-export function titleFitsPlan(title: string, planIncludesFood: boolean, mainIsFood: boolean): boolean {
+export function titleFitsPlan(title: string, planIncludesFood: boolean, mainIsFood: boolean, noListing = false): boolean {
+  // A theatre or cinema with no show listed: a title must not describe a performance, a film or a night out.
+  if (noListing && PERFORMANCE_WORDS.test(title)) return false;
   if (planIncludesFood || mainIsFood) return true;
   return !MEAL_WORDS.test(title);
 }

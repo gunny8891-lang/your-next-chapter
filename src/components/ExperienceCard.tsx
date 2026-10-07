@@ -100,6 +100,19 @@ export function ExperienceCard({ option, reason, variant, surface, who, state, e
         <h3 className={styles.title}>{option.experienceTitle}</h3>
         {meta.length > 0 && <p className={styles.meta}>{meta.join(" · ")}</p>}
         <p className={styles.reason}>{reason}</p>
+        {option.checkWhatsOn && (
+          <p className={styles.checkNote}>
+            Check what&apos;s on before you go.
+            {option.bookingUrl && (
+              <>
+                {" "}
+                <a href={option.bookingUrl} target="_blank" rel="noopener noreferrer">
+                  Their website
+                </a>
+              </>
+            )}
+          </p>
+        )}
 
         <button
           type="button"
