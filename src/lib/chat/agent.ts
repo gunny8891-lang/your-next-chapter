@@ -7,6 +7,7 @@ import { callClaude } from "@/lib/ai/client";
 import { AI_MODELS } from "@/lib/ai/models";
 import { careGuidance, type CareAssessment } from "@/lib/chat/care";
 import { PLAIN_WORDS_RULE } from "@/lib/ai/plainWords";
+import { loadRecentIdeas, recentIdeasText, type RecentIdea } from "@/lib/chat/recentIdeas";
 
 const MODEL = AI_MODELS.smart;
 const MAX_CANDIDATES_SENT_TO_LLM = 30;
@@ -42,7 +43,8 @@ function buildSystemPrompt(
   weekItems: ThisWeekItemRow[],
   candidateList: OpportunityCandidate[],
   affinitySummary: string,
-  care: CareAssessment = { level: "none", topics: [] }
+  care: CareAssessment = { level: "none", topics: [] },
+  recentIdeas: RecentIdea[] = []
 ) {
   const weekItemsText = weekItems.length
     ? weekItems
@@ -84,8 +86,11 @@ ${weekItemsText}
 OTHER CANDIDATE ACTIVITIES NEARBY (not yet scheduled — use this for "find me something" questions):
 ${candidatesText || "No other active candidate activities available right now."}
 
+IDEAS THEY HAVE RECENTLY SEEN OR SAVED ON TODAY AND EXPLORE (real places the app itself suggested; they may ask about these, so you may talk about them, but you only know what is on each line):
+${recentIdeasText(recentIdeas)}
+
 Hard rules:
-- Only ever mention a specific activity, date, time, or location if it appears verbatim in one of the two lists above. Never invent an activity, venue, or time.
+- Only ever mention a specific activity, date, time, or location if it appears verbatim in one of the lists above. Never invent an activity, venue, or time.
 - If nothing in the lists answers the question, say so plainly and suggest checking back later — do not make something up.
 - This app does not yet have social/companion-matching data (e.g. "who else is free"). If asked something like that, say honestly that you can't see other members' availability yet, and offer to help find an activity instead.
 - Keep it short. This audience wants a clear, direct answer, not an essay.
@@ -140,7 +145,8 @@ export async function answerChatQuestion(
     weekItems,
     candidateActivities,
     summarizeAffinity(affinity),
-    care
+    care,
+    await loadRecentIdeas(supabase, memberId, scheduledActivityIds)
   );
 
   const client = new Anthropic({ apiKey });
