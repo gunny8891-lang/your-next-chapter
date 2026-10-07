@@ -9,6 +9,7 @@ import { generateAndSaveItinerary } from "@/lib/itinerary/generateAndSave";
 import { triggerDiscoveryForRegion } from "@/lib/discovery/regional";
 import { cleanFirstName } from "@/lib/someTime/format";
 import type { OnboardingAnswers } from "@/components/OnboardingFlow";
+import { budgetBandFor, mobilityNoteFor } from "@/lib/onboarding/choices";
 
 const RADIUS_KM: Record<string, number> = {
   "Walking distance only": 1,
@@ -50,6 +51,9 @@ export async function saveOnboardingAction(submitted: OnboardingAnswers) {
       location_lat: geocoded?.lat ?? null,
       location_lng: geocoded?.lng ?? null,
       travel_radius_km: answers.radius ? RADIUS_KM[answers.radius] ?? null : null,
+      // What would make an outing unsuitable or unaffordable, asked now so the very first plan already respects it.
+      mobility_notes: mobilityNoteFor(answers.mobility),
+      budget_band: budgetBandFor(answers.budget),
       personality: answers.personality ? { free_time_pref: answers.personality } : {},
       goals: goalTag ? [goalTag] : [],
       onboarding_transcript: answers,

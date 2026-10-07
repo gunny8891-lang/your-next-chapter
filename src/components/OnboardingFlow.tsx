@@ -5,11 +5,13 @@ import { Check, ChevronLeft } from "lucide-react";
 import { Button, Chip, Field } from "@/components/ui";
 import { Wordmark } from "@/components/Wordmark";
 import { LOCATION_HINT_SETUP, LOCATION_LABEL, LOCATION_PLACEHOLDER } from "@/lib/geo/locationCopy";
+import { BUDGET_CHOICES, BUDGET_HEADING, BUDGET_INTRO, MOBILITY_CHOICES, MOBILITY_HEADING, MOBILITY_INTRO } from "@/lib/onboarding/choices";
 import styles from "@/components/Onboarding.module.css";
 
 /**
- * Five short questions, one at a time. The option wording is stored and mapped by
- * saveOnboardingAction (radius, goal), so change it there too if it changes here.
+ * Seven short questions, one at a time. The option wording is stored and mapped by
+ * saveOnboardingAction (radius, goal); the getting-around and budget questions take
+ * their wording and meaning from lib/onboarding/choices.ts, shared with the save.
  */
 const STEPS = [
   {
@@ -40,6 +42,20 @@ const STEPS = [
     type: "options" as const,
     heading: "How far are you happy to go for a good outing?",
     options: ["Walking distance only", "Up to 3 miles", "Up to 10 miles", "I'm happy to travel further"],
+  },
+  {
+    field: "mobility",
+    type: "options" as const,
+    heading: MOBILITY_HEADING,
+    intro: MOBILITY_INTRO,
+    options: MOBILITY_CHOICES.map((c) => c.label),
+  },
+  {
+    field: "budget",
+    type: "options" as const,
+    heading: BUDGET_HEADING,
+    intro: BUDGET_INTRO,
+    options: BUDGET_CHOICES.map((c) => c.label),
   },
   {
     field: "personality",
