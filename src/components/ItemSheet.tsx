@@ -62,6 +62,57 @@ function CalendarControl({ offer }: { offer: CalendarOffer }) {
   );
 }
 
+/**
+ * The choices once someone has said yes and then can't, or doesn't want to, go: the same two
+ * ways out they were offered the first time. Kept apart from the button that reveals it so it
+ * can be shown (and tested) on its own.
+ */
+export function ChangeMindOptions({
+  onAction,
+  onKeep,
+  onCalendar,
+}: {
+  onAction: (action: "swapped" | "skipped") => void;
+  onKeep: () => void;
+  /** True when this outing is on their Google Calendar, which the change will also clear. */
+  onCalendar: boolean;
+}) {
+  return (
+    <div className={`${styles.actions} ync-appear`}>
+      <p className={styles.hint}>
+        No problem. What would you like to do instead?
+        {onCalendar && " It will come off your Google Calendar too."}
+      </p>
+      <div className={styles.secondary}>
+        <Button variant="secondary" onClick={() => onAction("swapped")}>
+          <RefreshCw size={16} aria-hidden="true" /> Something else
+        </Button>
+        <Button variant="quiet" onClick={() => onAction("skipped")}>
+          Not this time
+        </Button>
+        <Button variant="quiet" onClick={onKeep}>
+          Keep it
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/** A quiet way back from "Going": one tap to reveal the choices, so it cannot happen by accident. */
+function ChangeMyMind({ onAction, onCalendar }: { onAction: (action: "swapped" | "skipped") => void; onCalendar: boolean }) {
+  const [open, setOpen] = useState(false);
+  if (!open) {
+    return (
+      <div className={styles.actions}>
+        <Button variant="quiet" onClick={() => setOpen(true)}>
+          Change my mind
+        </Button>
+      </div>
+    );
+  }
+  return <ChangeMindOptions onAction={onAction} onKeep={() => setOpen(false)} onCalendar={onCalendar} />;
+}
+
 /** One planned thing, opened from the week: what it is, why it was chosen, and what to do about it. */
 export function ItemSheet({
   item,
@@ -121,6 +172,7 @@ export function ItemSheet({
             <p className={styles.hint}>You&apos;re going. There&apos;s no booking link for this one yet.</p>
           )}
           {calendar && <CalendarControl offer={calendar} />}
+          <ChangeMyMind onAction={onAction} onCalendar={Boolean(calendar?.added)} />
           </>
         ) : (
           <div className={styles.actions}>
