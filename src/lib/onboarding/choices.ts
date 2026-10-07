@@ -9,7 +9,9 @@
  */
 
 export type MobilityChoice = { label: string; note: string | null };
-export type BudgetChoice = { label: string; band: "low" | "medium" | "high" | null };
+/** "any" is "don't worry too much about cost": an answer, which is different from never having been asked (null). */
+export type BudgetBand = "low" | "medium" | "high" | "any";
+export type BudgetChoice = { label: string; band: BudgetBand };
 
 export const MOBILITY_HEADING = "Is there anything we should know about getting around?";
 export const MOBILITY_INTRO = "Optional. It only helps us avoid ideas that wouldn't suit you. Choose the closest, or the first if none apply.";
@@ -21,14 +23,14 @@ export const MOBILITY_CHOICES: MobilityChoice[] = [
   { label: "I use a stick, frame or wheelchair", note: "Uses a walking aid or wheelchair" },
 ];
 
-export const BUDGET_HEADING = "What feels like a comfortable budget for an outing?";
-export const BUDGET_INTRO = "Just a guide. You can change it any time in Account.";
+export const BUDGET_HEADING = "When you're looking for something to do, what usually feels comfortable?";
+export const BUDGET_INTRO = "Just a guide, never a limit: you can always choose differently for a particular day, and change this any time in Account.";
 
 export const BUDGET_CHOICES: BudgetChoice[] = [
-  { label: "Keep costs low", band: "low" },
-  { label: "A moderate budget", band: "medium" },
-  { label: "Happy to spend more", band: "high" },
-  { label: "No preference", band: null },
+  { label: "Mostly free or inexpensive", band: "low" },
+  { label: "Happy to spend a little", band: "medium" },
+  { label: "Happy to spend for something worthwhile", band: "high" },
+  { label: "Don't worry too much about cost", band: "any" },
 ];
 
 /** What to keep in the profile's mobility notes for an answer; null for "fine", for an answer we do not recognise, or for none. */
@@ -36,7 +38,7 @@ export function mobilityNoteFor(label: string | undefined): string | null {
   return MOBILITY_CHOICES.find((c) => c.label === label)?.note ?? null;
 }
 
-/** The budget band for an answer; null for "no preference", an unrecognised answer, or none. */
-export function budgetBandFor(label: string | undefined): "low" | "medium" | "high" | null {
+/** The budget band for an answer; null for an unrecognised answer, or none. */
+export function budgetBandFor(label: string | undefined): BudgetBand | null {
   return BUDGET_CHOICES.find((c) => c.label === label)?.band ?? null;
 }

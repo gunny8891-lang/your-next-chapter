@@ -56,7 +56,7 @@ export async function updateProfileAction(formData: FormData) {
   const submitted = {
     location_text: newLocationText,
     travel_radius_km: radiusRaw ? Number(radiusRaw) : null,
-    budget_band: ["low", "medium", "high"].includes(budgetRaw) ? budgetRaw : null,
+    budget_band: ["low", "medium", "high", "any"].includes(budgetRaw) ? budgetRaw : null,
     dietary_preferences: String(formData.get("dietary_preferences") ?? "").trim() || null,
     mobility_notes: String(formData.get("mobility_notes") ?? "").trim() || null,
     drives: formData.get("drives") === "on",

@@ -7,6 +7,7 @@ import { Button, Card, CheckboxField, ErrorNote, Field, Notice, Page, PageHeader
 import { AdminLinks } from "@/components/AdminLinks";
 import { logout } from "@/app/auth/actions";
 import { LOCATION_HINT_ACCOUNT, LOCATION_LABEL, LOCATION_PLACEHOLDER } from "@/lib/geo/locationCopy";
+import { BUDGET_CHOICES } from "@/lib/onboarding/choices";
 import styles from "@/components/Account.module.css";
 
 type Profile = {
@@ -38,11 +39,8 @@ export function unofferedRadiusLabel(km: number | null): string {
   return `About ${miles} ${miles === 1 ? "mile" : "miles"}`;
 }
 
-const BUDGET_OPTIONS = [
-  { value: "low", label: "Keep costs low" },
-  { value: "medium", label: "A moderate budget" },
-  { value: "high", label: "Happy to spend more" },
-];
+/** The same wording and values as the set-up question, so the two cannot drift apart. */
+const BUDGET_OPTIONS = BUDGET_CHOICES.map((c) => ({ value: c.band, label: c.label }));
 
 /** The reasons onboarding offers, stored as tags. Any other tag already on a profile is kept as it is. */
 const GOAL_OPTIONS = [
@@ -218,8 +216,8 @@ export function AccountSettingsForm({
               {/* What is saved: the ticked reasons, and any other tag already on the profile (it stays in the list). */}
               <input type="hidden" name="goals" value={goals.join(", ")} />
             </fieldset>
-            <SelectField label="Budget" name="budget_band" defaultValue={profile.budget_band ?? ""}>
-              <option value="">No preference</option>
+            <SelectField label="What usually feels comfortable to spend?" name="budget_band" defaultValue={profile.budget_band ?? ""}>
+              <option value="">Not set</option>
               {BUDGET_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}

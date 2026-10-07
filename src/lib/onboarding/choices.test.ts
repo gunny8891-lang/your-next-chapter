@@ -29,20 +29,22 @@ describe("what each answer about getting around means", () => {
 
 describe("what each budget answer means", () => {
   it("maps to the same bands the Account page uses", () => {
-    expect(budgetBandFor("Keep costs low")).toBe("low");
-    expect(budgetBandFor("A moderate budget")).toBe("medium");
-    expect(budgetBandFor("Happy to spend more")).toBe("high");
-    expect(budgetBandFor("No preference")).toBeNull();
+    expect(budgetBandFor("Mostly free or inexpensive")).toBe("low");
+    expect(budgetBandFor("Happy to spend a little")).toBe("medium");
+    expect(budgetBandFor("Happy to spend for something worthwhile")).toBe("high");
+    expect(budgetBandFor("Don't worry too much about cost")).toBe("any");
     expect(budgetBandFor("nonsense")).toBeNull();
     expect(budgetBandFor(undefined)).toBeNull();
   });
 
-  it("uses exactly the wording and values of the Account page's budget choices", () => {
+  it("uses exactly the wording and values of the Account page's budget choices, by sharing them", () => {
     const account = read("src/components/AccountSettingsForm.tsx");
-    for (const choice of BUDGET_CHOICES.filter((c) => c.band)) {
-      expect(account, choice.label).toContain(`{ value: "${choice.band}", label: "${choice.label}" }`);
-    }
-    expect(account).toContain("No preference");
+    expect(account).toContain("BUDGET_CHOICES.map((c) => ({ value: c.band, label: c.label }))");
+    expect(read("src/app/account/actions.ts")).toContain('["low", "medium", "high", "any"].includes(budgetRaw)');
+  });
+
+  it("is one of the four answers the brief asks for, 'don't worry about cost' being an answer in its own right", () => {
+    expect(BUDGET_CHOICES.map((c) => c.band)).toEqual(["low", "medium", "high", "any"]);
   });
 });
 
@@ -75,7 +77,7 @@ describe("the set-up asks them, at the right point", () => {
     expect(MOBILITY_HEADING).toBe("Is there anything we should know about getting around?");
     expect(MOBILITY_INTRO).toMatch(/Optional/);
     expect(MOBILITY_INTRO).toMatch(/avoid ideas that wouldn't suit you/);
-    expect(BUDGET_HEADING).toMatch(/comfortable budget/);
+    expect(BUDGET_HEADING).toBe("When you're looking for something to do, what usually feels comfortable?");
   });
 
   it("saves both answers with the profile, so the very first plan already respects them", () => {
