@@ -104,7 +104,7 @@ export async function fetchRankedOpportunities(
   let query = supabase
     .from("activities")
     .select(
-      "id, title, description, category, address, price_estimate, tags, rating, accessibility_notes, location_lat, location_lng, booking_url, date_time, expires_at, recurrence_rule, duration_minutes"
+      "id, title, description, category, address, price_estimate, tags, rating, accessibility_notes, location_lat, location_lng, booking_url, date_time, expires_at, recurrence_rule, duration_minutes, price_min, price_max, price_type, cost_confidence, booking_required, dog_access, dog_restrictions, dog_confidence, dog_source"
     )
     .eq("status", "active");
   if (options.category) query = query.eq("category", options.category);
