@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { Check, ChevronLeft } from "lucide-react";
 import { Button, Chip, Field } from "@/components/ui";
 import { Wordmark } from "@/components/Wordmark";
+import { LOCATION_HINT_SETUP, LOCATION_LABEL, LOCATION_PLACEHOLDER } from "@/lib/geo/locationCopy";
 import styles from "@/components/Onboarding.module.css";
 
 /**
@@ -27,9 +28,9 @@ const STEPS = [
     field: "location",
     type: "text" as const,
     heading: "Where should we look for things to do?",
-    label: "Your town or area",
-    hint: "",
-    placeholder: "e.g. Bath, Somerset",
+    label: LOCATION_LABEL,
+    hint: LOCATION_HINT_SETUP,
+    placeholder: LOCATION_PLACEHOLDER,
     autoComplete: "address-level2",
     optional: false,
     suggestions: ["Richmond, London", "York", "Bristol"],

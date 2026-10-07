@@ -6,6 +6,7 @@ import { CalendarCheck } from "lucide-react";
 import { Button, Card, CheckboxField, ErrorNote, Field, Notice, Page, PageHeader, SectionTitle, SelectField, TextareaField } from "@/components/ui";
 import { AdminLinks } from "@/components/AdminLinks";
 import { logout } from "@/app/auth/actions";
+import { LOCATION_HINT_ACCOUNT, LOCATION_LABEL, LOCATION_PLACEHOLDER } from "@/lib/geo/locationCopy";
 import styles from "@/components/Account.module.css";
 
 type Profile = {
@@ -158,11 +159,12 @@ export function AccountSettingsForm({
           <fieldset className={styles.group}>
             <legend className={styles.legend}>Where and how far</legend>
             <Field
-              label="Where should we look?"
+              label={LOCATION_LABEL}
               name="location_text"
               defaultValue={profile.location_text ?? ""}
-              placeholder="e.g. Bath, Somerset"
-              hint="Changing this changes where your ideas are chosen from."
+              placeholder={LOCATION_PLACEHOLDER}
+              hint={LOCATION_HINT_ACCOUNT}
+              autoComplete="address-level2"
             />
             <SelectField label="How far are you happy to go?" name="travel_radius_km" defaultValue={radiusKm ?? ""}>
               {radiusKm === null && <option value="">Not set</option>}
