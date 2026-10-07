@@ -95,6 +95,12 @@ describe("tokens: CSS and TypeScript agree", () => {
 
   it("sets readable body text", () => {
     expect(css).toMatch(/--text-body:\s*17px/);
-    expect(css).toMatch(/--text-small:\s*15px/);
+    expect(css).toMatch(/--text-small:\s*16px/);
+  });
+
+  it("keeps even the smallest label at 14px or more, for older eyes", () => {
+    const label = css.match(/--text-label:\s*(\d+)px/);
+    expect(label).not.toBeNull();
+    expect(Number(label![1])).toBeGreaterThanOrEqual(14);
   });
 });

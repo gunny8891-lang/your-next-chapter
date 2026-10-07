@@ -46,8 +46,8 @@
 
   /* type */
   --text-body: 17px;
-  --text-small: 15px;
-  --text-label: 13px;
+  --text-small: 16px;
+  --text-label: 14px;
 
   /* motion */
   --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);

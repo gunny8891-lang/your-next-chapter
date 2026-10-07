@@ -31,6 +31,13 @@ const RADIUS_OPTIONS = [
   { km: 40, label: "I'm happy to travel further" },
 ];
 
+/** A distance that is not one of the offered ones (set another way) shown in miles, as everything else here is. */
+export function unofferedRadiusLabel(km: number | null): string {
+  if (km === null) return "Not set";
+  const miles = Math.max(1, Math.round(km / 1.609));
+  return `About ${miles} ${miles === 1 ? "mile" : "miles"}`;
+}
+
 const BUDGET_OPTIONS = [
   { value: "low", label: "Keep costs low" },
   { value: "medium", label: "A moderate budget" },
@@ -176,7 +183,7 @@ export function AccountSettingsForm({
                   {o.label}
                 </option>
               ))}
-              {!radiusIsOffered && <option value={radiusKm ?? ""}>About {radiusKm} km</option>}
+              {!radiusIsOffered && <option value={radiusKm ?? ""}>{unofferedRadiusLabel(radiusKm)}</option>}
             </SelectField>
             <fieldset className={styles.checks}>
               <legend className={styles.checksLegend}>How you usually get about</legend>
@@ -238,7 +245,7 @@ export function AccountSettingsForm({
         <p className={styles.plain}>
           {subscription
             ? `${subscription.plan} plan, ${subscription.status}${subscription.renewal_date ? `, renews ${subscription.renewal_date}` : ""}.`
-            : "You haven't subscribed."}
+            : "Lark Hour is free while we're testing it."}
         </p>
       </section>
 
