@@ -11,6 +11,7 @@ import { getSwapAlternativesAction, applySwapAction } from "@/app/week/swapActio
 import { DEMO_ITEMS, DEMO_SURPRISE } from "@/lib/demoData";
 import { formatCost, formatTime, LOCATION_UNKNOWN } from "@/lib/itinerary/format";
 import { weekLabel } from "@/lib/email/weekLabel";
+import { buildItemDetails } from "@/lib/itinerary/details";
 import { addDays, londonWeekStart, weekToShow } from "@/lib/opportunities/schedule";
 import { computeBehavioralRationale, formatBehavioralRationale, getRecentWindowStartIso } from "@/lib/memory/rationale";
 import type { CategoryName } from "@/lib/categories";
@@ -25,6 +26,12 @@ type ActivityRow = {
   price_estimate: number | null;
   booking_url: string | null;
   tags: string[];
+  description: string | null;
+  recurrence_rule: string | null;
+  duration_minutes: number | null;
+  location_lat: number | null;
+  location_lng: number | null;
+  accessibility_notes: string | null;
 };
 
 export const metadata = { title: "My week" };
@@ -38,7 +45,7 @@ export default async function WeekPage() {
 
   const { data: profile } = await supabase
     .from("member_profiles")
-    .select("location_text")
+    .select("location_text, location_lat, location_lng, drives, uses_public_transport, mobility_notes")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -54,7 +61,7 @@ export default async function WeekPage() {
   const { data: plans } = await supabase
     .from("itineraries")
     .select(
-      "id, week_start_date, itinerary_items(id, day_of_week, slot, member_action, rationale_text, activities(id, title, category, address, date_time, price_estimate, booking_url, tags))"
+      "id, week_start_date, itinerary_items(id, day_of_week, slot, member_action, rationale_text, activities(id, title, category, address, date_time, price_estimate, booking_url, tags, description, recurrence_rule, duration_minutes, location_lat, location_lng, accessibility_notes))"
     )
     .eq("member_id", user.id)
     .in("week_start_date", [thisWeek, addDays(thisWeek, 7)]);
@@ -104,6 +111,19 @@ export default async function WeekPage() {
           status: row.member_action as ItineraryItemView["status"],
           bookingUrl: activity.booking_url,
           behaviorNote: rationale ? formatBehavioralRationale(rationale) : null,
+          details: buildItemDetails({
+            title: activity.title,
+            description: activity.description,
+            recurrenceRule: activity.recurrence_rule,
+            durationMinutes: activity.duration_minutes,
+            bookingUrl: activity.booking_url,
+            accessibilityNotes: activity.accessibility_notes,
+            day: row.day_of_week,
+            lat: activity.location_lat,
+            lng: activity.location_lng,
+            home: { lat: profile.location_lat, lng: profile.location_lng },
+            travel: { drives: profile.drives, uses_public_transport: profile.uses_public_transport, mobility_notes: profile.mobility_notes },
+          }),
         };
       }) ?? [];
 

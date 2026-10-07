@@ -39,6 +39,17 @@
   color: var(--color-sage);
 }
 
+.about {
+  line-height: 1.55;
+  color: var(--color-ink);
+}
+
+.detailLink {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .why {
   display: grid;
   gap: var(--space-2);

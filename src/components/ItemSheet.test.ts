@@ -37,9 +37,9 @@ describe("changing your mind after saying yes", () => {
 
   it("is offered on a going outing, and only there", () => {
     // Inside the branch for status === "accepted"; the not-yet-accepted branch has its own buttons.
-    const accepted = source.slice(source.indexOf('status === "accepted" ?'), source.indexOf("Yes, I&apos;ll go"));
+    const accepted = source.slice(source.indexOf('status === "accepted" ?'), source.indexOf("Yes, I'll go"));
     expect(accepted).toContain("<ChangeMyMind");
-    const rest = source.slice(source.indexOf("Yes, I&apos;ll go"));
+    const rest = source.slice(source.indexOf("Yes, I'll go"));
     expect(rest).not.toContain("<ChangeMyMind");
   });
 

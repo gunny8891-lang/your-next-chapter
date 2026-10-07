@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Banknote, CalendarCheck, CalendarPlus, Check, Clock, MapPin, RefreshCw } from "lucide-react";
+import { Accessibility, Banknote, CalendarCheck, CalendarClock, CalendarPlus, Check, Clock, Globe, MapPin, Navigation, RefreshCw, Timer } from "lucide-react";
 import { Button, Cover, ErrorNote, Sheet } from "@/components/ui";
 import { isUnknownDetail } from "@/lib/itinerary/format";
 import { CATEGORY_COLOR } from "@/lib/theme";
@@ -127,10 +127,18 @@ export function ItemSheet({
   onClose: () => void;
   onAction: (action: "accepted" | "swapped" | "skipped") => void;
 }) {
-  const details = [
+  // The practical details from the catalogue (only on planned outings), shown when known: how long, how far, whether
+  // it is open that day, how to get in, and where to find out more or sign up.
+  const extra = "details" in item ? (item.details ?? null) : null;
+  const details: { icon: typeof Clock; text: string | null | undefined; href?: string }[] = [
     { icon: Clock, text: item.time },
     { icon: MapPin, text: item.location },
     { icon: Banknote, text: item.cost },
+    { icon: Timer, text: extra?.duration },
+    { icon: Navigation, text: extra?.journey },
+    { icon: CalendarClock, text: extra?.hours },
+    { icon: Accessibility, text: extra?.accessibility },
+    { icon: Globe, text: extra?.website ? "Find out more or sign up" : null, href: extra?.website ?? undefined },
   ].filter((d) => d.text && !isUnknownDetail(d.text));
 
   return (
@@ -143,13 +151,21 @@ export function ItemSheet({
         <h2 className={styles.title}>{item.title}</h2>
 
         <ul className={styles.details}>
-          {details.map(({ icon: Icon, text }) => (
+          {details.map(({ icon: Icon, text, href }) => (
             <li key={text}>
               <Icon size={18} strokeWidth={1.75} aria-hidden="true" />
-              <span>{text}</span>
+              {href ? (
+                <a href={href} target="_blank" rel="noopener noreferrer" className={styles.detailLink}>
+                  {text}
+                </a>
+              ) : (
+                <span>{text}</span>
+              )}
             </li>
           ))}
         </ul>
+
+        {extra?.about && <p className={styles.about}>{extra.about}</p>}
 
         {(item.why || ("behaviorNote" in item && item.behaviorNote)) && (
           <section className={styles.why}>
@@ -177,7 +193,7 @@ export function ItemSheet({
         ) : (
           <div className={styles.actions}>
             <Button fullWidth onClick={() => onAction("accepted")}>
-              <Check size={18} strokeWidth={2.25} aria-hidden="true" /> Yes, I&apos;ll go
+              <Check size={18} strokeWidth={2.25} aria-hidden="true" /> {item.category === "Give Back" ? "Yes, I'll look into it" : "Yes, I'll go"}
             </Button>
             <div className={styles.secondary}>
               <Button variant="secondary" onClick={() => onAction("swapped")}>

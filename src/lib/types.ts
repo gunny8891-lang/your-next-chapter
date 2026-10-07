@@ -1,4 +1,5 @@
 import type { CategoryName } from "@/lib/categories";
+import type { ItemDetails } from "@/lib/itinerary/details";
 
 export type MemberAction = "pending" | "accepted" | "swapped" | "skipped";
 
@@ -14,6 +15,8 @@ export type ItineraryItemView = {
   status: MemberAction;
   bookingUrl: string | null;
   behaviorNote?: string | null;
+  /** What it is, when it is open, how long, how far, how to find out more: from the catalogue, for the outing's sheet. */
+  details?: ItemDetails | null;
 };
 
 export type SwapAlternative = {
