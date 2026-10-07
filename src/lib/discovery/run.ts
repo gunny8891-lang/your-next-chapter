@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { DiscoverySource, RawActivityCandidate } from "@/lib/discovery/types";
 import { geocodeLocation, sleep, type Coordinates } from "@/lib/geo/geocode";
+import { normaliseTags } from "@/lib/opportunities/tags";
 
 export type DiscoveryRunResult = {
   source: string;
@@ -120,7 +121,7 @@ export async function persistDiscovery(
         duration_minutes: c.durationMinutes ?? null,
         booking_url: c.bookingUrl,
         source: "discovery_agent" as const,
-        tags: c.tags,
+        tags: normaliseTags(c.tags),
         status: c.status ?? "active",
         admin_notes: c.adminNotes ?? null,
       }));

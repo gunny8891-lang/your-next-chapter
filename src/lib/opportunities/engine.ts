@@ -4,6 +4,7 @@ import { computeLearnedAffinity, LEARNING_WINDOW_DAYS, type LearningEvent, type 
 import { filterByDistance } from "@/lib/geo/filterByDistance";
 import { isStillAvailable } from "@/lib/opportunities/availability";
 import { applyFoodVenueMode, type FoodVenueMode } from "@/lib/opportunities/kinds";
+import { normaliseTags } from "@/lib/opportunities/tags";
 
 export type OpportunityCandidate = {
   id: string;
@@ -25,6 +26,19 @@ export type OpportunityCandidate = {
   recurrence_rule: string | null;
   /** Typical visit length in minutes, when known. */
   duration_minutes: number | null;
+  /**
+   * What it costs and whether a dog can come, held as what is known (see facts.ts). Optional: the rest of the app
+   * never needs them, and a row read before they existed simply has none, which means "not known".
+   */
+  price_min?: number | null;
+  price_max?: number | null;
+  price_type?: string | null;
+  cost_confidence?: string | null;
+  booking_required?: boolean | null;
+  dog_access?: string | null;
+  dog_restrictions?: string | null;
+  dog_confidence?: string | null;
+  dog_source?: string | null;
 };
 
 export type FetchOpportunitiesOptions = {
@@ -106,7 +120,8 @@ export async function fetchRankedOpportunities(
   // would make finished items vanish from their own week view and history.
   const now = new Date();
   const allActive = applyFoodVenueMode(
-    ((activities ?? []) as OpportunityCandidate[]).filter((a) => isStillAvailable(a, now)),
+    // Tags arrive from several sources in several spellings; every rule below reads them in one vocabulary.
+    ((activities ?? []) as OpportunityCandidate[]).map((a) => ({ ...a, tags: normaliseTags(a.tags) })).filter((a) => isStillAvailable(a, now)),
     options.foodVenues ?? "exclude"
   );
 
