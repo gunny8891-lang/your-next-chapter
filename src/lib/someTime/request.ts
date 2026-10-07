@@ -1,4 +1,5 @@
 import type { SurpriseWho } from "@/lib/surprise/context";
+import { parseContext, type ExperienceContext } from "@/lib/context/constraints";
 
 /** When the free time starts: right now, or a later part of today. */
 export type StartChoice = "now" | "afternoon" | "evening";
@@ -16,6 +17,8 @@ export type TimeRequest = {
   untilMin?: number | null;
   /** Suggestions already seen in this sitting, so "show me different ideas" really is different. */
   exclude: string[];
+  /** What they have said about THIS outing (the dog is coming): see context/constraints.ts. Absent when they said nothing. */
+  context?: ExperienceContext;
 };
 
 const STARTS: StartChoice[] = ["now", "afternoon", "evening"];
@@ -50,7 +53,16 @@ export function parseTimeRequest(raw: unknown): TimeRequest | null {
     ? r.exclude.filter((id): id is string => typeof id === "string" && /^[0-9a-f-]{8,40}$/i.test(id)).slice(0, MAX_EXCLUDED)
     : [];
 
-  return { start, duration, who, mood: oneOf(r.mood, MOODS), untilMin: duration === "until_next" ? rawUntil : null, exclude };
+  const context = parseContext(r.context);
+  return {
+    start,
+    duration,
+    who,
+    mood: oneOf(r.mood, MOODS),
+    untilMin: duration === "until_next" ? rawUntil : null,
+    exclude,
+    ...(Object.keys(context).length > 0 ? { context } : {}),
+  };
 }
 
 export const MOOD_LABEL: Record<Mood, string> = {

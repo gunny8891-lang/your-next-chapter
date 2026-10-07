@@ -99,3 +99,15 @@ export function parseCostConfidence(value: unknown): CostConfidence {
 }
 
 export const COST_TIER_LABEL: Record<CostTier, string> = { free: "Free", low: "£", mid: "££", high: "£££" };
+
+/**
+ * The line shown on a card for a place that is known to take dogs, in the words that match how sure we are.
+ * Null for anything else: nothing is claimed about a place whose dog access is unknown or refused.
+ */
+export function dogFact(facts: DogFacts): string | null {
+  if (dogFriendly(facts) !== true) return null;
+  const word = parseDogConfidence(facts.dog_confidence) === "reported" ? "reportedly welcome" : "welcome";
+  const where = { allowed: "", outdoor_only: " outdoors", selected_areas: " in some areas" }[parseDogAccess(facts.dog_access) as "allowed" | "outdoor_only" | "selected_areas"];
+  const restriction = facts.dog_restrictions?.trim().slice(0, 80);
+  return `Dogs ${word}${where}${restriction ? ` (${restriction})` : ""}`;
+}

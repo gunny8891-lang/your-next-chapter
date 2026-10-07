@@ -6,6 +6,7 @@ import type { Evaluated, FoodStop } from "@/lib/someTime/score";
 import { clockLabel, durationLabel, type TimeWindow } from "@/lib/someTime/window";
 import { describeDailyState, type DailyState } from "@/lib/experience/dailyState";
 import { PLAIN_WORDS_RULE } from "@/lib/ai/plainWords";
+import { describeContext } from "@/lib/context/constraints";
 
 export const MAX_OPTIONS = 3;
 const MAX_WHY_CHARS = 420;
@@ -87,10 +88,11 @@ function candidateLine({ evaluated: e, foodStop }: ShortlistEntry): string {
     food = ` | then nearby: ${foodStop.candidate.title} (${kind ? KIND_LABEL[kind] : "food"}, ${foodStop.distanceMeters} m away, ${foodStop.meal}${open})`;
   }
   const venueOnly = isPerformanceVenue(c) && e.eventStartMin === null ? " | NOTE: a venue only: no show or film is listed for it" : "";
+  const toCheck = e.unverified?.length ? ` | NOTE: not confirmed, tell them to check: ${e.unverified.join("; ")}` : "";
   return (
     `- id=${c.id} | ${c.title} | ${c.category} | ${e.facts.join(", ")} | ` +
     `leave ${clockLabel(e.leaveMin)}, arrive ${clockLabel(e.arriveMin)}, home about ${clockLabel(e.homeMin)} | ` +
-    `tags=[${c.tags.filter((t) => t !== "food-venue").slice(0, 6).join(", ")}]${description}${scored}${food}${venueOnly}`
+    `tags=[${c.tags.filter((t) => t !== "food-venue").slice(0, 6).join(", ")}]${description}${scored}${food}${venueOnly}${toCheck}`
   );
 }
 
@@ -102,6 +104,7 @@ export function buildUserPrompt(ctx: PromptContext, shortlist: ShortlistEntry[])
     `Mood: ${request.mood ? MOOD_LABEL[request.mood] : "not specified"}.`,
     ctx.weatherNote ? `Weather: ${ctx.weatherNote}` : null,
     ctx.dailyState ? `How they say they are today: ${describeDailyState(ctx.dailyState)}.` : null,
+    ...describeContext(request.context),
     "",
     "About the member:",
     `- Goals: ${profile.goals.join(", ") || "none recorded"}`,

@@ -65,6 +65,8 @@ export type TimeOption = {
   happeningToday: boolean;
   /** A theatre or cinema with no show listed: the card says to check what is on before going. */
   checkWhatsOn: boolean;
+  /** What still needs checking given what they said about this outing ("Check dog access"); empty when all is certain. */
+  contextNotes: string[];
   foodStop: FoodStopOption | null;
   /** Roughly what it costs per person, from what we know; null when we know nothing about price. */
   estimatedCost: number | null;

@@ -11,6 +11,7 @@ import { estimateTravel, type TravelMode, type TravelProfile } from "@/lib/someT
 import { clockLabel, durationLabel, type TimeWindow } from "@/lib/someTime/window";
 import { dailyStateAdjustment, type DailyState } from "@/lib/experience/dailyState";
 import type { RecommendationMemory } from "@/lib/memory/memory";
+import { checkConstraints, stopWorks } from "@/lib/context/constraints";
 
 /**
  * Everything that decides whether something is a good way to spend a given
@@ -74,6 +75,8 @@ export type Evaluated = {
   facts: string[];
   /** Why it scored well — the truthful basis for the explanation. */
   reasons: string[];
+  /** What the member's context says still needs checking ("Check dog access"); absent or empty when everything is certain. */
+  unverified?: string[];
 };
 
 // ---- tuning -------------------------------------------------------------
@@ -308,9 +311,15 @@ export function evaluateCandidate(c: OpportunityCandidate, input: ScoringInput):
   const budget = budgetAdjustment(price, member.budget_band);
   if (budget === null) return null;
 
+  // --- does it work for what they said about today (the dog is coming)? ---
+  const fit = checkConstraints(c, request.context, "main");
+  if (fit.excluded) return null;
+
   // --- how good is it for them? ---
   const reasons: string[] = [];
   let score = 0;
+  score += fit.bonus;
+  reasons.push(...fit.reasons);
 
   const affinityScore = Math.max(-8, Math.min(12, scoreActivity(c, affinity)));
   score += affinityScore;
@@ -377,6 +386,7 @@ export function evaluateCandidate(c: OpportunityCandidate, input: ScoringInput):
   facts.push(`about ${durationLabel(durationMinutes)}`);
   const cost = priceFact(price, c.price_estimate != null);
   if (cost) facts.push(cost);
+  facts.push(...fit.facts, ...fit.unverified);
   if (event) facts.push(`starts ${clockLabel(new Date(c.date_time!).getUTCHours() * 60 + new Date(c.date_time!).getUTCMinutes())}`);
   else if (openUntil != null) facts.push(`open until ${clockLabel(openUntil)}`);
 
@@ -395,6 +405,7 @@ export function evaluateCandidate(c: OpportunityCandidate, input: ScoringInput):
     eventStartMin,
     facts,
     reasons,
+    unverified: fit.unverified,
   };
 }
 
@@ -459,6 +470,8 @@ export function findFoodStop(main: Evaluated, foodVenues: OpportunityCandidate[]
     if (venue.id === main.candidate.id || venue.location_lat == null || venue.location_lng == null) continue;
     const kind = foodKindOf(venue.tags);
     if (!kind) continue;
+    // The whole outing has to work: a walk with the dog does not end at a pub that has not said it takes dogs.
+    if (!stopWorks(venue, input.request.context)) continue;
 
     const km = haversineDistanceKm(main.candidate.location_lat, main.candidate.location_lng, venue.location_lat, venue.location_lng);
     if (km > FOOD_STOP_RADIUS_KM) continue;

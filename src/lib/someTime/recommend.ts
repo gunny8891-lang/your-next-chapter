@@ -13,6 +13,7 @@ import { buildPlan, estimateCost, fallbackExperienceTitle, titleFitsPlan } from 
 import { eventDate, weekStartFor } from "@/lib/opportunities/schedule";
 import { getDailyForecast, isStrongOutdoorWeather, type DayForecast } from "@/lib/nudges/weather";
 import { applyOpenTimeContext } from "@/lib/surprise/context";
+import { preferVerified } from "@/lib/context/constraints";
 import { loadRepetitionHistory } from "@/lib/someTime/history";
 import {
   buildUserPrompt,
@@ -142,6 +143,7 @@ function toTimeOption(entry: ShortlistEntry, why: string, includeFood: boolean, 
     isFood: isFoodVenue(c),
     happeningToday: eventDate(c) !== null,
     checkWhatsOn,
+    contextNotes: e.unverified ?? [],
     foodStop: stop ? toFoodStopOption(stop) : null,
     // A calm stand-in by kind of activity; a real photograph replaces it afterwards (see attachImages).
     image: fallbackImageFor(c.tags),
@@ -164,10 +166,13 @@ export async function buildRecommendations(inputs: RecommendInputs): Promise<{ o
   // mood that only comes from how they said they feel today stays a gentle preference, so Today is never left bare.)
   const chosenMood = inputs.request.mood;
   const foodVenues = inputs.candidates.filter(isFoodVenue);
-  const evaluated = primaryPool(inputs.candidates, request, window)
-    .filter((c) => moodFits(chosenMood, c))
-    .map((c) => evaluateCandidate(c, scoring))
-    .filter((e): e is Evaluated => e !== null);
+  // If anything works outright for what they said about this outing, only those; places that merely need checking are for when nothing else fits.
+  const evaluated = preferVerified(
+    primaryPool(inputs.candidates, request, window)
+      .filter((c) => moodFits(chosenMood, c))
+      .map((c) => evaluateCandidate(c, scoring))
+      .filter((e): e is Evaluated => e !== null)
+  );
 
   const shortlist: ShortlistEntry[] = diversify(evaluated, SHORTLIST_SIZE).map((e) => ({
     evaluated: e,
@@ -288,7 +293,7 @@ export async function getTimeOptions(
   const { data: profile } = await supabase
     .from("member_profiles")
     .select(
-      "location_lat, location_lng, budget_band, interests, goals, dietary_preferences, mobility_notes, drives, uses_public_transport, personality"
+      "location_lat, location_lng, budget_band, interests, goals, dietary_preferences, mobility_notes, drives, uses_public_transport, personality, has_dog, dog_usually_comes"
     )
     .eq("user_id", memberId)
     .maybeSingle();
@@ -337,8 +342,12 @@ export async function getTimeOptions(
     home: hasHome ? { lat: profile!.location_lat, lng: profile!.location_lng } : null,
   };
 
+  // Whether the dog is coming: what they said for this outing, otherwise what they usually do. Only ever asked of someone with a dog.
+  const dogComing = request.context?.dog ?? (profile?.has_dog === true && profile?.dog_usually_comes === true);
+  const requestForThisOuting = dogComing ? { ...request, context: { ...request.context, dog: true } } : request;
+
   const { options, notice } = await buildRecommendations({
-    request,
+    request: requestForThisOuting,
     window,
     candidates,
     weatherNote,
