@@ -10,6 +10,8 @@ import { generateWeekItineraryAction } from "@/app/week/itineraryActions";
 import { getSwapAlternativesAction, applySwapAction } from "@/app/week/swapActions";
 import { DEMO_ITEMS, DEMO_SURPRISE } from "@/lib/demoData";
 import { formatCost, formatTime, LOCATION_UNKNOWN } from "@/lib/itinerary/format";
+import { weekLabel } from "@/lib/email/weekLabel";
+import { addDays, londonWeekStart, weekToShow } from "@/lib/opportunities/schedule";
 import { computeBehavioralRationale, formatBehavioralRationale, getRecentWindowStartIso } from "@/lib/memory/rationale";
 import type { CategoryName } from "@/lib/categories";
 import type { ItineraryItemView, SurpriseView } from "@/lib/types";
@@ -45,15 +47,20 @@ export default async function WeekPage() {
   // London's calendar, not the server's: the week opens on today's day.
   const today = new Date().toLocaleDateString("en-GB", { weekday: "short", timeZone: "Europe/London" });
 
-  const { data: itinerary } = await supabase
+  // This week, or on a Sunday (once the Sunday-evening plan exists) next week. A week with no plan shows the example
+  // and the button to make one, rather than last week's plan with this week's days on it.
+  const now = new Date();
+  const thisWeek = londonWeekStart(now);
+  const { data: plans } = await supabase
     .from("itineraries")
     .select(
       "id, week_start_date, itinerary_items(id, day_of_week, slot, member_action, rationale_text, activities(id, title, category, address, date_time, price_estimate, booking_url, tags))"
     )
     .eq("member_id", user.id)
-    .order("week_start_date", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .in("week_start_date", [thisWeek, addDays(thisWeek, 7)]);
+  const shownWeek = weekToShow((plans ?? []).map((p) => p.week_start_date as string), now);
+  const itinerary = (plans ?? []).find((p) => p.week_start_date === shownWeek) ?? null;
+  const showingNextWeek = shownWeek !== thisWeek;
 
   // "Why this changed": real behavioral signal (last 4 weeks of accepted items),
   // never a fabricated reason — see computeBehavioralRationale.
@@ -134,7 +141,8 @@ export default async function WeekPage() {
       items={items}
       surprise={surprise}
       isDemo={isDemo}
-      today={today}
+      today={showingNextWeek ? "" : today}
+      nextWeekLabel={showingNextWeek && !isDemo ? weekLabel(shownWeek) : null}
       onItemAction={updateItineraryItemAction}
       onSurpriseAction={respondSurpriseAction}
       onGenerate={generateWeekItineraryAction}

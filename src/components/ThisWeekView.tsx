@@ -32,6 +32,7 @@ export function ThisWeekView({
   items,
   surprise,
   isDemo,
+  nextWeekLabel,
   onItemAction,
   onSurpriseAction,
   onGenerate,
@@ -47,6 +48,8 @@ export function ThisWeekView({
   items: ItineraryItemView[];
   surprise: SurpriseView;
   isDemo: boolean;
+  /** Set (e.g. "Week of Monday 12 October") when the screen is showing next week's plan, on a Sunday evening; null for this week. */
+  nextWeekLabel?: string | null;
   onItemAction: (itemId: string, action: "accepted" | "swapped" | "skipped") => Promise<void>;
   onSurpriseAction: (cardId: string, response: "accepted" | "dismissed") => Promise<void>;
   onGenerate: () => Promise<{ error: string | null; usedFallback?: boolean }>;
@@ -174,7 +177,10 @@ export function ThisWeekView({
 
   return (
     <Page>
-      <PageHeader title="My week" lead={isDemo ? "An example of how a week can look." : `Around ${locationLabel}`} />
+      <PageHeader
+        title={nextWeekLabel ? "Next week" : "My week"}
+        lead={isDemo ? "An example of how a week can look." : nextWeekLabel ? `${nextWeekLabel} · around ${locationLabel}` : `Around ${locationLabel}`}
+      />
 
       {isDemo && (
         <Card className={styles.demo}>

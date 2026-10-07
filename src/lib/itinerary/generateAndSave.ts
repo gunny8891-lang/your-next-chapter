@@ -1,12 +1,22 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { generateItinerary } from "@/lib/itinerary/agent";
-import { getCurrentWeekStart } from "@/lib/opportunities/schedule";
+import { addDays, getCurrentWeekStart, londonWeekStart, weekToShow } from "@/lib/opportunities/schedule";
 import { dropFromCalendarIfAny } from "@/lib/calendar/sync";
 import { newItemsAround, splitForRebuild, type ExistingItem } from "@/lib/itinerary/keepAccepted";
 
 // Moved to opportunities/schedule so the planner can use it without importing
 // this file (which imports the planner). Re-exported for existing callers.
 export { getCurrentWeekStart };
+
+/**
+ * The week a member's plan screens are showing, which is the one to rebuild when they ask for a
+ * fresh plan: this week, or on a Sunday (once it exists) next week.
+ */
+export async function weekForMember(admin: SupabaseClient, memberId: string, now: Date = new Date()): Promise<string> {
+  const current = londonWeekStart(now);
+  const { data } = await admin.from("itineraries").select("week_start_date").eq("member_id", memberId).in("week_start_date", [current, addDays(current, 7)]);
+  return weekToShow((data ?? []).map((row) => row.week_start_date as string), now);
+}
 
 /**
  * Shared by the per-member "Generate my week" action and the weekly batch job —
@@ -16,10 +26,13 @@ export { getCurrentWeekStart };
  */
 export async function generateAndSaveItinerary(
   admin: SupabaseClient,
-  memberId: string
+  memberId: string,
+  // Which week to plan (its Monday). The Sunday job says "next week"; everything else leaves it out and gets the
+  // week the member is looking at (see weekForMember).
+  options: { weekStart?: string } = {}
 ): Promise<{ error: string | null; usedFallback?: boolean; itineraryId?: string; itemCount?: number }> {
-  const weekStartDate = getCurrentWeekStart();
-  const { itinerary, usedFallback } = await generateItinerary(admin, memberId);
+  const weekStartDate = options.weekStart ?? (await weekForMember(admin, memberId));
+  const { itinerary, usedFallback } = await generateItinerary(admin, memberId, { weekStart: weekStartDate });
 
   const { data: itineraryRow, error: itineraryError } = await admin
     .from("itineraries")

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/utils/supabase/admin";
-import { generateAndSaveItinerary, getCurrentWeekStart } from "@/lib/itinerary/generateAndSave";
+import { generateAndSaveItinerary } from "@/lib/itinerary/generateAndSave";
+import { nextLondonWeekStart } from "@/lib/opportunities/schedule";
 import { formatCost, formatTime } from "@/lib/itinerary/format";
 import { sendWeeklyDigestEmail } from "@/lib/email/send";
 import type { DigestItem, DigestSurprise } from "@/lib/email/WeeklyDigestEmail";
@@ -28,7 +29,8 @@ function emailOf(users: MemberRow["users"]): string | null {
 }
 
 // Triggered by Vercel Cron Sunday evening (see vercel.json), or manually via
-// curl with the same bearer token — regenerates each member's week and emails it.
+// curl with the same bearer token. It plans each member's COMING week (the one starting tomorrow) and emails it:
+// planning the week that is ending would send a plan for days that have already gone.
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -36,6 +38,7 @@ export async function GET(request: Request) {
   }
 
   const admin = createAdminClient();
+  const weekStart = nextLondonWeekStart();
   const { data: members } = await admin.from("member_profiles").select("user_id, location_text, email_weekly_plan, users(email)");
 
   const results: { memberId: string; error: string | null }[] = [];
@@ -47,7 +50,7 @@ export async function GET(request: Request) {
       continue;
     }
 
-    const generated = await generateAndSaveItinerary(admin, member.user_id);
+    const generated = await generateAndSaveItinerary(admin, member.user_id, { weekStart });
     if (generated.error || !generated.itineraryId) {
       results.push({ memberId: member.user_id, error: generated.error ?? "Generation failed" });
       continue;
@@ -78,7 +81,7 @@ export async function GET(request: Request) {
       .from("surprise_me_cards")
       .select("activities(title, address, price_estimate, description, booking_url)")
       .eq("member_id", member.user_id)
-      .eq("week_start_date", getCurrentWeekStart())
+      .eq("week_start_date", weekStart)
       .maybeSingle();
 
     const surprise: DigestSurprise = (() => {
@@ -100,7 +103,7 @@ export async function GET(request: Request) {
     }
 
     try {
-      await sendWeeklyDigestEmail(email, member.user_id, member.location_text?.replace("Near ", "") || "This week", items, surprise);
+      await sendWeeklyDigestEmail(email, member.user_id, member.location_text?.replace("Near ", "") || "Your week", items, surprise, weekStart);
       results.push({ memberId: member.user_id, error: null });
     } catch (err) {
       results.push({ memberId: member.user_id, error: err instanceof Error ? err.message : "Email send failed" });

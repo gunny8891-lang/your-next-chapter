@@ -7,6 +7,9 @@ import {
   fitsDates,
   getCurrentWeekStart,
   londonToday,
+  londonWeekStart,
+  nextLondonWeekStart,
+  weekToShow,
   slotForHour,
   weekdayOf,
   weekDates,
@@ -144,5 +147,45 @@ describe("alignToEvents", () => {
   it("returns the plan in week order", () => {
     const result = alignToEvents([item("park", "Sat", "morning"), item("library", "Mon", "morning"), item("talk", "Sun", "evening")], all, WEEK);
     expect(result.map((i) => i.day)).toEqual(["Mon", "Thu", "Sat"]);
+  });
+});
+
+describe("which week a plan is for", () => {
+  it("starts the week on the Monday of London's week, which is not always the server's", () => {
+    // 23:30 UTC on Sunday 4 Oct is 00:30 on Monday 5 Oct in London (summer time).
+    expect(londonWeekStart(new Date("2026-10-04T23:30:00Z"))).toBe("2026-10-05");
+    expect(getCurrentWeekStart(new Date("2026-10-04T23:30:00Z"))).toBe("2026-09-28");
+    expect(londonWeekStart(new Date("2026-10-07T09:00:00Z"))).toBe("2026-10-05");
+  });
+
+  it("finds the coming week from any day, including the Sunday evening the weekly job runs", () => {
+    expect(nextLondonWeekStart(new Date("2026-10-02T09:00:00Z"))).toBe("2026-10-05"); // Friday
+    expect(nextLondonWeekStart(new Date("2026-10-04T18:00:00Z"))).toBe("2026-10-05"); // Sunday 18:00 UTC = 19:00 in London
+    expect(nextLondonWeekStart(new Date("2026-10-05T09:00:00Z"))).toBe("2026-10-12"); // Monday
+  });
+
+  it("shows this week on every day but Sunday, even if next week's plan exists", () => {
+    const both = ["2026-10-05", "2026-10-12"];
+    for (const day of ["05", "06", "07", "08", "09", "10"]) {
+      expect(weekToShow(both, new Date(`2026-10-${day}T10:00:00Z`)), day).toBe("2026-10-05");
+    }
+  });
+
+  it("shows next week on a Sunday once its plan exists, and this week until then", () => {
+    const sunday = new Date("2026-10-11T19:00:00Z");
+    expect(weekToShow(["2026-10-05"], sunday)).toBe("2026-10-05");
+    expect(weekToShow(["2026-10-05", "2026-10-12"], sunday)).toBe("2026-10-12");
+    expect(weekToShow(["2026-10-12"], sunday)).toBe("2026-10-12");
+  });
+
+  it("is back to this week as soon as it is Monday in London", () => {
+    // 23:30 UTC on Sunday 11 Oct is 00:30 on Monday 12 Oct in London: the new week has begun.
+    expect(weekToShow(["2026-10-05", "2026-10-12"], new Date("2026-10-11T23:30:00Z"))).toBe("2026-10-12");
+    expect(weekToShow(["2026-10-12", "2026-10-19"], new Date("2026-10-11T23:30:00Z"))).toBe("2026-10-12");
+  });
+
+  it("with no plan at all, points at this week", () => {
+    expect(weekToShow([], new Date("2026-10-07T10:00:00Z"))).toBe("2026-10-05");
+    expect(weekToShow([], new Date("2026-10-11T19:00:00Z"))).toBe("2026-10-05");
   });
 });

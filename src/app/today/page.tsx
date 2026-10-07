@@ -10,7 +10,7 @@ import { getFeaturedOption } from "@/lib/someTime/recommend";
 import { completeExperienceAction, clearDailyStateAction, saveDailyStateAction } from "@/app/today/experienceActions";
 import { loadDailyState } from "@/lib/experience/dailyStateStore";
 import { loadReflections } from "@/lib/experience/reflections";
-import { londonToday } from "@/lib/opportunities/schedule";
+import { londonToday, londonWeekStart } from "@/lib/opportunities/schedule";
 import { cleanFirstName, greetingFor } from "@/lib/someTime/format";
 import { londonClock } from "@/lib/someTime/window";
 import type { CategoryName } from "@/lib/categories";
@@ -56,8 +56,9 @@ export default async function TodayPage() {
       "itinerary_items(id, day_of_week, slot, member_action, rationale_text, activities(id, title, category, address, date_time, price_estimate, booking_url))"
     )
     .eq("member_id", user.id)
-    .order("week_start_date", { ascending: false })
-    .limit(1)
+    // The plan for the week we are in, never the latest: on a Sunday evening the latest is next week's, whose
+    // "Sun" is not today.
+    .eq("week_start_date", londonWeekStart())
     .maybeSingle();
 
   const todaysItems = (itinerary?.itinerary_items ?? []).filter(

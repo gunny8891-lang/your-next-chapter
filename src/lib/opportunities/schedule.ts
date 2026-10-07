@@ -50,6 +50,30 @@ export function londonToday(now: Date = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
 }
 
+/** The Monday that starts the week containing today's London date. */
+export function londonWeekStart(now: Date = new Date()): string {
+  return weekStartFor(londonToday(now));
+}
+
+/** The Monday after the current (London) week: the week the Sunday-evening plan is for. */
+export function nextLondonWeekStart(now: Date = new Date()): string {
+  return addDays(londonWeekStart(now), 7);
+}
+
+/**
+ * Which week the member's plan screens (My Week, and anything that rebuilds the plan) are
+ * about. Normally this week. On a Sunday (London), once next week's plan exists, it is next
+ * week: the Sunday-evening job makes it, and from then on that is the week to look at. Today
+ * is unaffected and always uses the week it is in. `available` is the week starts the
+ * member has a plan for.
+ */
+export function weekToShow(available: readonly string[], now: Date = new Date()): string {
+  const today = londonToday(now);
+  const current = weekStartFor(today);
+  const next = addDays(current, 7);
+  return weekdayOf(today) === "Sun" && available.includes(next) ? next : current;
+}
+
 export function slotForHour(hour: number): SlotName {
   if (hour < 12) return "morning";
   if (hour < 17) return "afternoon";

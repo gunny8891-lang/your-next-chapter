@@ -3,6 +3,7 @@ import { render } from "@react-email/render";
 import { WeeklyDigestEmail, type DigestItem, type DigestSurprise } from "@/lib/email/WeeklyDigestEmail";
 import { NudgeEmail, type NudgeActivity } from "@/lib/email/NudgeEmail";
 import { footerFor, unsubscribeUrlFor } from "@/lib/email/footer";
+import { weekLabel } from "@/lib/email/weekLabel";
 import type { EmailKind } from "@/lib/email/unsubscribe";
 import { OPERATOR } from "@/lib/legal/details";
 
@@ -46,7 +47,9 @@ export async function sendWeeklyDigestEmail(
   memberId: string,
   locationLabel: string,
   items: DigestItem[],
-  surprise: DigestSurprise
+  surprise: DigestSurprise,
+  /** The Monday of the week the plan is for; shown as "Week of Monday 12 October". */
+  weekStart?: string
 ) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) throw new Error("RESEND_API_KEY is not set");
@@ -55,7 +58,7 @@ export async function sendWeeklyDigestEmail(
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
   const html = await render(
-    <WeeklyDigestEmail locationLabel={locationLabel} items={items} surprise={surprise} siteUrl={siteUrl} footer={footerFor(memberId, "weekly_plan", siteUrl)} />
+    <WeeklyDigestEmail locationLabel={locationLabel} weekLabel={weekStart ? weekLabel(weekStart) : undefined} items={items} surprise={surprise} siteUrl={siteUrl} footer={footerFor(memberId, "weekly_plan", siteUrl)} />
   );
   return deliver(resend, to, memberId, "weekly_plan", siteUrl, "Your Perfect Week is ready", html);
 }

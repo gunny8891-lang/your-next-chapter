@@ -24,12 +24,15 @@ export type DigestSurprise = {
 
 export function WeeklyDigestEmail({
   locationLabel,
+  weekLabel,
   items,
   surprise,
   siteUrl,
   footer,
 }: {
   locationLabel: string;
+  /** Which week the plan is for, e.g. "Week of Monday 12 October". Left out for older callers. */
+  weekLabel?: string;
   items: DigestItem[];
   surprise: DigestSurprise;
   siteUrl: string;
@@ -44,9 +47,10 @@ export function WeeklyDigestEmail({
           <Text style={{ color: T.accent, fontSize: 13, fontWeight: 700, letterSpacing: 0.5, margin: "0 0 4px" }}>
             YOUR PERFECT WEEK
           </Text>
-          <Heading style={{ fontFamily: "Georgia, serif", color: T.ink, fontSize: 26, margin: "0 0 24px" }}>
+          <Heading style={{ fontFamily: "Georgia, serif", color: T.ink, fontSize: 26, margin: weekLabel ? "0 0 4px" : "0 0 24px" }}>
             {locationLabel}
           </Heading>
+          {weekLabel && <Text style={{ color: T.inkSoft, fontSize: 15, margin: "0 0 24px" }}>{weekLabel}</Text>}
 
           {items.map((item) => (
             <Section

@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  */
 
 const sent = { digest: [] as unknown[][], nudge: [] as unknown[][] };
-const calls = { detect: [] as string[], generate: [] as string[] };
+const calls = { detect: [] as string[], generate: [] as string[], weeks: [] as (string | undefined)[] };
 
 vi.mock("@/lib/email/send", () => ({
   sendWeeklyDigestEmail: async (...args: unknown[]) => void sent.digest.push(args),
@@ -23,8 +23,9 @@ vi.mock("@/lib/nudges/message", () => ({ writeNudgeMessage: async () => "A thoug
 vi.mock("@/lib/experience/dailyStateStore", () => ({ purgeOldDailyStates: async () => 0 }));
 vi.mock("@/lib/itinerary/generateAndSave", () => ({
   getCurrentWeekStart: () => "2026-10-05",
-  generateAndSaveItinerary: async (_admin: unknown, memberId: string) => {
+  generateAndSaveItinerary: async (_admin: unknown, memberId: string, options?: { weekStart?: string }) => {
     calls.generate.push(memberId);
+    calls.weeks.push(options?.weekStart);
     return { error: null, itineraryId: "it-1" };
   },
 }));
@@ -57,6 +58,7 @@ beforeEach(() => {
   sent.nudge.length = 0;
   calls.detect.length = 0;
   calls.generate.length = 0;
+  calls.weeks.length = 0;
 });
 
 describe("daily reminders", () => {
@@ -91,6 +93,23 @@ describe("the weekly plan email", () => {
     await GET(authed());
     expect(sent.digest.map((a) => a[0])).not.toContain("out@example.test");
     expect(calls.generate).toEqual(expect.arrayContaining(["opted-in", "opted-out"]));
+  });
+});
+
+describe("the weekly plan email is about the week ahead", () => {
+  it("plans the coming week, not the one that is ending, and says which week it is in the email", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-10-11T18:00:00Z")); // Sunday evening: the week of 5 October is ending
+      const { GET } = await import("@/app/api/jobs/weekly-digest/route");
+      await GET(authed());
+      expect(calls.weeks.length).toBeGreaterThan(0);
+      expect(new Set(calls.weeks)).toEqual(new Set(["2026-10-12"]));
+      const toIn = sent.digest.find((a) => a[0] === "in@example.test");
+      expect(toIn?.[5]).toBe("2026-10-12");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

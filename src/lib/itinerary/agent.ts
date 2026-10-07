@@ -114,7 +114,10 @@ async function requestItinerary(
 
 export async function generateItinerary(
   supabase: SupabaseClient,
-  memberId: string
+  memberId: string,
+  // The Monday of the week being planned. Defaults to this (UTC) week, as it always did; the plan screens and the
+  // Sunday job say which week they mean (see weekToShow and nextLondonWeekStart).
+  options: { weekStart?: string } = {}
 ): Promise<{ itinerary: GeneratedItinerary; usedFallback: boolean }> {
   const { data: profile } = await supabase
     .from("member_profiles")
@@ -138,7 +141,7 @@ export async function generateItinerary(
   // A one-off event is only plannable if it falls on a day of this week that
   // hasn't passed. Without this the model was offered events weeks away and
   // placed them on arbitrary days.
-  const weekStart = getCurrentWeekStart();
+  const weekStart = options.weekStart ?? getCurrentWeekStart();
   const today = londonToday();
   const dates = weekDates(weekStart);
   const remainingDates = Object.values(dates).filter((d) => d >= today);

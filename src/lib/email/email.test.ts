@@ -160,3 +160,20 @@ describe("the emails as sent", () => {
     expect(html).not.toContain("at most one of these a week");
   });
 });
+
+describe("the week the weekly plan email is about", () => {
+  it("names the week from its Monday", async () => {
+    const { weekLabel } = await import("@/lib/email/weekLabel");
+    expect(weekLabel("2026-10-12")).toBe("Week of Monday 12 October");
+    expect(weekLabel("2026-12-28")).toBe("Week of Monday 28 December");
+    expect(weekLabel("not a date")).toBe("");
+  });
+
+  it("shows it under the place name when given, and leaves a gap-free email when not", async () => {
+    const footer = { unsubscribeUrl: "https://app.test/u", preferencesUrl: "https://app.test/account", sender: "Lark Hour", reason: "r" } as never;
+    const withWeek = await render(createElement(WeeklyDigestEmail, { locationLabel: "Barnet", weekLabel: "Week of Monday 12 October", items: [], surprise: null, siteUrl: "https://app.test", footer }));
+    const without = await render(createElement(WeeklyDigestEmail, { locationLabel: "Barnet", items: [], surprise: null, siteUrl: "https://app.test", footer }));
+    expect(withWeek).toContain("Week of Monday 12 October");
+    expect(without).not.toContain("Week of");
+  });
+});
