@@ -2,6 +2,20 @@ import Link from "next/link";
 import { ChevronLeft, Coins } from "lucide-react";
 import { T } from "@/lib/theme";
 import type { UsageSummary, BreakdownRow } from "@/lib/ai/usageSummary";
+import { classifyAiFailure, needsOperator, operatorAlert } from "@/lib/ai/unavailable";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Failures in the last day that only the person running the app can fix (out of credit, a rejected key), worded as what to do about them. */
+export function operatorAlerts(failures: UsageSummary["recentFailures"], now: number = Date.now()): string[] {
+  const alerts = new Set<string>();
+  for (const f of failures) {
+    if (now - new Date(f.created_at).getTime() > DAY_MS) continue;
+    const kind = classifyAiFailure(new Error(f.error_message ?? ""));
+    if (needsOperator(kind)) alerts.add(operatorAlert(kind));
+  }
+  return [...alerts];
+}
 
 const FEATURE_LABEL: Record<string, string> = {
   itinerary_agent: "My Week",
@@ -137,6 +151,12 @@ export function AiCostDashboard({ summary }: { summary: UsageSummary }) {
       </div>
 
       <div style={{ maxWidth: 760, margin: "0 auto", padding: "24px 20px 60px" }}>
+        {operatorAlerts(summary.recentFailures).map((alert) => (
+          <div key={alert} role="alert" style={{ background: "#F6E6DF", border: "1px solid #C9876B", borderRadius: 10, padding: "12px 14px", marginBottom: 20, fontSize: 14, color: "#7A2F18", fontWeight: 600 }}>
+            {alert}
+          </div>
+        ))}
+
         {summary.truncated && (
           <div style={{ background: "#F5E9E2", border: "1px solid #D3A98C", borderRadius: 10, padding: "12px 14px", marginBottom: 20, fontSize: 14, color: "#8A4A28" }}>
             This month has more logged calls than the dashboard reads in one go — figures below are for the most recent calls only and undercount.

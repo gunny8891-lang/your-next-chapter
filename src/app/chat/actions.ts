@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { answerChatQuestion, type ChatHistoryMessage } from "@/lib/chat/agent";
+import { chatMessage, classifyAiFailure } from "@/lib/ai/unavailable";
 
 export async function sendChatMessageAction(
   question: string
@@ -31,10 +32,8 @@ export async function sendChatMessageAction(
   try {
     reply = await answerChatQuestion(supabase, user.id, trimmed, (historyRows ?? []) as ChatHistoryMessage[]);
   } catch (err) {
-    reply =
-      err instanceof Error && err.name === "UsageLimitError"
-        ? "We've talked a great deal today, and I'd like to leave something for tomorrow. Please ask me again then. Your ideas on Today and Explore are still here for you."
-        : "Sorry, I'm having trouble answering right now — please try again in a moment.";
+    // The member gets a kind sentence for what happened; the real reason is in the usage log and the server log.
+    reply = chatMessage(classifyAiFailure(err));
   }
 
   await supabase.from("chat_messages").insert({ member_id: user.id, role: "assistant", content: reply });

@@ -12,6 +12,7 @@ import { parseTimeRequest } from "@/lib/someTime/request";
 import { slotsForWindow } from "@/lib/someTime/slots";
 import type { TimeResult } from "@/lib/someTime/types";
 import { londonToday } from "@/lib/opportunities/schedule";
+import { classifyAiFailure, memberMessage } from "@/lib/ai/unavailable";
 import { loadDailyState } from "@/lib/experience/dailyStateStore";
 import { buildContext, explainedByState, recordExperience, signalForDismissal, validateEvent, type DismissReason, type ExperienceEvent } from "@/lib/experience/events";
 import { resolveWindow } from "@/lib/someTime/window";
@@ -40,8 +41,10 @@ export async function getTimeOptionsAction(raw: unknown): Promise<TimeResult> {
     scheduleImageLookups(result.options);
     return result;
   } catch (err) {
+    // Never the raw reason: the member gets a kind sentence, and the real one goes to the server log.
+    console.warn("time options failed:", err instanceof Error ? err.message : err);
     return {
-      error: err instanceof Error ? err.message : "Couldn't find suggestions right now.",
+      error: memberMessage(classifyAiFailure(err)),
       notice: null,
       options: [],
       windowLabel: null,

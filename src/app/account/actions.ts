@@ -76,6 +76,8 @@ export async function updateProfileAction(formData: FormData) {
   const admin = createAdminClient();
   const rebuild = planInputsChanged(existing, submitted);
   const generated = rebuild ? await generateAndSaveItinerary(admin, user.id) : { error: null };
+  // The reason goes to the server log; the member sees a kind sentence and the address carries only a flag.
+  if (generated.error) console.warn("account save: could not rebuild the plan:", generated.error);
 
   // A new location won't have any real candidates yet if the Discovery Agent
   // has never searched it — kick that off now instead of waiting for the
@@ -87,7 +89,7 @@ export async function updateProfileAction(formData: FormData) {
 
   revalidatePath("/account");
   revalidatePath("/week");
-  redirect(`/account?saved=1${rebuild ? "&planRebuilt=1" : ""}${generated.error ? `&planError=${encodeURIComponent(generated.error)}` : ""}`);
+  redirect(`/account?saved=1${rebuild ? "&planRebuilt=1" : ""}${generated.error ? "&planError=1" : ""}`);
 }
 
 export async function deleteAccountAction() {

@@ -20,7 +20,8 @@ export function GenerateWeekButton({
     startTransition(async () => {
       const result = await onGenerate();
       if (result.error) {
-        setError(`We couldn't plan your week just now: ${result.error}`);
+        // Never the raw reason (it can be a database or provider message): a kind sentence, and the button is still there.
+        setError("We couldn't plan your week just now. Please try again in a little while.");
         return;
       }
       if (!result.itemCount) {

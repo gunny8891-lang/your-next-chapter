@@ -2,6 +2,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { assertWithinMemberLimits } from "@/lib/ai/limits";
 import { createAdminClient } from "@/utils/supabase/admin";
+import { classifyAiFailure, needsOperator, operatorAlert } from "@/lib/ai/unavailable";
 
 // $ per 1M tokens, current standard (non-intro) rates. Cache read/write tokens
 // aren't priced here — no call site in this app uses prompt caching yet, so
@@ -101,6 +102,10 @@ export async function callClaude(
       false,
       err instanceof Error ? err.message : "Unknown error"
     );
+    // A failure only the person running the app can fix (out of credit, a rejected key) is made impossible to miss in
+    // the logs, because every member is affected at once. Members are told something kinder (see unavailable.ts).
+    const kind = classifyAiFailure(err);
+    if (needsOperator(kind)) console.error(`ACTION NEEDED (${context.feature}): ${operatorAlert(kind)}`);
     throw err;
   }
 }

@@ -122,6 +122,7 @@ const NOT_RECIPIENTS: Record<string, string> = {
   "operations.osmfoundation.org": "a documentation link in a comment",
   "www.larkhour.com": "the app's own address: page metadata, the sitemap, and the identifying header sent to Wikimedia",
   "search.local": "a placeholder, never requested",
+  "platform.claude.com": "a link in a message to the person running the app (where to add credit), never requested",
   "www.nationaltrust.org.uk": "a public page the discovery job reads for places, nothing about members",
   "www.richmond.gov.uk": "a public page the discovery job reads for places, nothing about members",
   "rut.u3asite.uk": "a public page the discovery job reads for places, nothing about members",

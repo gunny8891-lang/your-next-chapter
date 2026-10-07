@@ -144,7 +144,7 @@ export function AccountSettingsForm({
       {saved && planError && (
         <div className={styles.notice}>
           <Notice tone="info">
-            Your details are saved, but we couldn&apos;t refresh this week&apos;s plan just now ({planError}). It will refresh by itself next Sunday.
+            Your details are saved, but we couldn&apos;t refresh this week&apos;s plan just now. You can try again from My week, and next week&apos;s plan will be made for you on Sunday.
           </Notice>
         </div>
       )}
