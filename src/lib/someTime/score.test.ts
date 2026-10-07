@@ -150,8 +150,16 @@ describe("evaluateCandidate — opening hours and mealtimes", () => {
 describe("evaluateCandidate — budget", () => {
   const low = input({ member: member({ budget_band: "low" }) });
 
-  it("rules out something far beyond the budget", () => {
-    expect(evaluateCandidate(place({ price_estimate: 80 }), low)).toBeNull();
+  it("marks down something far beyond the budget a long way, but never rules it out: only an explicit spend choice does", () => {
+    const dear = evaluateCandidate(place({ price_estimate: 80 }), low);
+    expect(dear).not.toBeNull();
+    expect(score(place({ price_estimate: 80 }), low)!).toBeLessThan(score(place({ price_estimate: 20 }), low)!);
+    expect(score(place({ price_estimate: 10 }), low)! - score(place({ price_estimate: 80 }), low)!).toBeGreaterThan(4);
+  });
+
+  it("treats 'don't worry about cost' as no budget at all", () => {
+    const any = input({ member: member({ budget_band: "any" }) });
+    expect(score(place({ price_estimate: 80 }), any)).toBe(score(place({ price_estimate: 0 }), any));
   });
 
   it("marks down something over the budget, and prefers free on a tight one", () => {
@@ -343,7 +351,7 @@ describe("findFoodStop", () => {
     expect(findFoodStop(main(), [farther, closer], i)?.candidate.title).toBe("Closer");
   });
 
-  it("respects the budget", () => {
+  it("leaves a place to eat off the outing when it is far beyond the budget, since a stop is an optional extra", () => {
     const low = input({ member: member({ budget_band: "low" }) });
     const evaluated = evaluateCandidate(place({ km: 3, duration_minutes: 45 }), low)!;
     const pricey = near(0.3, { tags: ["food-venue", "restaurant"], price_estimate: 80, duration_minutes: 30 });

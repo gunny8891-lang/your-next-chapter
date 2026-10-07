@@ -14,12 +14,29 @@
  * offered, labelled, only when nothing that is certain fits. Pure: no database, no model.
  */
 
-import { dogFact, dogFriendly, parseDogConfidence, type DogFacts } from "@/lib/opportunities/facts";
+import { COST_TIER_LIMITS, dogFact, dogFriendly, parseDogConfidence, priceUpTo, type CostFacts, type DogFacts } from "@/lib/opportunities/facts";
+
+/** What the member wants to spend on this outing, per person: Free, £ or ££. Absent means "don't mind". */
+export type Spend = "free" | "low" | "mid";
+export const SPEND_OPTIONS: { value: Spend | "any"; label: string }[] = [
+  { value: "free", label: "Free" },
+  { value: "low", label: "£" },
+  { value: "mid", label: "££" },
+  { value: "any", label: "Don't mind" },
+];
+
+/** The most each spend allows per person, in pounds. */
+const SPEND_CAP: Record<Spend, number> = { free: 0, low: COST_TIER_LIMITS.low, mid: COST_TIER_LIMITS.mid };
 
 export type ExperienceContext = {
   /** The dog is coming on this outing. */
   dog?: boolean;
+  /** The most they want to spend per person on this outing. A choice for this outing, not a budget. */
+  spend?: Spend;
 };
+
+/** What a place tells us that the constraints look at. */
+export type PlaceFacts = DogFacts & CostFacts;
 
 /** A place on an outing: the main thing, or a stop (such as somewhere to eat) added to it. Each must work. */
 export type ConstraintRole = "main" | "stop";
@@ -35,7 +52,7 @@ type Constraint = {
   parse: (raw: unknown) => ExperienceContext[keyof ExperienceContext] | undefined;
   /** Whether this context asks anything of a place. */
   active: (context: ExperienceContext) => boolean;
-  check: (place: DogFacts, context: ExperienceContext, role: ConstraintRole) => Verdict;
+  check: (place: PlaceFacts, context: ExperienceContext, role: ConstraintRole) => Verdict;
   /** One line for the model: what the member has said about this outing. */
   describe: (context: ExperienceContext) => string | null;
 };
@@ -57,8 +74,25 @@ const dogConstraint: Constraint = {
   describe: (context) => (context.dog === true ? "The dog is coming. Only say dogs are welcome where a line says so; where a line says to check dog access, tell them to check." : null),
 };
 
+const spendConstraint: Constraint = {
+  key: "spend",
+  parse: (raw) => (raw === "free" || raw === "low" || raw === "mid" ? raw : undefined),
+  active: (context) => context.spend !== undefined,
+  check: (place, context) => {
+    const cap = SPEND_CAP[context.spend as Spend];
+    const top = priceUpTo(place);
+    // Nothing is known about the price: it is not assumed to fit, and not assumed not to.
+    if (top === null) return { kind: "unverified", note: "Check the price" };
+    return top > cap ? { kind: "exclude" } : { kind: "ok" };
+  },
+  describe: (context) =>
+    context.spend === undefined
+      ? null
+      : `They want to keep this outing to ${{ free: "free things", low: "about £15 a person or less", mid: "about £40 a person or less" }[context.spend]}. Never call a place free or cheap unless its line says so; where a line says to check the price, tell them to check.`,
+};
+
 /** Every constraint the engine knows. */
-const CONSTRAINTS: Constraint[] = [dogConstraint];
+const CONSTRAINTS: Constraint[] = [dogConstraint, spendConstraint];
 
 /** Keeps only what a constraint recognises, from whatever arrived. Never throws. */
 export function parseContext(raw: unknown): ExperienceContext {
@@ -87,7 +121,7 @@ export type ConstraintResult = {
 };
 
 /** Every active constraint's verdict on one place, gathered. */
-export function checkConstraints(place: DogFacts, context: ExperienceContext | undefined, role: ConstraintRole = "main"): ConstraintResult {
+export function checkConstraints(place: PlaceFacts, context: ExperienceContext | undefined, role: ConstraintRole = "main"): ConstraintResult {
   const result: ConstraintResult = { excluded: false, unverified: [], reasons: [], facts: [], bonus: 0 };
   if (!context) return result;
   for (const c of CONSTRAINTS) {
@@ -120,7 +154,12 @@ export function describeContext(context: ExperienceContext | undefined): string[
 }
 
 /** Whether a place to eat or stop at can be added to an outing under this context: it must work outright, not merely maybe. */
-export function stopWorks(place: DogFacts, context: ExperienceContext | undefined): boolean {
+export function stopWorks(place: PlaceFacts, context: ExperienceContext | undefined): boolean {
   const r = checkConstraints(place, context, "stop");
   return !r.excluded && r.unverified.length === 0;
+}
+
+/** Whether a whole outing's cost per person fits what they want to spend: the main thing and the stop together, not each alone. */
+export function withinSpend(totalPerPerson: number, context: ExperienceContext | undefined): boolean {
+  return context?.spend === undefined || totalPerPerson <= SPEND_CAP[context.spend];
 }

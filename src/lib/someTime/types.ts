@@ -1,5 +1,6 @@
 import type { CategoryName } from "@/lib/categories";
 import type { PlaceImage } from "@/lib/imagery/types";
+import type { CostTier } from "@/lib/opportunities/facts";
 
 /** A café, pub, restaurant or tea room to finish at. */
 export type FoodStopOption = {
@@ -70,6 +71,10 @@ export type TimeOption = {
   foodStop: FoodStopOption | null;
   /** Roughly what it costs per person, from what we know; null when we know nothing about price. */
   estimatedCost: number | null;
+  /** Free, £, ££ or £££ for the whole outing; null when we know nothing about price (never shown as Free). */
+  costTier: CostTier | null;
+  /** The price is a guess from what such places usually cost, or from a figure nobody checked, rather than a known price. */
+  costIsEstimate: boolean;
   /** The stops in order, and the travel between them (legs.length === stops.length - 1). */
   stops: PlanStop[];
   legs: PlanLeg[];

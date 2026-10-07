@@ -14,6 +14,7 @@ import { eventDate, weekStartFor } from "@/lib/opportunities/schedule";
 import { getDailyForecast, isStrongOutdoorWeather, type DayForecast } from "@/lib/nudges/weather";
 import { applyOpenTimeContext } from "@/lib/surprise/context";
 import { preferVerified } from "@/lib/context/constraints";
+import { costTierOf } from "@/lib/opportunities/facts";
 import { loadRepetitionHistory } from "@/lib/someTime/history";
 import {
   buildUserPrompt,
@@ -33,6 +34,7 @@ import {
   diversify,
   evaluateCandidate,
   findFoodStop,
+  limitExpensive,
   moodFits,
   type Evaluated,
   type FoodStop,
@@ -115,6 +117,9 @@ function toTimeOption(entry: ShortlistEntry, why: string, includeFood: boolean, 
   const c = e.candidate;
   const stop = includeFood ? foodStop : null;
   const plan = buildPlan(e, stop);
+  const totalCost = estimateCost(e, stop);
+  // A price is "known" only when it was recorded as checked, for the main thing and for any stop.
+  const costIsEstimate = !(c.cost_confidence === "known" && (!stop || stop.candidate.cost_confidence === "known"));
   // A theatre or cinema with no show listed is a place to check, not a promised performance.
   const checkWhatsOn = isPerformanceVenue(c) && e.eventStartMin === null;
   // The model's name for the outing, if it is honest about the plan; otherwise one built from the facts.
@@ -124,7 +129,9 @@ function toTimeOption(entry: ShortlistEntry, why: string, includeFood: boolean, 
     id: c.id,
     title: c.title,
     experienceTitle,
-    estimatedCost: estimateCost(e, stop),
+    estimatedCost: totalCost,
+    costTier: totalCost === null ? null : costTierOf({ price_estimate: totalCost }),
+    costIsEstimate,
     stops: plan.stops,
     legs: plan.legs,
     category: c.category as CategoryName,
@@ -211,10 +218,18 @@ export async function buildRecommendations(inputs: RecommendInputs): Promise<{ o
     const reply = await inputs.ask(SYSTEM_PROMPT, buildUserPrompt(promptContext, shortlist));
     const choices = parseChoices(reply, new Set(byId.keys()), idsWithFood);
     if (choices.length > 0) {
+      const chosen = choices.map((ch) => ({ ch, entry: byId.get(ch.id)!, evaluated: byId.get(ch.id)!.evaluated }));
+      // However the model chose, the options shown stay mixed in cost: an expensive pick beyond the limit gives way to the next best.
+      const kept: { ch: (typeof choices)[number] | null; entry: ShortlistEntry; evaluated: Evaluated }[] = limitExpensive(chosen);
+      for (const next of shortlist) {
+        if (kept.length >= chosen.length) break;
+        if (kept.some((k) => k.entry === next) || limitExpensive([...kept, { ch: null, entry: next, evaluated: next.evaluated }]).length === kept.length) continue;
+        kept.push({ ch: null, entry: next, evaluated: next.evaluated });
+      }
       return {
-        options: choices.map((ch) => {
-          const entry = byId.get(ch.id)!;
+        options: kept.map(({ ch, entry }) => {
           // An explanation that talks like the app's internals ("a category you have not touched") is replaced by one built from the facts.
+          if (!ch) return toTimeOption(entry, fallbackWhy(entry.evaluated), entry.foodStop !== null && window.availableMinutes >= 90);
           return toTimeOption(entry, containsJargon(ch.why) ? fallbackWhy(entry.evaluated) : ch.why, ch.withFood, ch.title);
         }),
         notice,

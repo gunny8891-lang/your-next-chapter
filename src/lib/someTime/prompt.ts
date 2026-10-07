@@ -56,6 +56,7 @@ How to choose:
 genuinely different ways to spend the time — never three similar things. Put the strongest first.
 - Respect their mood, who they are with, and anything in their profile (mobility, diet, budget).
 - If they have said how they feel today, respect that over their usual habits: on a day they are taking it easy, never choose something strenuous or long, however much they usually enjoy it. How they feel today is only about today.
+- Keep the options mixed in cost: at most one that costs more than about £40 a person, unless it is the only good choice. Free and inexpensive ideas are as good as dear ones.
 - If fewer than ${MAX_OPTIONS} are genuinely good, return fewer rather than padding.
 
 How to name each outing: give it a short, plain "title" of three to eight words that sounds like a good plan for the \
@@ -109,7 +110,7 @@ export function buildUserPrompt(ctx: PromptContext, shortlist: ShortlistEntry[])
     "About the member:",
     `- Goals: ${profile.goals.join(", ") || "none recorded"}`,
     `- Interests: ${profile.interests.join(", ") || "none recorded"}`,
-    `- Budget: ${profile.budget_band ?? "not specified"}`,
+    `- Budget: ${profile.budget_band === "any" ? "does not worry much about cost" : (profile.budget_band ?? "not specified")}`,
     `- Dietary: ${profile.dietary ?? "none recorded"}`,
     `- Mobility: ${profile.mobility_notes ?? "none recorded"}`,
     `- Free-time style: ${profile.personality ?? "not recorded"}`,

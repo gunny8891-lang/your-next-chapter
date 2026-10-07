@@ -11,7 +11,8 @@ import { estimateTravel, type TravelMode, type TravelProfile } from "@/lib/someT
 import { clockLabel, durationLabel, type TimeWindow } from "@/lib/someTime/window";
 import { dailyStateAdjustment, type DailyState } from "@/lib/experience/dailyState";
 import type { RecommendationMemory } from "@/lib/memory/memory";
-import { checkConstraints, stopWorks } from "@/lib/context/constraints";
+import { checkConstraints, stopWorks, withinSpend, type PlaceFacts } from "@/lib/context/constraints";
+import { costTierOf, type CostTier } from "@/lib/opportunities/facts";
 
 /**
  * Everything that decides whether something is a good way to spend a given
@@ -82,8 +83,14 @@ export type Evaluated = {
 // ---- tuning -------------------------------------------------------------
 
 const BUDGET_PER_PERSON: Record<string, number> = { low: 12, medium: 35, high: 90 };
-/** Over this multiple of the budget it is not a stretch, it is out. */
-const BUDGET_HARD_LIMIT = 2.5;
+/**
+ * Over this multiple of the budget a place to eat is left off the outing. It never rules out the main thing: cost nudges
+ * the ranking, and only an explicit "Free / £ / ££" choice for an outing leaves something out. A stop is different
+ * because it is an optional extra: no stop at all is better than one far beyond what they said is comfortable.
+ */
+const STOP_BUDGET_LIMIT = 2.5;
+/** The most the budget can mark a main suggestion down: a long way down, never out. */
+const MAX_BUDGET_PENALTY = 5;
 /** When the home location is unknown, assume this much travel. */
 const UNKNOWN_DISTANCE_KM = 4;
 /** An event is entered this long before it starts. */
@@ -221,14 +228,32 @@ function pricePerPerson(c: OpportunityCandidate, kind: FoodKind | null): number 
   return kind ? typicalSpend(kind) : null;
 }
 
-/** null = outside any reasonable stretch of the budget; otherwise a score adjustment (≤ 0.5). */
-function budgetAdjustment(price: number | null, band: string | null): number | null {
+/** A score adjustment (at most +0.5, at worst −MAX_BUDGET_PENALTY). "any", or no band, or no price: no effect. */
+function budgetAdjustment(price: number | null, band: string | null): number {
   if (price == null || !band) return 0;
   const cap = BUDGET_PER_PERSON[band];
   if (!cap) return 0;
-  if (price > cap * BUDGET_HARD_LIMIT) return null;
-  if (price > cap) return -Math.min(3, ((price - cap) / cap) * 2);
+  if (price > cap) return -Math.min(MAX_BUDGET_PENALTY, ((price - cap) / cap) * 2);
   return price === 0 && band === "low" ? 0.5 : 0;
+}
+
+/** Far beyond the comfortable budget: enough to leave an optional stop off. */
+function farBeyondBudget(price: number | null, band: string | null): boolean {
+  const cap = band ? BUDGET_PER_PERSON[band] : undefined;
+  return price != null && cap !== undefined && price > cap * STOP_BUDGET_LIMIT;
+}
+
+/**
+ * A place as the outing constraints see it, with what a place of its kind usually costs standing in for a price that was
+ * never recorded (a café has no entry fee, but is not free). The stand-in is only used to judge fit, never shown as a price.
+ */
+export function placeFacts(c: OpportunityCandidate): PlaceFacts {
+  return { ...c, price_estimate: pricePerPerson(c, foodKindOf(c.tags)) };
+}
+
+/** The cost tier of one place, from its price or what a place of its kind usually costs; null when nothing is known. */
+export function tierOfPlace(c: OpportunityCandidate): CostTier | null {
+  return costTierOf(placeFacts(c));
 }
 
 function priceFact(price: number | null, exact: boolean): string | null {
@@ -306,13 +331,12 @@ export function evaluateCandidate(c: OpportunityCandidate, input: ScoringInput):
   if (isOutdoor && daylight && (arriveMin < daylight.sunriseMin || arriveMin + Math.min(durationMinutes, DAYLIGHT_MIN_VISIT) > daylight.sunsetMin)) return null;
   const runsPastSunset = isOutdoor && daylight !== null && endMin > daylight.sunsetMin;
 
-  // --- can they afford it? ---
+  // --- what does it cost? (only ever a nudge; an explicit spend choice is handled with the other outing context below) ---
   const price = pricePerPerson(c, kind);
   const budget = budgetAdjustment(price, member.budget_band);
-  if (budget === null) return null;
 
   // --- does it work for what they said about today (the dog is coming)? ---
-  const fit = checkConstraints(c, request.context, "main");
+  const fit = checkConstraints(placeFacts(c), request.context, "main");
   if (fit.excluded) return null;
 
   // --- how good is it for them? ---
@@ -431,7 +455,54 @@ export function diversify(evaluated: Evaluated[], size: number, perCategory = 2,
     else categoryCounts[category] = (categoryCounts[category] ?? 0) + 1;
     picked.push(e);
   }
-  return picked;
+  return balanceCost(picked);
+}
+
+/** How many of the offered options may be expensive (£££): richer listings and better photographs must not pull every suggestion upmarket. */
+export const MAX_EXPENSIVE_OPTIONS = 1;
+/** How many options are actually shown: the cost spread is kept within these. */
+const SHOWN_OPTIONS = 3;
+
+/**
+ * Keeps the options that will be shown mixed in cost. Best-first order is kept except that no more than
+ * MAX_EXPENSIVE_OPTIONS expensive ones sit among the first few (the rest follow), and, when there is a
+ * free or inexpensive idea further down, one is brought up if the first few offer nothing like it.
+ * An idea whose price is unknown counts as neither: it is not assumed cheap or dear.
+ */
+export function balanceCost(sorted: Evaluated[]): Evaluated[] {
+  const tier = (e: Evaluated) => tierOfPlace(e.candidate);
+  const head: Evaluated[] = [];
+  const rest: Evaluated[] = [];
+  let expensive = 0;
+  for (const e of sorted) {
+    if (head.length < SHOWN_OPTIONS && !(tier(e) === "high" && expensive >= MAX_EXPENSIVE_OPTIONS)) {
+      head.push(e);
+      if (tier(e) === "high") expensive += 1;
+    } else rest.push(e);
+  }
+  const mixed = head.some((e) => {
+    const t = tier(e);
+    return t === "free" || t === "low" || t === null;
+  });
+  if (!mixed && head.length === SHOWN_OPTIONS) {
+    const cheap = rest.findIndex((e) => tier(e) === "free" || tier(e) === "low");
+    if (cheap !== -1) {
+      const [bringUp] = rest.splice(cheap, 1);
+      rest.unshift(head.pop() as Evaluated);
+      head.push(bringUp);
+    }
+  }
+  return [...head, ...rest];
+}
+
+/** Of the options already chosen, drops expensive ones beyond the limit. Pure over ids so a model's choice can be checked the same way. */
+export function limitExpensive<T extends { evaluated: Evaluated }>(chosen: T[]): T[] {
+  let expensive = 0;
+  return chosen.filter((c) => {
+    if (tierOfPlace(c.evaluated.candidate) !== "high") return true;
+    expensive += 1;
+    return expensive <= MAX_EXPENSIVE_OPTIONS;
+  });
 }
 
 // ---- food stops ---------------------------------------------------------
@@ -471,7 +542,7 @@ export function findFoodStop(main: Evaluated, foodVenues: OpportunityCandidate[]
     const kind = foodKindOf(venue.tags);
     if (!kind) continue;
     // The whole outing has to work: a walk with the dog does not end at a pub that has not said it takes dogs.
-    if (!stopWorks(venue, input.request.context)) continue;
+    if (!stopWorks(placeFacts(venue), input.request.context)) continue;
 
     const km = haversineDistanceKm(main.candidate.location_lat, main.candidate.location_lng, venue.location_lat, venue.location_lng);
     if (km > FOOD_STOP_RADIUS_KM) continue;
@@ -494,8 +565,11 @@ export function findFoodStop(main: Evaluated, foodVenues: OpportunityCandidate[]
     const status = openStatus(venue.recurrence_rule, weekday, arriveMin, stay);
     if (status.status === "closed") continue;
 
-    const budget = budgetAdjustment(pricePerPerson(venue, kind), member.budget_band);
-    if (budget === null) continue;
+    const stopPrice = pricePerPerson(venue, kind);
+    if (farBeyondBudget(stopPrice, member.budget_band)) continue;
+    // What they want to spend is for the whole outing: the main thing and the stop together.
+    if (!withinSpend((pricePerPerson(main.candidate, null) ?? 0) + (stopPrice ?? 0), input.request.context)) continue;
+    const budget = budgetAdjustment(stopPrice, member.budget_band);
 
     // Closer, independent, well-described and liked-before venues win.
     let score = budget - km * 2 + Math.max(-3, Math.min(3, scoreActivity(venue, affinity)) / 2);
