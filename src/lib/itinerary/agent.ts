@@ -8,6 +8,7 @@ import { alignToEvents, describeWhen, fitsDates, getCurrentWeekStart, londonToda
 import { callClaude } from "@/lib/ai/client";
 import { AI_MODELS } from "@/lib/ai/models";
 import { PLAIN_WORDS_RULE } from "@/lib/ai/plainWords";
+import { limitSignUpRoles } from "@/lib/itinerary/limitSignUpRoles";
 
 const MODEL = AI_MODELS.smart;
 const MAX_CANDIDATES_SENT_TO_LLM = 40;
@@ -148,8 +149,12 @@ export async function generateItinerary(
   const remainingDates = Object.values(dates).filter((d) => d >= today);
   const plannable = rankedActivities.filter((a) => fitsDates(a, remainingDates));
 
+  // Standing volunteer roles are a commitment, not a Tuesday outing: none unless their goals say giving back matters, then one.
   const candidateActivities = selectBalanced(
-    plannable.filter((a) => (affinity.activityScores[a.id] ?? 0) > DISLIKE_EXCLUSION_THRESHOLD),
+    limitSignUpRoles(
+      plannable.filter((a) => (affinity.activityScores[a.id] ?? 0) > DISLIKE_EXCLUSION_THRESHOLD),
+      profile?.goals ?? []
+    ),
     MAX_CANDIDATES_SENT_TO_LLM,
     MIN_CANDIDATES_PER_CATEGORY
   );
