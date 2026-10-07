@@ -8,7 +8,7 @@ const read = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 describe("where a member could see a raw error, they now see a kind sentence", () => {
   it("the concierge answers in its own voice for each kind of failure", () => {
     const chat = read("src/app/chat/actions.ts");
-    expect(chat).toContain("reply = chatMessage(classifyAiFailure(err));");
+    expect(chat).toContain("reply = chatMessage(classifyAiFailure(err)) + note;");
     expect(chat).not.toContain("having trouble answering right now —");
   });
 
