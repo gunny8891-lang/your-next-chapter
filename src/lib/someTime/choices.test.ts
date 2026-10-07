@@ -14,10 +14,10 @@ describe("the questions", () => {
 });
 
 describe("availableStarts", () => {
-  it("only offers the parts of today that are still ahead", () => {
-    expect(availableStarts(9).map((s) => s.value)).toEqual(["now", "afternoon", "evening"]);
-    expect(availableStarts(17).map((s) => s.value)).toEqual(["now", "evening"]);
-    expect(availableStarts(21).map((s) => s.value)).toEqual(["now"]);
+  it("only offers the parts of today that are still ahead, and tomorrow always", () => {
+    expect(availableStarts(9).map((s) => s.value)).toEqual(["now", "afternoon", "evening", "tomorrow"]);
+    expect(availableStarts(17).map((s) => s.value)).toEqual(["now", "evening", "tomorrow"]);
+    expect(availableStarts(21).map((s) => s.value)).toEqual(["now", "tomorrow"]);
   });
 });
 

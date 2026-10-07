@@ -17,6 +17,21 @@ export const DURATION_OPTIONS: { value: Exclude<DurationChoice, "until_next">; l
   { value: "rest_of_day", label: "Rest of today", hint: "Until this evening" },
 ];
 
+/**
+ * What tomorrow offers instead: "rest of today" and a half-hour break mean nothing for a day that has not started, and
+ * "all day" only makes sense for one that has not.
+ */
+export const TOMORROW_DURATION_OPTIONS: { value: Exclude<DurationChoice, "until_next">; label: string; hint: string }[] = [
+  { value: "1-2h", label: "1–2 hours", hint: "A good stretch" },
+  { value: "half_day", label: "Half a day", hint: "Around four hours" },
+  { value: "all_day", label: "All day", hint: "Morning to evening" },
+];
+
+/** The lengths of time worth offering for a start. */
+export function durationOptionsFor(start: StartChoice): typeof DURATION_OPTIONS {
+  return start === "tomorrow" ? TOMORROW_DURATION_OPTIONS : DURATION_OPTIONS;
+}
+
 /** Surprise me first and most prominent; the rest are ways to steer it. */
 export const MOOD_OPTIONS: { value: Mood; label: string }[] = [
   { value: "surprise", label: "Surprise me" },
@@ -46,13 +61,15 @@ const START_LABEL: Record<StartChoice, string> = {
   now: "Starting now",
   afternoon: "This afternoon",
   evening: "This evening",
+  tomorrow: "Tomorrow",
 };
 
-/** The starts still worth offering at this hour: "this afternoon" is no use at 6pm. */
+/** The starts still worth offering at this hour: "this afternoon" is no use at 6pm. Tomorrow is always there. */
 export function availableStarts(hour: number): { value: StartChoice; label: string }[] {
   const starts: { value: StartChoice; label: string }[] = [{ value: "now", label: "Now" }];
   if (hour < 17) starts.push({ value: "afternoon", label: "This afternoon" });
   if (hour < 21) starts.push({ value: "evening", label: "This evening" });
+  starts.push({ value: "tomorrow", label: "Tomorrow" });
   return starts;
 }
 
@@ -101,7 +118,7 @@ export function summaryLine(parts: { duration: DurationChoice; start: StartChoic
   const length =
     parts.duration === "until_next" && parts.untilMin != null
       ? `Until ${clockLabel(parts.untilMin)}`
-      : (DURATION_OPTIONS.find((d) => d.value === parts.duration)?.label ?? durationLabel(60));
+      : ([...DURATION_OPTIONS, ...TOMORROW_DURATION_OPTIONS].find((d) => d.value === parts.duration)?.label ?? durationLabel(60));
   const mood = parts.mood && parts.mood !== "surprise" ? MOOD_OPTIONS.find((m) => m.value === parts.mood)?.label : null;
   return [length, START_LABEL[parts.start], mood].filter(Boolean).join(" · ");
 }

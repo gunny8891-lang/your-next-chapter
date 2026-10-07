@@ -7,6 +7,7 @@ import { ExperienceCard, type FeedbackReason } from "@/components/ExperienceCard
 import {
   availableStarts,
   DURATION_OPTIONS,
+  durationOptionsFor,
   MOOD_OPTIONS,
   startLabel,
   summaryLine,
@@ -106,6 +107,8 @@ export function TimeSheet({ initial, commitment, suggestedMood, nowMin, onFind, 
   const hour = Math.floor(nowMin / 60);
   const starts = availableStarts(hour);
   const effectiveStart = starts.some((s) => s.value === start) ? start : "now";
+  // Tomorrow has its own lengths of time, and no "until my next thing": that is about the day they are in.
+  const durations = durationOptionsFor(effectiveStart);
 
   const chooseDuration = (value: DurationChoice, until: number | null = null) => {
     setDuration(value);
@@ -170,13 +173,13 @@ export function TimeSheet({ initial, commitment, suggestedMood, nowMin, onFind, 
         )}
 
         <div className={styles.options}>
-          {until && (
+          {until && effectiveStart !== "tomorrow" && (
             <button type="button" className={`${styles.option} ${styles.optionUntil}`} onClick={() => chooseDuration("until_next", until.untilMin)}>
               <span className={styles.optionLabel}>{until.label}</span>
               <span className={styles.optionHint}>{until.hint}</span>
             </button>
           )}
-          {DURATION_OPTIONS.map((d) => (
+          {durations.map((d) => (
             <button
               key={d.value}
               type="button"

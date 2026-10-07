@@ -1,10 +1,10 @@
 import type { SurpriseWho } from "@/lib/surprise/context";
 import { parseContext, type ExperienceContext } from "@/lib/context/constraints";
 
-/** When the free time starts: right now, or a later part of today. */
-export type StartChoice = "now" | "afternoon" | "evening";
+/** When the free time starts: right now, a later part of today, or tomorrow (from the morning). */
+export type StartChoice = "now" | "afternoon" | "evening" | "tomorrow";
 /** "until_next" is the time before the next thing already in the member's day (see untilMin). */
-export type DurationChoice = "30m" | "1-2h" | "half_day" | "rest_of_day" | "until_next";
+export type DurationChoice = "30m" | "1-2h" | "half_day" | "all_day" | "rest_of_day" | "until_next";
 export type Mood = "surprise" | "outdoors" | "social" | "active" | "culture" | "relaxed" | "food";
 
 export type TimeRequest = {
@@ -21,8 +21,8 @@ export type TimeRequest = {
   context?: ExperienceContext;
 };
 
-const STARTS: StartChoice[] = ["now", "afternoon", "evening"];
-const DURATIONS: DurationChoice[] = ["30m", "1-2h", "half_day", "rest_of_day", "until_next"];
+const STARTS: StartChoice[] = ["now", "afternoon", "evening", "tomorrow"];
+const DURATIONS: DurationChoice[] = ["30m", "1-2h", "half_day", "all_day", "rest_of_day", "until_next"];
 const WHOS: SurpriseWho[] = ["just_me", "partner", "friends", "family"];
 const MOODS: Mood[] = ["surprise", "outdoors", "social", "active", "culture", "relaxed", "food"];
 const MAX_EXCLUDED = 40;

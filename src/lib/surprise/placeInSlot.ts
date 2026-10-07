@@ -3,8 +3,12 @@ import { londonToday, weekdayOf, weekStartFor, type DayName, type SlotName } fro
 
 /** Which plan week and day "today" belongs to, in the member's (London) calendar. */
 export function resolveToday(now: Date = new Date()): { weekStart: string; day: DayName } {
-  const today = londonToday(now);
-  return { weekStart: weekStartFor(today), day: weekdayOf(today) };
+  return resolveDate(londonToday(now));
+}
+
+/** Which plan week and day a calendar date (YYYY-MM-DD, London) belongs to. */
+export function resolveDate(date: string): { weekStart: string; day: DayName } {
+  return { weekStart: weekStartFor(date), day: weekdayOf(date) };
 }
 
 const CHOSEN_RATIONALE = "You chose this from today's Open Time suggestions.";
@@ -28,9 +32,11 @@ export async function placeOpenTimeChoice(
   activityId: string,
   slot: SlotName,
   now: Date = new Date(),
-  rationale: string = CHOSEN_RATIONALE
+  rationale: string = CHOSEN_RATIONALE,
+  /** The calendar date it is for, when that is not today (tomorrow): it goes into that day's plan, in whichever week that falls. */
+  onDate?: string
 ): Promise<{ error: string | null }> {
-  const { weekStart, day } = resolveToday(now);
+  const { weekStart, day } = onDate ? resolveDate(onDate) : resolveToday(now);
 
   const { data: activity } = await member.from("activities").select("id").eq("id", activityId).maybeSingle();
   if (!activity) return { error: "That suggestion isn't available any more." };

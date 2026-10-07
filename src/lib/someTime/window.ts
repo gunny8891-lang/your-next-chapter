@@ -1,9 +1,14 @@
 import type { DurationChoice, StartChoice } from "@/lib/someTime/request";
+import { addDays } from "@/lib/opportunities/schedule";
 
 /** The last sensible moment to still be out and about; nothing is planned past this. */
 const DAY_END_MIN = 22 * 60 + 30;
 const AFTERNOON_START_MIN = 14 * 60;
 const EVENING_START_MIN = 18 * 60;
+/** Tomorrow starts at ten: when most places open and a day out sensibly begins. Earlier, and anything opening at ten would count as shut on arrival. */
+const TOMORROW_START_MIN = 10 * 60;
+/** "All day": from the start to the evening, about nine hours. */
+const ALL_DAY_MIN = 9 * 60;
 /** Below this there is no time to go anywhere. */
 const MIN_USABLE_MIN = 25;
 
@@ -53,9 +58,9 @@ export function durationLabel(minutes: number): string {
 }
 
 /**
- * Turns "now / this afternoon / this evening" and "30 min … rest of day" into a
- * concrete stretch of today. A later start never begins before the time it names,
- * and never before now; the end is clipped to the end of a sensible day.
+ * Turns "now / this afternoon / this evening / tomorrow" and "30 min … all day" into a
+ * concrete stretch of time. A later start today never begins before the time it names,
+ * and never before now; tomorrow starts in the morning. The end is clipped to the end of a sensible day.
  */
 export function resolveWindow(
   request: { start: StartChoice; duration: DurationChoice; untilMin?: number | null },
@@ -63,19 +68,22 @@ export function resolveWindow(
 ): WindowResult {
   const clock = londonClock(now);
   const nowMin = roundUp5(clock.minutes);
+  const tomorrow = request.start === "tomorrow";
+  const date = tomorrow ? addDays(clock.date, 1) : clock.date;
   const startMin =
-    request.start === "afternoon" ? Math.max(nowMin, AFTERNOON_START_MIN)
+    tomorrow ? TOMORROW_START_MIN
+    : request.start === "afternoon" ? Math.max(nowMin, AFTERNOON_START_MIN)
     : request.start === "evening" ? Math.max(nowMin, EVENING_START_MIN)
     : nowMin;
 
   if (DAY_END_MIN - startMin < MIN_USABLE_MIN) {
-    return { ok: false, reason: "It is too late today for anything new — try again tomorrow." };
+    return { ok: false, reason: "It is too late today for anything new. Try \"Tomorrow\" instead." };
   }
 
   const untilDayEnd = DAY_END_MIN - startMin;
 
   // Time before the next thing already in their day: free until then, and back for it.
-  if (request.duration === "until_next") {
+  if (request.duration === "until_next" && !tomorrow) {
     const gap = (request.untilMin ?? 0) - startMin;
     if (gap < MIN_USABLE_MIN) {
       return { ok: false, reason: "There is not enough time before your next plan — try a different amount of time." };
@@ -83,7 +91,7 @@ export function resolveWindow(
     const available = Math.min(gap, untilDayEnd, 600);
     return {
       ok: true,
-      window: { date: clock.date, startMin, endMin: startMin + available, availableMinutes: available, minUsefulMinutes: Math.min(45, available) },
+      window: { date, startMin, endMin: startMin + available, availableMinutes: available, minUsefulMinutes: Math.min(45, available) },
     };
   }
 
@@ -91,13 +99,14 @@ export function resolveWindow(
     request.duration === "30m" ? [30, 15]
     : request.duration === "1-2h" ? [120, 45]
     : request.duration === "half_day" ? [240, 120]
+    : request.duration === "all_day" ? [ALL_DAY_MIN, 240]
     : [Math.min(600, untilDayEnd), Math.min(90, untilDayEnd)]; // rest of the day
 
   const availableMinutes = Math.min(wanted, untilDayEnd);
   return {
     ok: true,
     window: {
-      date: clock.date,
+      date,
       startMin,
       endMin: startMin + availableMinutes,
       availableMinutes,

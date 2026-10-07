@@ -91,7 +91,7 @@ export async function acceptTimeOptionAction(
   const admin = createAdminClient();
   let lastError = "Something is already planned for that time.";
   for (const slot of slots) {
-    const result = await placeOpenTimeChoice(supabase, admin, user.id, activityId, slot, new Date(), rationale);
+    const result = await placeOpenTimeChoice(supabase, admin, user.id, activityId, slot, new Date(), rationale, resolved.window.date);
     if (!result.error) {
       const planned = eventFor("planned", activityId, meta);
       if (planned) {
