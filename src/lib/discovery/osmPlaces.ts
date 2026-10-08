@@ -8,9 +8,22 @@ import {
   type OsmLayer,
 } from "@/lib/discovery/sources/openStreetMap";
 import { geocodeLocation, sleep, type Coordinates } from "@/lib/geo/geocode";
+import { haversineDistanceKm } from "@/lib/geo/haversine";
 
-// Anything this close to a region's centre counts as that region's coverage.
-const COVERED_RADIUS_KM = 12;
+/**
+ * Anything this close to a place counts as covering it. It must be smaller than the distance between a town and its
+ * villages: at 12 km, Ardeley (8 km from Stevenage) counted as already covered by Stevenage's places, so nothing around
+ * the village itself was ever fetched and someone living there saw only the town. Duplicates are skipped when places
+ * are saved, so a nearby second fetch costs time (about a minute, free), not repeated entries.
+ */
+export const COVERED_RADIUS_KM = 6;
+
+/** The box around a centre that counts as covered by it. Pure. */
+export function coverageBox(centre: Coordinates, km: number = COVERED_RADIUS_KM) {
+  const dLat = km / 111;
+  const dLng = km / (111 * Math.cos((centre.lat * Math.PI) / 180));
+  return { latMin: centre.lat - dLat, latMax: centre.lat + dLat, lngMin: centre.lng - dLng, lngMax: centre.lng + dLng };
+}
 
 const LAYERS: { layer: OsmLayer; notePrefix: string }[] = [
   { layer: "places", notePrefix: OSM_PLACES_NOTE_PREFIX },
@@ -28,19 +41,24 @@ type Deps = OpenStreetMapDeps & {
   geocode?: (query: string) => Promise<Coordinates | null>;
 };
 
+/** Whether any of these places is within the covered distance of the centre: a true distance, not the corner of a box. Pure. */
+export function isCovered(places: { location_lat: number | null; location_lng: number | null }[], centre: Coordinates, km: number = COVERED_RADIUS_KM): boolean {
+  return places.some((p) => p.location_lat != null && p.location_lng != null && haversineDistanceKm(centre.lat, centre.lng, Number(p.location_lat), Number(p.location_lng)) <= km);
+}
+
 async function alreadyCovered(supabase: SupabaseClient, centre: Coordinates, notePrefix: string): Promise<boolean> {
-  const dLat = COVERED_RADIUS_KM / 111;
-  const dLng = COVERED_RADIUS_KM / (111 * Math.cos((centre.lat * Math.PI) / 180));
-  const { count, error } = await supabase
+  const box = coverageBox(centre);
+  const { data, error } = await supabase
     .from("activities")
-    .select("id", { count: "exact", head: true })
+    .select("location_lat, location_lng")
     .like("admin_notes", `${notePrefix}%`)
-    .gte("location_lat", centre.lat - dLat)
-    .lte("location_lat", centre.lat + dLat)
-    .gte("location_lng", centre.lng - dLng)
-    .lte("location_lng", centre.lng + dLng);
+    .gte("location_lat", box.latMin)
+    .lte("location_lat", box.latMax)
+    .gte("location_lng", box.lngMin)
+    .lte("location_lng", box.lngMax)
+    .limit(500);
   if (error) throw new Error(`Couldn't check existing place coverage: ${error.message}`);
-  return (count ?? 0) > 0;
+  return isCovered(data ?? [], centre);
 }
 
 /**
