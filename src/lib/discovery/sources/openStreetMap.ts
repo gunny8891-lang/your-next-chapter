@@ -3,6 +3,7 @@ import type { CategoryName } from "@/lib/categories";
 import type { DiscoverySource, RawActivityCandidate } from "@/lib/discovery/types";
 import { sleep, type Coordinates } from "@/lib/geo/geocode";
 import { FOOD_VENUE_TAG } from "@/lib/opportunities/kinds";
+import { dogFactsFromOsm } from "@/lib/discovery/dogTags";
 
 /**
  * Free base layer of real, standing places — leisure centres, pools, parks,
@@ -438,6 +439,8 @@ export function selectPlaces(
       openingHours: openingHoursOf(place),
       durationMinutes: cfg.minutes,
       bookingUrl: useSite ? site : osmUrl(place),
+      // Only what the entry itself says about dogs: most have nothing, and that stays "unknown".
+      dog: dogFactsFromOsm(place.extratags, osmUrl(place)),
       bookingUrlVerified: true,
       tags,
       status: "active",

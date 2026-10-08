@@ -117,11 +117,18 @@ export async function persistDiscovery(
         date_time: c.dateTime,
         expires_at: c.availableUntil ?? null,
         price_estimate: c.priceEstimate,
+        // A price found by a search or a tag is an estimate until someone has checked it: the app says "about".
+        price_type: c.priceEstimate === null ? "unknown" : c.priceEstimate === 0 ? "free" : "entry",
+        cost_confidence: c.priceEstimate === null ? "unknown" : "estimated",
         recurrence_rule: c.openingHours ?? null,
         duration_minutes: c.durationMinutes ?? null,
         booking_url: c.bookingUrl,
         source: "discovery_agent" as const,
         tags: normaliseTags(c.tags),
+        // Written only when the source said something; otherwise the column's default, unknown, stands.
+        ...(c.dog
+          ? { dog_access: c.dog.access, dog_restrictions: c.dog.restrictions, dog_confidence: c.dog.confidence, dog_source: c.dog.source }
+          : {}),
         status: c.status ?? "active",
         admin_notes: c.adminNotes ?? null,
       }));

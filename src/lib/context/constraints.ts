@@ -36,7 +36,24 @@ export type ExperienceContext = {
 };
 
 /** What a place tells us that the constraints look at. */
-export type PlaceFacts = DogFacts & CostFacts;
+export type PlaceFacts = DogFacts & CostFacts & { tags?: string[] };
+
+/**
+ * When the dog is coming and a place has not said whether dogs are allowed, outdoor places are put ahead of
+ * indoor ones. That is only an order for places we have to ask the member to check anyway: being outdoors
+ * never makes a place count as dog-friendly (it stays "Check dog access"), it is simply more likely to be
+ * worth the check than a gym or a cinema.
+ */
+const OUTDOOR_FOR_DOG = ["outdoors", "walking", "nature", "gardens", "park", "wildlife", "cycling", "views"];
+const INDOOR_FOR_DOG = ["indoor", "theatre", "cinema", "museum", "swimming", "fitness", "yoga", "classes", "books", "gentle exercise", "arts"];
+const UNCONFIRMED_OUTDOOR_BONUS = 1.5;
+const UNCONFIRMED_INDOOR_PENALTY = 1.5;
+
+function unconfirmedDogOrder(tags: string[] | undefined): number {
+  if (tags?.some((t) => OUTDOOR_FOR_DOG.includes(t))) return UNCONFIRMED_OUTDOOR_BONUS;
+  if (tags?.some((t) => INDOOR_FOR_DOG.includes(t))) return -UNCONFIRMED_INDOOR_PENALTY;
+  return 0;
+}
 
 /** A place on an outing: the main thing, or a stop (such as somewhere to eat) added to it. Each must work. */
 export type ConstraintRole = "main" | "stop";
@@ -44,7 +61,7 @@ export type ConstraintRole = "main" | "stop";
 export type Verdict =
   | { kind: "ok"; /** A clause the explanation can use. */ reason?: string; /** A short line for the card. */ fact?: string; /** Added to the score. */ bonus?: number }
   | { kind: "exclude" }
-  | { kind: "unverified"; /** What to tell the member: "Check dog access". */ note: string };
+  | { kind: "unverified"; /** What to tell the member: "Check dog access". */ note: string; /** Ordering among the unconfirmed only: it never says the place suits. */ bonus?: number };
 
 type Constraint = {
   key: keyof ExperienceContext;
@@ -69,7 +86,7 @@ const dogConstraint: Constraint = {
     if (friendly === true && parseDogConfidence(place.dog_confidence) !== "unknown") {
       return { kind: "ok", reason: "dogs are welcome, so the dog can come", fact: dogFact(place) ?? undefined, bonus: 1 };
     }
-    return { kind: "unverified", note: "Check dog access" };
+    return { kind: "unverified", note: "Check dog access", bonus: unconfirmedDogOrder(place.tags) };
   },
   describe: (context) => (context.dog === true ? "The dog is coming. Only say dogs are welcome where a line says so; where a line says to check dog access, tell them to check." : null),
 };
@@ -128,8 +145,10 @@ export function checkConstraints(place: PlaceFacts, context: ExperienceContext |
     if (!c.active(context)) continue;
     const verdict = c.check(place, context, role);
     if (verdict.kind === "exclude") result.excluded = true;
-    else if (verdict.kind === "unverified") result.unverified.push(verdict.note);
-    else {
+    else if (verdict.kind === "unverified") {
+      result.unverified.push(verdict.note);
+      result.bonus += verdict.bonus ?? 0;
+    } else {
       if (verdict.reason) result.reasons.push(verdict.reason);
       if (verdict.fact) result.facts.push(verdict.fact);
       result.bonus += verdict.bonus ?? 0;
