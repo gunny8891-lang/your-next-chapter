@@ -1,15 +1,25 @@
+import { COST_TIER_LABEL, costTierOf, type CostTier } from "@/lib/opportunities/facts";
+
 /** Small formatting helpers for the cards. Pure, so they can be tested. */
 
 /**
- * A price as a band: "Free", "£", "££" or "£££". Cards show a band rather than a
- * figure because most of what we know is an estimate. null = no price known.
+ * A price as a band: "Free", "£", "££" or "£££", on the same limits as the cost tiers and the Spend
+ * choice, so what a card says and what a filter means are never different. Cards show a band rather
+ * than a figure because most of what we know is an estimate. null = no price known.
  */
 export function priceBand(price: number | null | undefined): string | null {
-  if (price == null) return null;
-  if (price === 0) return "Free";
-  if (price <= 10) return "£";
-  if (price <= 30) return "££";
-  return "£££";
+  const tier = costTierOf({ price_estimate: price ?? null });
+  return tier ? COST_TIER_LABEL[tier] : null;
+}
+
+/**
+ * What an idea's card says about cost: the exact price when it is a checked one ("£12"), otherwise the
+ * band, since most of what we hold is an estimate. Null when nothing is known: never "Free" by default.
+ */
+export function costLabelFor(o: { costTier: CostTier | null; costIsEstimate: boolean; estimatedCost: number | null }): string | null {
+  if (!o.costTier) return null;
+  if (!o.costIsEstimate && o.estimatedCost !== null) return o.estimatedCost === 0 ? "Free" : `£${o.estimatedCost}`;
+  return COST_TIER_LABEL[o.costTier];
 }
 
 const POSTCODE = /^[A-Z]{1,2}\d[A-Z\d]?(\s*\d[A-Z]{2})?$/i;

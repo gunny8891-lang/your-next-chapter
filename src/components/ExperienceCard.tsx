@@ -3,7 +3,7 @@
 import { useEffect, useId, useState } from "react";
 import { Check, ChevronDown, Heart } from "lucide-react";
 import { Button, Card, Chip, Cover, Timeline } from "@/components/ui";
-import { doorToDoorMinutes, friendlyDuration, placeLabel, planLabelFor, priceBand } from "@/lib/someTime/format";
+import { costLabelFor, doorToDoorMinutes, friendlyDuration, placeLabel, planLabelFor } from "@/lib/someTime/format";
 import { trackSeen } from "@/components/trackExperience";
 import type { Surface } from "@/lib/experience/events";
 import type { TimeOption } from "@/lib/someTime/types";
@@ -67,8 +67,10 @@ export function ExperienceCard({ option, reason, variant, surface, who, state, e
   const meta = [
     placeLabel(option.address),
     total ? friendlyDuration(total) : null,
-    priceBand(option.estimatedCost ?? option.priceEstimate),
+    costLabelFor(option),
     option.setting ? SETTING_LABEL[option.setting] : null,
+    // Only said when the place is known to take dogs; nothing is claimed otherwise.
+    option.facts.find((f) => f.startsWith("Dogs ")) ?? null,
   ].filter((m): m is string => Boolean(m));
 
   const summary = (
@@ -100,6 +102,7 @@ export function ExperienceCard({ option, reason, variant, surface, who, state, e
         <h3 className={styles.title}>{option.experienceTitle}</h3>
         {meta.length > 0 && <p className={styles.meta}>{meta.join(" · ")}</p>}
         <p className={styles.reason}>{reason}</p>
+        {option.contextNotes.length > 0 && <p className={styles.checkNote}>{option.contextNotes.join(" · ")}</p>}
         {option.checkWhatsOn && (
           <p className={styles.checkNote}>
             Check what&apos;s on before you go.

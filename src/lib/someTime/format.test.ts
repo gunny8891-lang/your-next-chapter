@@ -1,15 +1,21 @@
 import { describe, expect, it } from "vitest";
 import { humanReason } from "@/lib/someTime/copy";
-import { cleanFirstName, clockToMinutes, doorToDoorMinutes, friendlyDuration, greetingFor, placeLabel, planLabelFor, priceBand, settingOf } from "@/lib/someTime/format";
+import { cleanFirstName, clockToMinutes, costLabelFor, doorToDoorMinutes, friendlyDuration, greetingFor, placeLabel, planLabelFor, priceBand, settingOf } from "@/lib/someTime/format";
 
 describe("priceBand", () => {
   it("shows a band, not a false precision", () => {
     expect(priceBand(0)).toBe("Free");
     expect(priceBand(8)).toBe("£");
-    expect(priceBand(10)).toBe("£");
-    expect(priceBand(11)).toBe("££");
-    expect(priceBand(30)).toBe("££");
-    expect(priceBand(31)).toBe("£££");
+    expect(priceBand(15)).toBe("£");
+    expect(priceBand(16)).toBe("££");
+    expect(priceBand(40)).toBe("££");
+    expect(priceBand(41)).toBe("£££");
+  });
+
+  it("uses the same limits as the Spend choice, so a card and a filter never disagree", () => {
+    // A £12 gallery is "£", and is exactly what choosing "£" (up to £15) keeps.
+    expect(priceBand(12)).toBe("£");
+    expect(priceBand(15)).toBe(priceBand(1));
   });
 
   it("shows nothing when the price is not known", () => {
@@ -147,5 +153,18 @@ describe("planLabelFor", () => {
 
   it("says just 'Plan this' if the time is not a clock time", () => {
     expect(planLabelFor("Afternoon")).toBe("Plan this");
+  });
+});
+
+describe("costLabelFor", () => {
+  it("shows an exact price only when it was checked, and the band otherwise", () => {
+    expect(costLabelFor({ costTier: "low", costIsEstimate: false, estimatedCost: 12 })).toBe("£12");
+    expect(costLabelFor({ costTier: "low", costIsEstimate: true, estimatedCost: 12 })).toBe("£");
+    expect(costLabelFor({ costTier: "free", costIsEstimate: false, estimatedCost: 0 })).toBe("Free");
+    expect(costLabelFor({ costTier: "high", costIsEstimate: true, estimatedCost: 80 })).toBe("£££");
+  });
+
+  it("says nothing when nothing is known, never Free", () => {
+    expect(costLabelFor({ costTier: null, costIsEstimate: true, estimatedCost: null })).toBeNull();
   });
 });
