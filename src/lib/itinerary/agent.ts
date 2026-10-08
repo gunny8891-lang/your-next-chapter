@@ -9,6 +9,7 @@ import { callClaude } from "@/lib/ai/client";
 import { AI_MODELS } from "@/lib/ai/models";
 import { PLAIN_WORDS_RULE } from "@/lib/ai/plainWords";
 import { limitSignUpRoles } from "@/lib/itinerary/limitSignUpRoles";
+import { isHallVenue } from "@/lib/opportunities/kinds";
 
 const MODEL = AI_MODELS.smart;
 const MAX_CANDIDATES_SENT_TO_LLM = 40;
@@ -152,7 +153,8 @@ export async function generateItinerary(
   // Standing volunteer roles are a commitment, not a Tuesday outing: none unless their goals say giving back matters, then one.
   const candidateActivities = selectBalanced(
     limitSignUpRoles(
-      plannable.filter((a) => (affinity.activityScores[a.id] ?? 0) > DISLIKE_EXCLUSION_THRESHOLD),
+      // A hall with nothing listed is not a plan for a morning: it is offered only where someone can check what is on.
+      plannable.filter((a) => !isHallVenue(a) && (affinity.activityScores[a.id] ?? 0) > DISLIKE_EXCLUSION_THRESHOLD),
       profile?.goals ?? []
     ),
     MAX_CANDIDATES_SENT_TO_LLM,

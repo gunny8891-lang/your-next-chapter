@@ -32,6 +32,22 @@ export function isPerformanceVenue(a: { tags: string[] }): boolean {
   return a.tags.some((t) => PERFORMANCE_VENUE_TAGS.includes(t));
 }
 
+/**
+ * Village halls and community centres are listed the same way: as a building, with nothing recorded about what happens
+ * in it. "A community catch-up" at a hall whose programme we do not know sends someone to an empty room, so these are
+ * offered only as somewhere to check, and never as an activity for the weekly plan.
+ */
+export const HALL_VENUE_TAGS = ["community-centre"];
+
+export function isHallVenue(a: { tags: string[] }): boolean {
+  return a.tags.some((t) => HALL_VENUE_TAGS.includes(t));
+}
+
+/** A building with no listing of what is on: a theatre, a cinema or a hall. */
+export function isVenueOnly(a: { tags: string[] }): boolean {
+  return isPerformanceVenue(a) || isHallVenue(a);
+}
+
 export type FoodVenueMode = "exclude" | "include" | "only";
 
 /** Pure: applies a caller's choice about food and drink places to a candidate list. */

@@ -1,4 +1,4 @@
-import { foodKindOf, isPerformanceVenue } from "@/lib/opportunities/kinds";
+import { foodKindOf, isHallVenue, isPerformanceVenue } from "@/lib/opportunities/kinds";
 import { humanReason } from "@/lib/someTime/copy";
 import { cleanTitle } from "@/lib/someTime/experience";
 import { MOOD_LABEL, type TimeRequest } from "@/lib/someTime/request";
@@ -70,7 +70,7 @@ it is a short walk). Do not state anything about a place that is not in its line
 
 ${PLAIN_WORDS_RULE}
 
-Venues: a candidate marked "a venue only" is a theatre or cinema building. Nothing says anything is on there today. Never describe a show, a film, a performance or "a night out" there as if one exists, and never call the outing "an evening of theatre" or similar. Say it is worth checking what's on before going.
+Venues: a candidate marked "a venue only" is a theatre, a cinema or a community hall. Nothing says anything is on there today. Never describe a show, a film, a performance, a class, a group or "a night out" there as if one exists, and never call the outing "an evening of theatre" or similar. Say it is worth checking what's on before going.
 
 Food: a candidate may list "then nearby" — a café, pub, restaurant or tea room close by that fits the time of day. Set \
 "with_food" to true only for a candidate that lists one AND where finishing there makes sense for the time and mood; \
@@ -88,7 +88,8 @@ function candidateLine({ evaluated: e, foodStop }: ShortlistEntry): string {
     const open = foodStop.openUntil != null ? `, open until ${clockLabel(foodStop.openUntil)}` : "";
     food = ` | then nearby: ${foodStop.candidate.title} (${kind ? KIND_LABEL[kind] : "food"}, ${foodStop.distanceMeters} m away, ${foodStop.meal}${open})`;
   }
-  const venueOnly = isPerformanceVenue(c) && e.eventStartMin === null ? " | NOTE: a venue only: no show or film is listed for it" : "";
+  const venueOnly =
+    e.eventStartMin !== null ? "" : isPerformanceVenue(c) ? " | NOTE: a venue only: no show or film is listed for it" : isHallVenue(c) ? " | NOTE: a venue only: no class or group is listed for it" : "";
   const toCheck = e.unverified?.length ? ` | NOTE: not confirmed, tell them to check: ${e.unverified.join("; ")}` : "";
   return (
     `- id=${c.id} | ${c.title} | ${c.category} | ${e.facts.join(", ")} | ` +

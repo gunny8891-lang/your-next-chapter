@@ -6,7 +6,7 @@ import { containsJargon } from "@/lib/ai/plainWords";
 import { AI_MODELS } from "@/lib/ai/models";
 import { summarizeAffinity, type AffinityScores } from "@/lib/memory/scoring";
 import { fetchRankedOpportunities, type OpportunityCandidate } from "@/lib/opportunities/engine";
-import { foodKindOf, isFoodVenue, isPerformanceVenue } from "@/lib/opportunities/kinds";
+import { foodKindOf, isFoodVenue, isVenueOnly } from "@/lib/opportunities/kinds";
 import { humanReason } from "@/lib/someTime/copy";
 import { settingOf } from "@/lib/someTime/format";
 import { buildPlan, estimateCost, fallbackExperienceTitle, titleFitsPlan } from "@/lib/someTime/experience";
@@ -124,7 +124,7 @@ function toTimeOption(request: TimeRequest, entry: ShortlistEntry, why: string, 
   // A price is "known" only when it was recorded as checked, for the main thing and for any stop.
   const costIsEstimate = !(c.cost_confidence === "known" && (!stop || stop.candidate.cost_confidence === "known"));
   // A theatre or cinema with no show listed is a place to check, not a promised performance.
-  const checkWhatsOn = isPerformanceVenue(c) && e.eventStartMin === null;
+  const checkWhatsOn = isVenueOnly(c) && e.eventStartMin === null;
   // The model's name for the outing, if it is honest about the plan; otherwise one built from the facts.
   const experienceTitle =
     modelTitle && titleFitsPlan(modelTitle, stop !== null, isFoodVenue(c), checkWhatsOn, e.eventStartMin ?? e.arriveMin) ? modelTitle : fallbackExperienceTitle(e, stop);

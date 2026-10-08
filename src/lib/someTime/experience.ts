@@ -1,5 +1,5 @@
 import type { CategoryName } from "@/lib/categories";
-import { foodKindOf, isFoodVenue, isPerformanceVenue } from "@/lib/opportunities/kinds";
+import { foodKindOf, isFoodVenue, isVenueOnly } from "@/lib/opportunities/kinds";
 import { friendlyDuration, placeLabel } from "@/lib/someTime/format";
 import { typicalSpend } from "@/lib/someTime/food";
 import type { Evaluated, FoodStop } from "@/lib/someTime/score";
@@ -59,7 +59,7 @@ export function fallbackExperienceTitle(main: Evaluated, food: FoodStop | null):
   const c = main.candidate;
   if (main.eventStartMin !== null) return c.title;
   // A theatre or cinema with nothing listed: do not promise a performance, point at the place.
-  if (isPerformanceVenue(c)) return `See what's on at ${c.title}${food ? `, then ${food.meal}` : ""}`;
+  if (isVenueOnly(c)) return `See what's on at ${c.title}${food ? `, then ${food.meal}` : ""}`;
 
   const noun = activityNoun(c.tags, c.category, c.title);
   const then = food ? `, then ${food.meal}` : "";

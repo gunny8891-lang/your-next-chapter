@@ -207,7 +207,8 @@ describe("a theatre or cinema is a place to check, not a promised show", () => {
     );
     expect(prompt).toContain("NOTE: a venue only: no show or film is listed for it");
     expect(SYSTEM_PROMPT).toMatch(/a venue only/);
-    expect(SYSTEM_PROMPT).toMatch(/Never describe a show, a film, a performance or "a night out"/);
+    expect(SYSTEM_PROMPT).toMatch(/Never describe a show, a film, a performance, a class, a group or "a night out"/);
+    expect(SYSTEM_PROMPT).toMatch(/theatre, a cinema or a community hall/);
   });
 
   it("shows the member a 'check what's on' line, with a link to the venue's website when there is one", () => {

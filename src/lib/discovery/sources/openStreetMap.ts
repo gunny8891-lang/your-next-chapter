@@ -76,7 +76,8 @@ const TYPES: Record<PlaceType, TypeConfig> = {
   garden: { category: "Joy", label: "Public garden", keep: 2, minutes: 45, layer: "places", tags: ["gardens", "outdoors", "grandchildren"] },
   library: { category: "Learn", label: "Public library", keep: 3, minutes: 45, layer: "places", tags: ["books", "quiet", "indoor"], freeByDefault: true },
   arts_centre: { category: "Learn", label: "Arts centre", keep: 3, minutes: 90, layer: "places", tags: ["arts", "classes"] },
-  community_centre: { category: "Connect", label: "Community centre", keep: 4, minutes: 60, layer: "places", tags: ["community", "social"] },
+  // "community-centre" marks a building with no listing of what happens in it (see isHallVenue): it is somewhere to check, not an activity.
+  community_centre: { category: "Connect", label: "Community centre", keep: 4, minutes: 60, layer: "places", tags: ["community", "social", "community-centre"] },
   theatre: { category: "Joy", label: "Theatre", keep: 3, minutes: 150, layer: "places", tags: ["theatre"] },
   cinema: { category: "Joy", label: "Cinema", keep: 2, minutes: 150, layer: "places", tags: ["cinema"] },
   playground: { category: "Joy", label: "Children's playground", keep: 2, minutes: 60, layer: "places", tags: ["playground", "grandchildren"], freeByDefault: true },
@@ -178,7 +179,7 @@ export function viewboxQuadrants(centre: Coordinates, radiusKm: number): string[
 const GENERIC_NAME = /^(the |a )?(main |kids |childrens |children's |learner |competition |training |outdoor |indoor |sports? |leisure |community |public |local )*(swimming pool|pool|sports? ?centre|leisure ?centre|community ?centre|park|garden|gym|library|theatre|cinema|playground|museum|hall|cafe|café|restaurant|pub|coffee shop|tea ?room|bar)$/i;
 // A community centre run for one age group isn't a place to send a retiree.
 const NOT_FOR_RETIREES = /\b(youth|young|children|child|nursery|scout|guide|cadet|acf|atc|detachment|barracks|school|college|academy)\b/i;
-const PRIVATE_CLUB_NAME = /\b(club|ground|grounds|memorial|rugby|cricket|football|fc|hockey|boxing|mma)\b/i;
+const PRIVATE_CLUB_NAME = /\b(clubs?|ground|grounds|memorial|rugby|cricket|football|fc|hockey|boxing|mma)\b/i;
 // Outdoor pitches and courts are tagged as sports centres but are not somewhere to send a retiree.
 const PITCH_NAME = /\b(muga|multi[- ]?use|games? area|pitch|pitches|astro|turf|courts?|playing field)\b/i;
 const LEISURE_FACILITY_NAME = /(centre|center|leisure|lido|pool|swim|sport|athletic|tennis|squash|badminton|aquatic|baths|arena|complex|stadium)/i;
