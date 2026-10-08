@@ -84,14 +84,23 @@ const PERFORMANCE_WORDS = /\b(shows?|performances?|concerts?|screenings?|gigs?|m
 
 const MEAL_WORDS = /\b(lunch|dinner|breakfast|brunch|coffee|tea|pub|caf[eé]|drinks?|meal|supper|bite)\b/i;
 
+/** A part of the day named in a title, and when it is true to say it (minutes after midnight, when they arrive). */
+const PART_OF_DAY: [RegExp, (arriveMin: number) => boolean][] = [
+  [/\bmorning\b/i, (m) => m < 12 * 60 + 30],
+  [/\bafternoon\b/i, (m) => m >= 12 * 60 && m < 18 * 60],
+  [/\b(evening|night)\b/i, (m) => m >= 17 * 60],
+];
+
 /**
  * Whether a title is honest about the plan: it may only talk about a meal or a
- * drink if the plan actually includes one (the model is told so, but a promise is
- * worth checking).
+ * drink if the plan actually includes one, and about a part of the day only if that
+ * is when they arrive (the model is told so, but a promise is worth checking).
  */
-export function titleFitsPlan(title: string, planIncludesFood: boolean, mainIsFood: boolean, noListing = false): boolean {
+export function titleFitsPlan(title: string, planIncludesFood: boolean, mainIsFood: boolean, noListing = false, arriveMin: number | null = null): boolean {
   // A theatre or cinema with no show listed: a title must not describe a performance, a film or a night out.
   if (noListing && PERFORMANCE_WORDS.test(title)) return false;
+  // "An afternoon of arts" for a plan that starts at twenty-five past ten is a small lie.
+  if (arriveMin !== null && PART_OF_DAY.some(([word, fits]) => word.test(title) && !fits(arriveMin))) return false;
   if (planIncludesFood || mainIsFood) return true;
   return !MEAL_WORDS.test(title);
 }

@@ -62,7 +62,7 @@ genuinely different ways to spend the time — never three similar things. Put t
 How to name each outing: give it a short, plain "title" of three to eight words that sounds like a good plan for the \
 time ("A slow afternoon in Barnet", "A walk and a late lunch", "An hour with local history"). Use only places and \
 words from the candidate's own line; no exclamation marks. Only mention a meal or a drink in the title if you set \
-"with_food" to true for that candidate.
+"with_food" to true for that candidate. Only name a part of the day (morning, afternoon, evening) if it is when they arrive.
 
 How to write each "why": one or two warm sentences (under 45 words) in the second person, no exclamation marks. Say why it suits THEM \
 using the supplied reasons, profile and context, and mention one practical detail (for example when it closes, or that \
