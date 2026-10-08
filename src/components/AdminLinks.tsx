@@ -9,6 +9,9 @@ export function AdminLinks() {
         <Button href="/admin/activities" variant="secondary">
           Review queue
         </Button>
+        <Button href="/admin/places" variant="secondary">
+          Places and dogs
+        </Button>
         <Button href="/admin/ai-costs" variant="secondary">
           Running costs
         </Button>
