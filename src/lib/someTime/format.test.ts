@@ -33,6 +33,10 @@ describe("placeLabel", () => {
 
   it("keeps a lone name, and copes with a postcode-only or empty address", () => {
     expect(placeLabel("Barnet")).toBe("Barnet");
+    // A postcode written on the end of the place name, not as a part of its own, is not part of the name.
+    expect(placeLabel("Fairlands Valley Park, Six Hills Way, Stevenage SG2 0BL")).toBe("Stevenage");
+    expect(placeLabel("Various locations in Stevenage, incl. Fairlands Valley Park, Six Hills Way, Stevenage SG2 0BL")).toBe("Stevenage");
+    expect(placeLabel("Stevenage SG1 1XX")).toBe("Stevenage");
     expect(placeLabel("EN5 1AB")).toBeNull();
     expect(placeLabel("")).toBeNull();
     expect(placeLabel(null)).toBeNull();

@@ -23,6 +23,8 @@ export function costLabelFor(o: { costTier: CostTier | null; costIsEstimate: boo
 }
 
 const POSTCODE = /^[A-Z]{1,2}\d[A-Z\d]?(\s*\d[A-Z]{2})?$/i;
+/** A full postcode on the end of a place name: "Stevenage SG2 0BL". */
+const TRAILING_POSTCODE = /\s+[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}$/i;
 
 /**
  * The part of an address worth showing on a card: the neighbourhood, not the
@@ -32,7 +34,7 @@ export function placeLabel(address: string | null | undefined): string | null {
   if (!address) return null;
   const parts = address
     .split(",")
-    .map((p) => p.trim())
+    .map((p) => p.trim().replace(TRAILING_POSTCODE, "").trim())
     .filter((p) => p && !POSTCODE.test(p));
   if (parts.length === 0) return null;
   // With a street first ("5 Nether Street, North Finchley") the locality is what follows.
