@@ -18,6 +18,7 @@ const NOUNS: [(tags: string[], title: string) => boolean, string][] = [
   [(t, n) => t.includes("museum") || /\bmuseum\b/i.test(n), "A museum visit"],
   [(t) => t.includes("heritage") || t.includes("history"), "A heritage visit"],
   [(t) => t.includes("gardens"), "A garden visit"],
+  [(t) => t.includes("farm"), "A farm visit"],
   [(t) => t.includes("walking") || t.includes("nature"), "A walk"],
   [(t) => t.includes("books"), "A quiet hour with books"],
   [(t) => t.includes("theatre"), "A trip to the theatre"],

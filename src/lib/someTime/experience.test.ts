@@ -70,6 +70,7 @@ describe("activityNoun", () => {
     expect(activityNoun(["museum", "history"], "Explore", "Kenwood")).toBe("A museum visit");
     expect(activityNoun([], "Joy", "Barnet Museum")).toBe("A museum visit"); // untagged, but the name says so
     expect(activityNoun(["gardens"], "Joy", "Quiet Garden")).toBe("A garden visit");
+    expect(activityNoun(["farm", "animals", "outdoors"], "Explore", "Church Farm Ardeley")).toBe("A farm visit");
     expect(activityNoun(["theatre"], "Joy", "Intimate Theatre")).toBe("A trip to the theatre");
     expect(activityNoun(["swimming"], "Move", "Finchley Lido")).toBe("A swim");
   });
