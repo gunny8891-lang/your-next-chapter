@@ -28,10 +28,10 @@ describe("what OpenStreetMap says about dogs", () => {
     expect(dogFactsFromOsm({ outdoor_seating: "yes", leisure: "park" }, OSM)).toBeNull();
   });
 
-  it("is written with a new place only when the source said something", () => {
+  it("is written with every new place, unknown when the source said nothing (the behaviour itself is tested in persist.test.ts)", () => {
     const run = read("src/lib/discovery/run.ts");
-    expect(run).toContain("...(c.dog");
-    expect(run).toContain("dog_access: c.dog.access");
+    expect(run).toContain('dog_access: c.dog?.access ?? "unknown"');
+    expect(run).toContain('dog_confidence: c.dog?.confidence ?? "unknown"');
     expect(read("src/lib/discovery/sources/openStreetMap.ts")).toContain("dog: dogFactsFromOsm(place.extratags, osmUrl(place))");
   });
 
