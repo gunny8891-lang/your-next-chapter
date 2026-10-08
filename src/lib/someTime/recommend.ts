@@ -16,6 +16,7 @@ import { applyOpenTimeContext } from "@/lib/surprise/context";
 import { preferVerified } from "@/lib/context/constraints";
 import { costTierOf } from "@/lib/opportunities/facts";
 import { assignRoles } from "@/lib/someTime/roles";
+import { distanceHint, withDistanceHint } from "@/lib/account/distanceHint";
 import { loadRepetitionHistory } from "@/lib/someTime/history";
 import {
   buildUserPrompt,
@@ -324,7 +325,7 @@ export async function getTimeOptions(
   const { data: profile } = await supabase
     .from("member_profiles")
     .select(
-      "location_lat, location_lng, budget_band, interests, goals, dietary_preferences, mobility_notes, drives, uses_public_transport, personality, has_dog, dog_usually_comes"
+      "location_lat, location_lng, travel_radius_km, budget_band, interests, goals, dietary_preferences, mobility_notes, drives, uses_public_transport, personality, has_dog, dog_usually_comes"
     )
     .eq("user_id", memberId)
     .maybeSingle();
@@ -404,7 +405,10 @@ export async function getTimeOptions(
     ask,
   });
 
-  return { error: null, notice, options: await attachImages(supabase, options), windowLabel: weekdayDateLabel(window) };
+  // A thin result from a search for half a day or more, with a wider distance on offer, is probably the distance: say so.
+  // (A shorter window being thin is the time, not the distance.)
+  const hint = window.availableMinutes >= 180 ? distanceHint(profile?.travel_radius_km, options.length) : null;
+  return { error: null, notice: withDistanceHint(notice, hint), options: await attachImages(supabase, options), windowLabel: weekdayDateLabel(window) };
 }
 
 /**

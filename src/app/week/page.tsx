@@ -16,6 +16,7 @@ import { addDays, londonWeekStart, weekToShow } from "@/lib/opportunities/schedu
 import { computeBehavioralRationale, formatBehavioralRationale, getRecentWindowStartIso } from "@/lib/memory/rationale";
 import type { CategoryName } from "@/lib/categories";
 import type { ItineraryItemView, SurpriseView } from "@/lib/types";
+import { distanceHint } from "@/lib/account/distanceHint";
 
 type ActivityRow = {
   id: string;
@@ -45,7 +46,7 @@ export default async function WeekPage() {
 
   const { data: profile } = await supabase
     .from("member_profiles")
-    .select("location_text, location_lat, location_lng, drives, uses_public_transport, mobility_notes")
+    .select("location_text, location_lat, location_lng, travel_radius_km, drives, uses_public_transport, mobility_notes")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -158,6 +159,7 @@ export default async function WeekPage() {
   return (
     <ThisWeekView
       locationLabel={profile.location_text?.replace("Near ", "") || "This week"}
+      distanceHint={isDemo ? null : distanceHint(profile.travel_radius_km, items.length)}
       items={items}
       surprise={surprise}
       isDemo={isDemo}
