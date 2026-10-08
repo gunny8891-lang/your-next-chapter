@@ -16,6 +16,7 @@ import {
   type Commitment,
 } from "@/lib/someTime/choices";
 import { INTENTION_OPTIONS } from "@/lib/experience/dailyState";
+import { SPEND_OPTIONS, type ExperienceContext, type Spend } from "@/lib/context/constraints";
 import type { DurationChoice, Mood, StartChoice } from "@/lib/someTime/request";
 import type { SurpriseWho } from "@/lib/surprise/context";
 import type { TimeOption, TimeResult } from "@/lib/someTime/types";
@@ -30,7 +31,12 @@ type FindRequest = {
   who: SurpriseWho;
   mood: Mood | null;
   exclude: string[];
+  /** What they said about this outing (a spend, the dog coming). Absent when they said nothing. */
+  context?: ExperienceContext;
 };
+
+/** What the sheet needs to know about the member's dog: only members who have one are asked. */
+export type DogInfo = { hasDog: boolean; usuallyComes: boolean; name: string | null };
 
 type Props = {
   initial?: TimeSheetInitial;
@@ -40,6 +46,8 @@ type Props = {
   suggestedMood?: Mood | null;
   /** The time now, in minutes after midnight. */
   nowMin: number;
+  /** Their dog, if they have one. Without one, "Dog coming" is never shown. */
+  dog?: DogInfo;
   onFind: (request: FindRequest) => Promise<TimeResult>;
   onAccept: (
     activityId: string,
@@ -77,10 +85,25 @@ function writeSaved(saved: Saved) {
   }
 }
 
+/** What they chose for this outing, as the request carries it; undefined when they chose nothing (spend not set, no dog). */
+export function extrasContext(spend: Spend | "any", dog: DogInfo | undefined, dogComing: boolean): ExperienceContext | undefined {
+  const context: ExperienceContext = {};
+  if (spend !== "any") context.spend = spend;
+  // Said either way for someone with a dog, so that "No" overrides a usual "Yes" for this outing.
+  if (dog?.hasDog) context.dog = dogComing;
+  return Object.keys(context).length > 0 ? context : undefined;
+}
+
+/** The choices so far, in a line: "Spend: Don't mind · Dog coming". */
+export function extrasSummary(spend: Spend | "any", dog: DogInfo | undefined, dogComing: boolean): string {
+  const label = SPEND_OPTIONS.find((o) => o.value === spend)?.label ?? "Don't mind";
+  return `Spend: ${label}${dog?.hasDog && dogComing ? " · Dog coming" : ""}`;
+}
+
 const isDuration = (v: unknown): v is DurationChoice => DURATION_OPTIONS.some((d) => d.value === v);
 const isWho = (v: unknown): v is SurpriseWho => WHO_OPTIONS.some((w) => w.value === v);
 
-export function TimeSheet({ initial, commitment, suggestedMood, nowMin, onFind, onAccept, onFeedback, onSave, onClose }: Props) {
+export function TimeSheet({ initial, commitment, suggestedMood, nowMin, dog, onFind, onAccept, onFeedback, onSave, onClose }: Props) {
   const [saved] = useState(readSaved);
   const [step, setStep] = useState<"time" | "feel" | "results">("time");
   const [start, setStart] = useState<StartChoice>(initial?.start ?? "now");
@@ -90,6 +113,10 @@ export function TimeSheet({ initial, commitment, suggestedMood, nowMin, onFind, 
   const [mood, setMood] = useState<Mood | null>(null);
   const [showWhen, setShowWhen] = useState(false);
   const [showWho, setShowWho] = useState(false);
+  // Optional, and for this outing only: spend is not remembered, and the dog starts as what they usually do.
+  const [spend, setSpend] = useState<Spend | "any">("any");
+  const [dogComing, setDogComing] = useState<boolean>(dog?.hasDog === true && dog.usuallyComes);
+  const [showExtras, setShowExtras] = useState(false);
 
   const [result, setResult] = useState<TimeResult | null>(null);
   const [shown, setShown] = useState<string[]>([]);
@@ -124,7 +151,8 @@ export function TimeSheet({ initial, commitment, suggestedMood, nowMin, onFind, 
     setStep("results");
     writeSaved({ duration: duration === "until_next" ? undefined : duration, who });
     startTransition(async () => {
-      const res = await onFind({ start: effectiveStart, duration, untilMin, who, mood: chosenMood, exclude });
+      const context = extrasContext(spend, dog, dogComing);
+      const res = await onFind({ start: effectiveStart, duration, untilMin, who, mood: chosenMood, exclude, ...(context ? { context } : {}) });
       if (res.error) {
         setError(res.error);
         return;
@@ -224,6 +252,37 @@ export function TimeSheet({ initial, commitment, suggestedMood, nowMin, onFind, 
                 {m.label}
               </Chip>
             ))}
+          </div>
+
+          <div className={styles.who}>
+            <button type="button" className={styles.refine} onClick={() => setShowExtras((v) => !v)} aria-expanded={showExtras}>
+              {extrasSummary(spend, dog, dogComing)} · <strong>{showExtras ? "Done" : "Change"}</strong>
+            </button>
+            {showExtras && (
+              <div className={styles.extras}>
+                <p className={styles.extraLabel}>Spend, per person</p>
+                <div className={styles.chips} role="group" aria-label="Spend per person">
+                  {SPEND_OPTIONS.map((o) => (
+                    <Chip key={o.value} selected={spend === o.value} onClick={() => setSpend(o.value)}>
+                      {o.label}
+                    </Chip>
+                  ))}
+                </div>
+                {dog?.hasDog && (
+                  <>
+                    <p className={styles.extraLabel}>{dog.name ? `Is ${dog.name} coming?` : "Is the dog coming?"}</p>
+                    <div className={styles.chips} role="group" aria-label="Dog coming">
+                      <Chip selected={dogComing} onClick={() => setDogComing(true)}>
+                        Yes
+                      </Chip>
+                      <Chip selected={!dogComing} onClick={() => setDogComing(false)}>
+                        No
+                      </Chip>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           <div className={styles.who}>

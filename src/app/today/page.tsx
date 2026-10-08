@@ -40,7 +40,7 @@ export default async function TodayPage() {
 
   const { data: profile } = await supabase
     .from("member_profiles")
-    .select("location_lat, location_lng")
+    .select("location_lat, location_lng, has_dog, dog_name, dog_usually_comes")
     .eq("user_id", user.id)
     .maybeSingle();
   if (!profile) redirect("/onboarding");
@@ -112,6 +112,7 @@ export default async function TodayPage() {
       greeting={greetingFor(Math.floor(londonClock(new Date()).minutes / 60))}
       firstName={cleanFirstName(user.user_metadata?.first_name)}
       featured={featured}
+      dog={{ hasDog: profile.has_dog === true, usuallyComes: profile.dog_usually_comes === true, name: profile.dog_name ?? null }}
       dateLabel={dateLabel}
       weather={weather}
       slots={slots}

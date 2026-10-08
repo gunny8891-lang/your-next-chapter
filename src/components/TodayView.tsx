@@ -9,7 +9,7 @@ import { DailyStateStrip } from "@/components/DailyStateStrip";
 import { Reflections } from "@/components/Reflections";
 import type { DailyState } from "@/lib/experience/dailyState";
 import type { Reflection } from "@/lib/experience/reflections";
-import { TimeSheet, type TimeSheetInitial } from "@/components/TimeSheet";
+import { TimeSheet, type DogInfo, type TimeSheetInitial } from "@/components/TimeSheet";
 import { nextCommitment, type Commitment } from "@/lib/someTime/choices";
 import { isUnknownDetail } from "@/lib/itinerary/format";
 import { placeLabel } from "@/lib/someTime/format";
@@ -83,6 +83,7 @@ export function TodayView({
   weather,
   slots,
   featured,
+  dog,
   onItemAction,
   onFindTime,
   onAcceptTime,
@@ -100,6 +101,8 @@ export function TodayView({
   weather: TodayWeather;
   slots: TodaySlot[];
   featured: TimeOption | null;
+  /** Their dog, if they have one: the sheet only asks about the dog for someone who does. */
+  dog?: DogInfo;
   onItemAction: (itemId: string, action: "accepted" | "swapped" | "skipped") => Promise<void>;
   onFindTime: FlowActions["onFind"];
   onAcceptTime: FlowActions["onAccept"];
@@ -223,6 +226,7 @@ export function TodayView({
               commitment={sheet.commitment}
               suggestedMood={dailyState?.intention ?? null}
               nowMin={sheet.nowMin}
+              dog={dog}
               onClose={() => setSheet(null)}
               {...flowActions}
             />

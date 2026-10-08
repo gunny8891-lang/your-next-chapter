@@ -8,6 +8,7 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { geocodeLocation } from "@/lib/geo/geocode";
 import { cleanFirstName } from "@/lib/someTime/format";
 import { generateAndSaveItinerary } from "@/lib/itinerary/generateAndSave";
+import { dogFromForm } from "@/lib/account/dog";
 import { planInputsChanged } from "@/lib/account/planInputs";
 import { triggerDiscoveryForRegion } from "@/lib/discovery/regional";
 import { googleConfig } from "@/lib/calendar/google";
@@ -63,6 +64,7 @@ export async function updateProfileAction(formData: FormData) {
     uses_public_transport: formData.get("uses_public_transport") === "on",
     interests: parseTagList(formData.get("interests")),
     goals: parseTagList(formData.get("goals")),
+    ...dogFromForm(formData),
   };
 
   await supabase

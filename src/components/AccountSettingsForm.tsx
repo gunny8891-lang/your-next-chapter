@@ -20,6 +20,9 @@ type Profile = {
   uses_public_transport: boolean | null;
   interests: string[];
   goals: string[];
+  has_dog: boolean;
+  dog_name: string | null;
+  dog_usually_comes: boolean;
 };
 
 type Subscription = { plan: string; status: string; renewal_date: string | null } | null;
@@ -92,6 +95,8 @@ export function AccountSettingsForm({
   const [confirmText, setConfirmText] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [goals, setGoals] = useState<string[]>(profile.goals);
+  // The name and "usually comes" only matter, and are only asked, once there is a dog.
+  const [hasDog, setHasDog] = useState(profile.has_dog);
   const [clearStep, setClearStep] = useState<"idle" | "confirm" | "busy" | "done">("idle");
   const [clearError, setClearError] = useState<string | null>(null);
   const [weeklyPlanEmail, setWeeklyPlanEmail] = useState(emailPrefs.weeklyPlan);
@@ -230,6 +235,17 @@ export function AccountSettingsForm({
               defaultValue={profile.dietary_preferences ?? ""}
               placeholder="e.g. vegetarian, no shellfish"
             />
+            <fieldset className={styles.checks}>
+              <legend className={styles.checksLegend}>Your dog</legend>
+              <CheckboxField name="has_dog" label="I have a dog" checked={hasDog} onChange={(e) => setHasDog(e.target.checked)} />
+              {hasDog && (
+                <>
+                  <Field label="Their name (optional)" name="dog_name" defaultValue={profile.dog_name ?? ""} maxLength={60} placeholder="e.g. Biscuit" />
+                  <CheckboxField name="dog_usually_comes" label="I often take my dog with me" defaultChecked={profile.dog_usually_comes} />
+                </>
+              )}
+              <p className={styles.hint}>With a dog, &ldquo;I&apos;ve got some time&rdquo; can ask whether they&apos;re coming, and leaves out places that don&apos;t allow dogs.</p>
+            </fieldset>
           </fieldset>
         </Card>
 
