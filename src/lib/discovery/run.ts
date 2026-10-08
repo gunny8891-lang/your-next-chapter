@@ -125,10 +125,13 @@ export async function persistDiscovery(
         booking_url: c.bookingUrl,
         source: "discovery_agent" as const,
         tags: normaliseTags(c.tags),
-        // Written only when the source said something; otherwise the column's default, unknown, stands.
-        ...(c.dog
-          ? { dog_access: c.dog.access, dog_restrictions: c.dog.restrictions, dog_confidence: c.dog.confidence, dog_source: c.dog.source }
-          : {}),
+        // Always all four, "unknown" when the source said nothing. Rows in one insert must carry the same columns: a
+        // column present in some rows and absent in others is filled with null for the rest, not with the default, and
+        // dog_access is not nullable.
+        dog_access: c.dog?.access ?? "unknown",
+        dog_restrictions: c.dog?.restrictions ?? null,
+        dog_confidence: c.dog?.confidence ?? "unknown",
+        dog_source: c.dog?.source ?? null,
         status: c.status ?? "active",
         admin_notes: c.adminNotes ?? null,
       }));

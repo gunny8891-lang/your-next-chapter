@@ -19,8 +19,8 @@ const CATEGORIES: readonly CategoryName[] = ["Move", "Connect", "Learn", "Explor
 const MAX_TOOL_USES = 10;
 // A heavier search (more pages read, more narration between tool calls) can
 // exhaust a small budget before reaching a final answer — 4096 was observed
-// to truncate mid-search for a genuinely real region ("Chelmsford").
-const MAX_TOKENS = 8192;
+// to truncate mid-search for a genuinely real region ("Chelmsford"), and 8192 did the same for "Stevenage".
+const MAX_TOKENS = 16384;
 
 type ExtractedItem = {
   title?: string;
