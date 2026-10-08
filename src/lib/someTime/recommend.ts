@@ -11,10 +11,11 @@ import { humanReason } from "@/lib/someTime/copy";
 import { settingOf } from "@/lib/someTime/format";
 import { buildPlan, estimateCost, fallbackExperienceTitle, titleFitsPlan } from "@/lib/someTime/experience";
 import { eventDate, weekStartFor } from "@/lib/opportunities/schedule";
-import { getDailyForecast, isStrongOutdoorWeather, type DayForecast } from "@/lib/nudges/weather";
+import { getDailyForecast, isStrongOutdoorWeather, isWetDay, type DayForecast } from "@/lib/nudges/weather";
 import { applyOpenTimeContext } from "@/lib/surprise/context";
 import { preferVerified } from "@/lib/context/constraints";
 import { costTierOf } from "@/lib/opportunities/facts";
+import { assignRoles } from "@/lib/someTime/roles";
 import { loadRepetitionHistory } from "@/lib/someTime/history";
 import {
   buildUserPrompt,
@@ -66,6 +67,8 @@ export type RecommendInputs = {
   candidates: OpportunityCandidate[];
   weatherNote: string | null;
   pleasantWeather: boolean;
+  /** A wet day: indoors is a plus. */
+  wetDay?: boolean;
   /** Today's sunrise and sunset, so nothing outdoors is offered in the dark. */
   daylight?: ScoringInput["daylight"];
   member: MemberContext;
@@ -112,7 +115,7 @@ function toFoodStopOption(stop: FoodStop): FoodStopOption {
   };
 }
 
-function toTimeOption(entry: ShortlistEntry, why: string, includeFood: boolean, modelTitle: string | null = null): TimeOption {
+function toTimeOption(request: TimeRequest, entry: ShortlistEntry, why: string, includeFood: boolean, modelTitle: string | null = null): TimeOption {
   const { evaluated: e, foodStop } = entry;
   const c = e.candidate;
   const stop = includeFood ? foodStop : null;
@@ -124,7 +127,7 @@ function toTimeOption(entry: ShortlistEntry, why: string, includeFood: boolean, 
   const checkWhatsOn = isPerformanceVenue(c) && e.eventStartMin === null;
   // The model's name for the outing, if it is honest about the plan; otherwise one built from the facts.
   const experienceTitle =
-    modelTitle && titleFitsPlan(modelTitle, stop !== null, isFoodVenue(c), checkWhatsOn) ? modelTitle : fallbackExperienceTitle(e, stop);
+    modelTitle && titleFitsPlan(modelTitle, stop !== null, isFoodVenue(c), checkWhatsOn, e.eventStartMin ?? e.arriveMin) ? modelTitle : fallbackExperienceTitle(e, stop);
   return {
     id: c.id,
     title: c.title,
@@ -149,12 +152,21 @@ function toTimeOption(entry: ShortlistEntry, why: string, includeFood: boolean, 
     travelMinutes: e.travelMinutes,
     isFood: isFoodVenue(c),
     happeningToday: eventDate(c) !== null,
+    dayWord: request.start === "tomorrow" ? "tomorrow" : "today",
+    tags: c.tags,
+    role: null,
     checkWhatsOn,
     contextNotes: e.unverified ?? [],
     foodStop: stop ? toFoodStopOption(stop) : null,
     // A calm stand-in by kind of activity; a real photograph replaces it afterwards (see attachImages).
     image: fallbackImageFor(c.tags),
   };
+}
+
+/** Labels the ideas as they will be shown, best first: see roles.ts. */
+function withRoles(options: TimeOption[], request: TimeRequest): TimeOption[] {
+  const roles = assignRoles(options, request.who);
+  return options.map((o, i) => ({ ...o, role: roles[i] }));
 }
 
 /**
@@ -167,7 +179,7 @@ export async function buildRecommendations(inputs: RecommendInputs): Promise<{ o
   const dailyState = inputs.dailyState ?? null;
   // What they feel like today stands in for a mood they did not choose for this request.
   const request = requestWithDailyState(inputs.request, dailyState);
-  const scoring: ScoringInput = { window, request, member, affinity, history, pleasantWeather: inputs.pleasantWeather, daylight: inputs.daylight, dailyState };
+  const scoring: ScoringInput = { window, request, member, affinity, history, pleasantWeather: inputs.pleasantWeather, wetDay: inputs.wetDay, daylight: inputs.daylight, dailyState };
 
   // A mood they CHOSE for this request is a requirement, not a nudge: an idea that does not fit it is left out. (A
   // mood that only comes from how they said they feel today stays a gentle preference, so Today is never left bare.)
@@ -227,11 +239,14 @@ export async function buildRecommendations(inputs: RecommendInputs): Promise<{ o
         kept.push({ ch: null, entry: next, evaluated: next.evaluated });
       }
       return {
-        options: kept.map(({ ch, entry }) => {
-          // An explanation that talks like the app's internals ("a category you have not touched") is replaced by one built from the facts.
-          if (!ch) return toTimeOption(entry, fallbackWhy(entry.evaluated), entry.foodStop !== null && window.availableMinutes >= 90);
-          return toTimeOption(entry, containsJargon(ch.why) ? fallbackWhy(entry.evaluated) : ch.why, ch.withFood, ch.title);
-        }),
+        options: withRoles(
+          kept.map(({ ch, entry }) => {
+            // An explanation that talks like the app's internals ("a category you have not touched") is replaced by one built from the facts.
+            if (!ch) return toTimeOption(request, entry, fallbackWhy(entry.evaluated), entry.foodStop !== null && window.availableMinutes >= 90);
+            return toTimeOption(request, entry, containsJargon(ch.why) ? fallbackWhy(entry.evaluated) : ch.why, ch.withFood, ch.title);
+          }),
+          request
+        ),
         notice,
       };
     }
@@ -242,9 +257,10 @@ export async function buildRecommendations(inputs: RecommendInputs): Promise<{ o
     console.warn("some_time: model call failed; using the scored fallback:", err instanceof Error ? err.message : err);
   }
 
-  const options = shortlist
-    .slice(0, MAX_OPTIONS)
-    .map((s) => toTimeOption(s, fallbackWhy(s.evaluated), s.foodStop !== null && window.availableMinutes >= 90));
+  const options = withRoles(
+    shortlist.slice(0, MAX_OPTIONS).map((s) => toTimeOption(request, s, fallbackWhy(s.evaluated), s.foodStop !== null && window.availableMinutes >= 90)),
+    request
+  );
   return { options, notice };
 }
 
@@ -367,6 +383,7 @@ export async function getTimeOptions(
     candidates,
     weatherNote,
     pleasantWeather: todayForecast ? isStrongOutdoorWeather(todayForecast) : false,
+    wetDay: todayForecast ? isWetDay(todayForecast) : false,
     daylight:
       todayForecast?.sunriseMin != null && todayForecast?.sunsetMin != null
         ? { sunriseMin: todayForecast.sunriseMin, sunsetMin: todayForecast.sunsetMin }

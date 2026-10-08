@@ -21,6 +21,17 @@
   text-underline-offset: 3px;
 }
 
+.role {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-bottom: var(--space-1);
+  font-size: var(--text-label);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--color-sage);
+}
+
 .onToday {
   margin-bottom: var(--space-1);
   font-size: var(--text-label);

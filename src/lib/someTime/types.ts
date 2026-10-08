@@ -1,6 +1,7 @@
 import type { CategoryName } from "@/lib/categories";
 import type { PlaceImage } from "@/lib/imagery/types";
 import type { CostTier } from "@/lib/opportunities/facts";
+import type { OptionRole } from "@/lib/someTime/roles";
 
 /** A café, pub, restaurant or tea room to finish at. */
 export type FoodStopOption = {
@@ -62,8 +63,14 @@ export type TimeOption = {
   travelMinutes: number;
   /** The suggestion is itself a place to eat or drink. */
   isFood: boolean;
-  /** A one-off event actually on today, as opposed to a place or an ongoing thing. */
+  /** A one-off event actually on that day, as opposed to a place or an ongoing thing. */
   happeningToday: boolean;
+  /** Which day the idea is for: "today", or "tomorrow" when that is what they asked for. */
+  dayWord: "today" | "tomorrow";
+  /** What kind of place it is, in the catalogue's own words. */
+  tags: string[];
+  /** Best match, something different, something social: only among two or more ideas, and only where true. */
+  role: OptionRole | null;
   /** A theatre or cinema with no show listed: the card says to check what is on before going. */
   checkWhatsOn: boolean;
   /** What still needs checking given what they said about this outing ("Check dog access"); empty when all is certain. */

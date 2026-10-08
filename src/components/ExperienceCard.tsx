@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import { Check, ChevronDown, Heart } from "lucide-react";
+import { Check, ChevronDown, Heart, Sparkles, Star, Users } from "lucide-react";
 import { Button, Card, Chip, Cover, Timeline } from "@/components/ui";
 import { costLabelFor, doorToDoorMinutes, friendlyDuration, placeLabel, planLabelFor } from "@/lib/someTime/format";
 import { trackSeen } from "@/components/trackExperience";
 import type { Surface } from "@/lib/experience/events";
 import type { TimeOption } from "@/lib/someTime/types";
+import { ROLE_LABEL, type OptionRole } from "@/lib/someTime/roles";
 import styles from "@/components/ExperienceCard.module.css";
 
 export type FeedbackReason = "not_my_thing" | "too_far" | "too_expensive" | "seen_it";
@@ -19,6 +20,8 @@ const REASONS: { value: FeedbackReason; label: string }[] = [
 ];
 
 const SETTING_LABEL = { outdoors: "Mostly outdoors", indoors: "Indoors" } as const;
+
+const ROLE_ICON: Record<OptionRole, typeof Star> = { best: Star, different: Sparkles, social: Users };
 
 type Props = {
   option: TimeOption;
@@ -98,7 +101,17 @@ export function ExperienceCard({ option, reason, variant, surface, who, state, e
     <Card padding="none" className={`ync-appear ${variant === "hero" ? styles.hero : ""}`}>
       <Cover category={option.category} image={option.image} ratio={variant === "hero" ? "wide" : "banner"} />
       <div className={styles.body}>
-        {option.happeningToday && <p className={styles.onToday}>On today</p>}
+        {/* Only the ideas in the sheet are grouped: the one on Today is simply the best for the day. */}
+        {variant === "result" && option.role && (
+          <p className={styles.role}>
+            {(() => {
+              const Icon = ROLE_ICON[option.role];
+              return <Icon size={14} strokeWidth={2} aria-hidden="true" />;
+            })()}
+            {ROLE_LABEL[option.role]}
+          </p>
+        )}
+        {option.happeningToday && <p className={styles.onToday}>On {option.dayWord}</p>}
         <h3 className={styles.title}>{option.experienceTitle}</h3>
         {meta.length > 0 && <p className={styles.meta}>{meta.join(" · ")}</p>}
         <p className={styles.reason}>{reason}</p>

@@ -337,7 +337,8 @@ describe("without a model (the Today hero)", () => {
     });
     const byTitle = Object.fromEntries(options.map((o) => [o.title, o]));
     expect(byTitle.Park.setting).toBe("outdoors");
-    expect(byTitle.Park.reason).toBe("It supports your goal of staying active, and it is perfect weather for it today.");
+    // Why now comes first: the weather, then what suits them in general.
+    expect(byTitle.Park.reason).toBe("It is perfect weather for it today, and it supports your goal of staying active.");
     expect(byTitle.Museum.setting).toBe("indoors");
     expect(byTitle.Museum.reason).toBe("");
   });

@@ -1,6 +1,6 @@
 import type { OpportunityCandidate } from "@/lib/opportunities/engine";
 import { foodKindOf, isFoodVenue, type FoodKind } from "@/lib/opportunities/kinds";
-import { eventDate, weekdayOf } from "@/lib/opportunities/schedule";
+import { availableUntilDate, eventDate, weekdayOf } from "@/lib/opportunities/schedule";
 import { scoreActivity, type AffinityScores } from "@/lib/memory/scoring";
 import { haversineDistanceKm } from "@/lib/geo/haversine";
 import { estimateDurationMinutes } from "@/lib/someTime/duration";
@@ -13,6 +13,7 @@ import { dailyStateAdjustment, type DailyState } from "@/lib/experience/dailySta
 import type { RecommendationMemory } from "@/lib/memory/memory";
 import { checkConstraints, stopWorks, withinSpend, type PlaceFacts } from "@/lib/context/constraints";
 import { costTierOf, type CostTier } from "@/lib/opportunities/facts";
+import { settingOf } from "@/lib/someTime/format";
 
 /**
  * Everything that decides whether something is a good way to spend a given
@@ -52,6 +53,8 @@ export type ScoringInput = {
   history: RepetitionHistory;
   /** Dry and mild enough that being outdoors is a plus. */
   pleasantWeather: boolean;
+  /** A wet day: indoors is a plus, and says so. */
+  wetDay?: boolean;
   /** Today's sunrise and sunset in minutes after midnight, when known. Outdoor things are not offered in the dark. */
   daylight?: { sunriseMin: number; sunsetMin: number } | null;
 };
@@ -341,6 +344,8 @@ export function evaluateCandidate(c: OpportunityCandidate, input: ScoringInput):
 
   // --- how good is it for them? ---
   const reasons: string[] = [];
+  // Why THIS time: what makes it worth doing now rather than another day. These come first, so they are the ones said.
+  const whyNow: string[] = [];
   let score = 0;
   score += fit.bonus;
   reasons.push(...fit.reasons);
@@ -379,13 +384,34 @@ export function evaluateCandidate(c: OpportunityCandidate, input: ScoringInput):
 
   if (input.pleasantWeather && c.tags.some((t) => OUTDOOR_TAGS.includes(t))) {
     score += 1;
-    reasons.push("the weather suits being outdoors");
+    whyNow.push("the weather suits being outdoors");
+  }
+
+  // A wet day is a day for indoors. (Outdoor places are already left out when every day asked about is wet.)
+  if (input.wetDay && settingOf(c.tags) === "indoors") {
+    score += 1;
+    whyNow.push("it is a wet day and this is indoors");
   }
 
   if (event) {
     score += request.mood === "food" ? 0 : 1.5;
-    reasons.push("it is actually happening today");
+    whyNow.push(request.start === "tomorrow" ? "it is actually happening tomorrow" : "it is actually happening today");
   }
+
+  // Something that runs for a while but ends soon: now is the time, and it is true because the end date is recorded.
+  const endsOn = !event ? availableUntilDate(c) : null;
+  if (endsOn) {
+    const daysLeft = Math.round((Date.parse(`${endsOn}T00:00:00Z`) - Date.parse(`${window.date}T00:00:00Z`)) / 86_400_000);
+    if (daysLeft >= 0 && daysLeft <= 6) {
+      score += 1;
+      whyNow.push(
+        daysLeft === 0 ? "it ends today" : daysLeft === 1 ? "it ends tomorrow" : `it closes on ${new Date(`${endsOn}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", timeZone: "UTC" })}`
+      );
+    }
+  }
+
+  // They asked for time before something already planned: it fits, which is why it can be offered.
+  if (request.duration === "until_next") whyNow.push("it fits before your next plan");
 
   if (runsPastSunset) score -= 1.5;
 
@@ -428,7 +454,7 @@ export function evaluateCandidate(c: OpportunityCandidate, input: ScoringInput):
     openUntil,
     eventStartMin,
     facts,
-    reasons,
+    reasons: [...whyNow, ...reasons],
     unverified: fit.unverified,
   };
 }
