@@ -47,6 +47,11 @@ export async function GET(request: Request) {
         .filter((region): region is string => !!region && region !== "Somewhere else")
     )
   );
+  // The same places with where each one is, for the paid search: it matches a request to a region already searched
+  // by position, so a member who typed a postcode and one who typed the town are one region, not two.
+  const regionRequests = (profiles ?? [])
+    .map((p) => ({ label: p.location_text?.replace(/^Near /, "").trim() ?? "", lat: p.location_lat, lng: p.location_lng }))
+    .filter((r) => r.label && r.label !== "Somewhere else");
 
   // Events come from where members actually live, not one fixed town (Richmond is
   // only the fallback when nobody has a resolved location). The key is checked
@@ -69,7 +74,7 @@ export async function GET(request: Request) {
   // The same system-wide daily search budget that holds member-triggered searches holds this one.
   const searchBudget = await searchAllowed(admin, null);
   const [regionalSettled, places, images] = await Promise.all([
-    searchRegionsThrottled(admin, regions, { maxSearches: searchBudget.allowed ? MAX_REGIONAL_SEARCHES_PER_RUN : 0, force }).then(
+    searchRegionsThrottled(admin, regionRequests, { maxSearches: searchBudget.allowed ? MAX_REGIONAL_SEARCHES_PER_RUN : 0, force }).then(
       (summary) => ({ summary, error: null as string | null }),
       // Fails closed — if the throttle can't be consulted, nothing is searched.
       (err: unknown) => ({ summary: null, error: err instanceof Error ? err.message : "Regional search failed" })

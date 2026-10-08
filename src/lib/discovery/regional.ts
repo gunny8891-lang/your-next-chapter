@@ -11,8 +11,11 @@ import { ensureOpenStreetMapPlaces } from "@/lib/discovery/osmPlaces";
 import { memberAreas } from "@/lib/discovery/areas";
 import { createTicketmasterSource } from "@/lib/discovery/sources/ticketmaster";
 import { generateAndSaveItinerary } from "@/lib/itinerary/generateAndSave";
-import { decideSearch, normalizeRegionKey, type RegionState, type SearchDecision } from "@/lib/discovery/throttle";
-import type { Coordinates } from "@/lib/geo/geocode";
+import { decideSearch, nearestRegion, normalizeRegionKey, type RegionState, type SearchDecision } from "@/lib/discovery/throttle";
+import { geocodeLocation, sleep, type Coordinates } from "@/lib/geo/geocode";
+
+/** A place to search: the words, and where it is when that is already known (so it is not looked up again). */
+export type RegionRequest = { label: string; lat?: number | null; lng?: number | null };
 
 /**
  * Runs the real search for one region and saves what it found (phase 1 only —
@@ -65,7 +68,7 @@ function lastSuccessMs(state: RegionState | undefined): number {
  */
 export async function searchRegionsThrottled(
   supabase: SupabaseClient,
-  regions: string[],
+  regions: (string | RegionRequest)[],
   options: Options = {}
 ): Promise<ThrottledSearchSummary> {
   const maxSearches = options.maxSearches ?? 1;
@@ -73,30 +76,52 @@ export async function searchRegionsThrottled(
   const runSearch: RunSearch =
     options.runSearch ?? ((region) => persistDiscovery(supabase, [createClaudeWebSearchSource([region], { memberId: options.memberId })]));
 
-  const labelByKey = new Map<string, string>();
-  for (const label of regions) {
-    const key = normalizeRegionKey(label);
-    if (key && !labelByKey.has(key)) labelByKey.set(key, label.trim());
-  }
+  const requests: RegionRequest[] = regions
+    .map((r) => (typeof r === "string" ? { label: r } : r))
+    .map((r) => ({ ...r, label: r.label.trim() }))
+    .filter((r) => r.label);
 
   const summary: ThrottledSearchSummary = { searched: [], skipped: [], deferred: [] };
-  if (labelByKey.size === 0) return summary;
+  if (requests.length === 0) return summary;
 
+  // Every region searched so far (a short list): a request is matched to one by WHERE it is, not by how it was typed,
+  // so a postcode, "Town, County" and "Town" are one place and cost one search.
   const { data: stateRows, error: stateError } = await supabase
     .from("discovery_regions")
-    .select("region_key, region_label, last_attempt_at, last_success_at, empty_runs, consecutive_failures")
-    .in("region_key", [...labelByKey.keys()]);
+    .select("region_key, region_label, last_attempt_at, last_success_at, empty_runs, consecutive_failures, lat, lng");
   if (stateError) {
     throw new Error(`Couldn't read discovery_regions (is the migration applied?): ${stateError.message}`);
   }
-  const stateByKey = new Map((stateRows ?? []).map((r) => [r.region_key as string, r as RegionState]));
+  const known = (stateRows ?? []) as RegionState[];
+  const stateByKey = new Map(known.map((r) => [r.region_key, r]));
+  const geocode = options.geocode ?? geocodeLocation;
 
-  const due: { key: string; label: string; state: RegionState | undefined }[] = [];
-  for (const [key, label] of labelByKey) {
-    const state = stateByKey.get(key);
+  type Wanted = { key: string; label: string; state: RegionState | undefined; point: Coordinates | null };
+  const wanted = new Map<string, Wanted>();
+  let lookedUp = 0;
+  for (const request of requests) {
+    let point: Coordinates | null = request.lat != null && request.lng != null ? { lat: Number(request.lat), lng: Number(request.lng) } : null;
+    if (!point) {
+      // Without a position the best that can be done is the words. A failed lookup is not an error: it just means that.
+      if (lookedUp > 0) await sleep(1100);
+      lookedUp += 1;
+      point = await geocode(request.label).catch(() => null);
+    }
+    const near = point ? nearestRegion(known, point) : undefined;
+    // Two new requests for the same place in one run (a postcode and the town) are one search too.
+    const sibling = !near && point ? nearestRegion([...wanted.values()].map((w) => ({ ...w, ...(w.point ?? {}) })), point) : undefined;
+    const key = near?.region_key ?? sibling?.key ?? normalizeRegionKey(request.label);
+    if (!key || wanted.has(key)) continue;
+    // An existing region keeps its own name, so what is searched is the place that was searched before, not a postcode.
+    const stored = near ?? stateByKey.get(key);
+    wanted.set(key, { key, label: stored?.region_label ?? request.label, state: stored, point });
+  }
+
+  const due: { key: string; label: string; state: RegionState | undefined; point: Coordinates | null }[] = [];
+  for (const { key, label, state, point } of wanted.values()) {
     const decision = decideSearch(state, options.now ?? new Date());
     const runnable = decision.due || (options.force && decision.reason !== "just_attempted");
-    if (runnable) due.push({ key, label, state });
+    if (runnable) due.push({ key, label, state, point });
     else summary.skipped.push({ region: label, reason: decision.reason });
   }
 
@@ -104,7 +129,7 @@ export async function searchRegionsThrottled(
   const toRun = due.slice(0, maxSearches);
   summary.deferred = due.slice(maxSearches).map((d) => d.label);
 
-  for (const { key, label, state } of toRun) {
+  for (const { key, label, state, point } of toRun) {
     // Claim first. The failure count is bumped pessimistically and cleared on
     // success, so a search that gets killed mid-way (no chance to record
     // anything) still backs off instead of looking like it never happened —
@@ -115,6 +140,8 @@ export async function searchRegionsThrottled(
         region_label: label,
         last_attempt_at: nowIso(),
         consecutive_failures: (state?.consecutive_failures ?? 0) + 1,
+        // Where the region is, recorded once and not moved by later requests from nearby addresses.
+        ...(point && state?.lat == null ? { lat: point.lat, lng: point.lng } : {}),
       },
       { onConflict: "region_key" }
     );
@@ -226,10 +253,14 @@ export async function triggerDiscoveryForRegion(
     // this behind it could get both cut off.
     // The paid search (about $1.30) is the one thing here that costs real money, so it runs only
     // within the per-member and system-wide daily budget. The free places and events do not.
+    // Where the member actually is (saved with their profile before this runs): the search is matched to a region by
+    // place, so a postcode or "Town, County" for somewhere already searched does not start a second search.
+    const { data: home } = await supabase.from("member_profiles").select("location_lat, location_lng").eq("user_id", memberId).maybeSingle();
+    const request: RegionRequest = { label: region, lat: home?.location_lat ?? null, lng: home?.location_lng ?? null };
     const budget = await searchAllowed(supabase, memberId);
     if (!budget.allowed) console.warn(`discovery: not searching "${region}" for member ${memberId.slice(0, 8)} (${budget.reason}); the nightly job will reach it when it is due`);
     const [summary, places, events] = await Promise.all([
-      searchRegionsThrottled(supabase, [region], { maxSearches: budget.allowed ? 1 : 0, memberId }),
+      searchRegionsThrottled(supabase, [request], { maxSearches: budget.allowed ? 1 : 0, memberId }),
       ensureOpenStreetMapPlaces(supabase, region),
       fetchTicketmasterNear(supabase, memberId).catch(() => 0),
     ]);
