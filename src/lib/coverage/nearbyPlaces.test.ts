@@ -70,3 +70,14 @@ describe("where the note is shown", () => {
     expect(read("src/components/ExploreView.tsx")).toContain("{learningArea && <AreaLearningNote />}");
   });
 });
+
+describe("My Week before there is a plan", () => {
+  it("says when it is the area that is still being learned, and only counts the places then", () => {
+    const page = read("src/app/week/page.tsx");
+    expect(page).toContain("isDemo && isThinArea(await countNearbyPlaces(");
+    expect(page).toContain("learningArea={learningArea}");
+    const view = read("src/components/ThisWeekView.tsx");
+    expect(view).toContain("We're still finding places near you");
+    expect(view).toContain("Plan your own and it will be chosen around you.");
+  });
+});

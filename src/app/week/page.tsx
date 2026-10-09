@@ -17,6 +17,7 @@ import { computeBehavioralRationale, formatBehavioralRationale, getRecentWindowS
 import type { CategoryName } from "@/lib/categories";
 import type { ItineraryItemView, SurpriseView } from "@/lib/types";
 import { distanceHint } from "@/lib/account/distanceHint";
+import { countNearbyPlaces, isThinArea } from "@/lib/coverage/nearbyPlaces";
 import { imageForRow } from "@/lib/imagery/forRow";
 import { directionsUrl, travelModeToward } from "@/lib/act/directions";
 import { itemCalendarUrl } from "@/lib/act/links";
@@ -174,6 +175,8 @@ export default async function WeekPage() {
   })();
 
   const isDemo = realItems.length === 0;
+  // With no plan of their own yet, say whether that is because we are still learning their area (the count is only made then).
+  const learningArea = isDemo && isThinArea(await countNearbyPlaces(supabase, profile.location_lat, profile.location_lng));
   const items = isDemo ? DEMO_ITEMS : realItems;
   const surprise = isDemo ? DEMO_SURPRISE : realSurprise;
 
@@ -192,6 +195,7 @@ export default async function WeekPage() {
       items={items}
       surprise={surprise}
       isDemo={isDemo}
+      learningArea={learningArea}
       today={showingNextWeek ? "" : today}
       nextWeekLabel={showingNextWeek && !isDemo ? weekLabel(shownWeek) : null}
       onItemAction={updateItineraryItemAction}

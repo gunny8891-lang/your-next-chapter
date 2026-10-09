@@ -35,6 +35,7 @@ export function ThisWeekView({
   items,
   surprise,
   isDemo,
+  learningArea = false,
   nextWeekLabel,
   onItemAction,
   onSurpriseAction,
@@ -53,6 +54,8 @@ export function ThisWeekView({
   items: ItineraryItemView[];
   surprise: SurpriseView;
   isDemo: boolean;
+  /** No plan yet, and few places known near them: the week will fill in once their area has been learned. */
+  learningArea?: boolean;
   /** Set (e.g. "Week of Monday 12 October") when the screen is showing next week's plan, on a Sunday evening; null for this week. */
   nextWeekLabel?: string | null;
   onItemAction: (itemId: string, action: "accepted" | "swapped" | "skipped") => Promise<void>;
@@ -197,7 +200,11 @@ export function ThisWeekView({
 
       {isDemo && (
         <Card className={styles.demo}>
-          <p>This is only an example. Plan your own and it will be chosen around you.</p>
+          <p>
+            {learningArea
+              ? "This is only an example. We're still finding places near you, and your own week will appear here as soon as there are enough to choose from. You can ask for it now, but it may be short."
+              : "This is only an example. Plan your own and it will be chosen around you."}
+          </p>
           <GenerateWeekButton onGenerate={onGenerate} />
         </Card>
       )}

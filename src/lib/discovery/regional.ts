@@ -242,10 +242,20 @@ async function fetchTicketmasterNear(supabase: SupabaseClient, memberId: string)
  * so their week picks it up without a manual "Generate my real week" click.
  * Swallows its own errors since nothing awaits this.
  */
+/** The steps of a regional trigger, replaceable so the rebuild of a member's week can be tested without searching anything. */
+export type TriggerDeps = {
+  searchAllowed?: typeof searchAllowed;
+  searchRegions?: typeof searchRegionsThrottled;
+  ensurePlaces?: typeof ensureOpenStreetMapPlaces;
+  events?: (supabase: SupabaseClient, memberId: string) => Promise<number>;
+  rebuildWeek?: typeof generateAndSaveItinerary;
+};
+
 export async function triggerDiscoveryForRegion(
   supabase: SupabaseClient,
   memberId: string,
-  region: string
+  region: string,
+  deps: TriggerDeps = {}
 ): Promise<void> {
   try {
     // The free place layer runs alongside the paid search, not after it: a
@@ -257,15 +267,15 @@ export async function triggerDiscoveryForRegion(
     // place, so a postcode or "Town, County" for somewhere already searched does not start a second search.
     const { data: home } = await supabase.from("member_profiles").select("location_lat, location_lng").eq("user_id", memberId).maybeSingle();
     const request: RegionRequest = { label: region, lat: home?.location_lat ?? null, lng: home?.location_lng ?? null };
-    const budget = await searchAllowed(supabase, memberId);
+    const budget = await (deps.searchAllowed ?? searchAllowed)(supabase, memberId);
     if (!budget.allowed) console.warn(`discovery: not searching "${region}" for member ${memberId.slice(0, 8)} (${budget.reason}); the nightly job will reach it when it is due`);
     const [summary, places, events] = await Promise.all([
-      searchRegionsThrottled(supabase, [request], { maxSearches: budget.allowed ? 1 : 0, memberId }),
-      ensureOpenStreetMapPlaces(supabase, region),
-      fetchTicketmasterNear(supabase, memberId).catch(() => 0),
+      (deps.searchRegions ?? searchRegionsThrottled)(supabase, [request], { maxSearches: budget.allowed ? 1 : 0, memberId }),
+      (deps.ensurePlaces ?? ensureOpenStreetMapPlaces)(supabase, region),
+      (deps.events ?? fetchTicketmasterNear)(supabase, memberId).catch(() => 0),
     ]);
     const newlyActive = summary.searched.reduce((sum, o) => sum + o.insertedActive, 0) + places.inserted + events;
-    if (newlyActive > 0) await generateAndSaveItinerary(supabase, memberId);
+    if (newlyActive > 0) await (deps.rebuildWeek ?? generateAndSaveItinerary)(supabase, memberId);
   } catch {
     // Best-effort — the nightly job will pick this region up when it's due.
   }

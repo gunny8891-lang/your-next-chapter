@@ -96,7 +96,7 @@ export function ExploreView({
     });
   };
 
-  // A saved idea is planned for today; one just found is planned for the day it was found for.
+  // A saved idea is planned for the day chosen beside it; one just found, for the day it was found for.
   const plan = async (id: string, foodStopId?: string, day: StartChoice = "now") => {
     setErrors((e) => ({ ...e, [id]: null }));
     setStates((s) => ({ ...s, [id]: "planning" }));
@@ -233,11 +233,24 @@ export function ExploreView({
                   {meta && <p className={styles.savedMeta}>{meta}</p>}
                   <div className={styles.savedActions}>
                     {state === "planned" ? (
-                      <p className={styles.planned}>Added to your day</p>
-                    ) : (
-                      <Button size="sm" loading={state === "planning"} onClick={() => plan(idea.id)}>
-                        {state === "planning" ? "Planning…" : "Plan this for today"}
+                      <p className={styles.planned}>Added to your plan</p>
+                    ) : state === "planning" ? (
+                      <Button size="sm" loading disabled>
+                        Planning…
                       </Button>
+                    ) : (
+                      <>
+                        <span className={styles.planFor} id={`plan-for-${idea.id}`}>
+                          Plan it for
+                        </span>
+                        <div className={styles.planDays} role="group" aria-labelledby={`plan-for-${idea.id}`}>
+                          {days.map((d) => (
+                            <Button key={d.value} size="sm" variant="secondary" onClick={() => plan(idea.id, undefined, d.value)}>
+                              {d.label}
+                            </Button>
+                          ))}
+                        </div>
+                      </>
                     )}
                     <Button size="sm" variant="quiet" onClick={() => unsave(idea.id)}>
                       Remove

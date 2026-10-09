@@ -145,3 +145,17 @@ describe("the Explore heading", () => {
     expect(explore).toMatch(/label === "Today" \|\| label === "Tomorrow" \? label\.toLowerCase\(\)/);
   });
 });
+
+describe("saved ideas", () => {
+  const explore = read("src/components/ExploreView.tsx");
+
+  it("can be planned for any of the days offered, not only today", () => {
+    expect(explore).toContain("plan(idea.id, undefined, d.value)");
+    expect(explore).toContain("Plan it for");
+    expect(explore).not.toContain("Plan this for today");
+  });
+
+  it("say they are in the plan, since it may be for another day", () => {
+    expect(explore).toContain("Added to your plan");
+  });
+});
