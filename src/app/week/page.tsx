@@ -17,6 +17,7 @@ import { computeBehavioralRationale, formatBehavioralRationale, getRecentWindowS
 import type { CategoryName } from "@/lib/categories";
 import type { ItineraryItemView, SurpriseView } from "@/lib/types";
 import { distanceHint } from "@/lib/account/distanceHint";
+import { imageForRow } from "@/lib/imagery/forRow";
 
 type ActivityRow = {
   id: string;
@@ -33,6 +34,11 @@ type ActivityRow = {
   location_lat: number | null;
   location_lng: number | null;
   accessibility_notes: string | null;
+  image_url: string | null;
+  image_alt: string | null;
+  image_credit: string | null;
+  image_license: string | null;
+  image_source_url: string | null;
 };
 
 export const metadata = { title: "My week" };
@@ -62,7 +68,7 @@ export default async function WeekPage() {
   const { data: plans } = await supabase
     .from("itineraries")
     .select(
-      "id, week_start_date, itinerary_items(id, day_of_week, slot, member_action, rationale_text, activities(id, title, category, address, date_time, price_estimate, booking_url, tags, description, recurrence_rule, duration_minutes, location_lat, location_lng, accessibility_notes))"
+      "id, week_start_date, itinerary_items(id, day_of_week, slot, member_action, rationale_text, activities(id, title, category, address, date_time, price_estimate, booking_url, tags, description, recurrence_rule, duration_minutes, location_lat, location_lng, accessibility_notes, image_url, image_alt, image_credit, image_license, image_source_url))"
     )
     .eq("member_id", user.id)
     .in("week_start_date", [thisWeek, addDays(thisWeek, 7)]);
@@ -112,6 +118,7 @@ export default async function WeekPage() {
           status: row.member_action as ItineraryItemView["status"],
           bookingUrl: activity.booking_url,
           behaviorNote: rationale ? formatBehavioralRationale(rationale) : null,
+          image: imageForRow(activity),
           details: buildItemDetails({
             title: activity.title,
             description: activity.description,

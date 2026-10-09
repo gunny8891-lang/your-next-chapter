@@ -144,7 +144,7 @@ export function ItemSheet({
   return (
     <Sheet label={item.title} onClose={onClose}>
       <div className={styles.body}>
-        <Cover category={item.category} ratio="banner" />
+        <Cover category={item.category} image={"image" in item ? (item.image ?? null) : null} ratio="banner" />
         <p className={styles.category} style={{ color: CATEGORY_COLOR[item.category] }}>
           {item.category}
         </p>

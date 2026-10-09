@@ -1,5 +1,6 @@
 import type { CategoryName } from "@/lib/categories";
 import type { ItemDetails } from "@/lib/itinerary/details";
+import type { PlaceImage } from "@/lib/imagery/types";
 
 export type MemberAction = "pending" | "accepted" | "swapped" | "skipped";
 
@@ -17,6 +18,8 @@ export type ItineraryItemView = {
   behaviorNote?: string | null;
   /** What it is, when it is open, how long, how far, how to find out more: from the catalogue, for the outing's sheet. */
   details?: ItemDetails | null;
+  /** A photograph of the place, or a calm stand-in for the kind of thing it is, for the top of the outing's sheet. */
+  image?: PlaceImage | null;
 };
 
 export type SwapAlternative = {
