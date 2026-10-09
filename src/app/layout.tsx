@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Fraunces } from "next/font/google";
 import { AppShell } from "@/components/AppShell";
 import "./globals.css";
+import { TEXT_SIZE_BOOT } from "@/lib/prefs/textSizeShared";
 
 // Geist carries the interface: clean, highly legible, contemporary.
 const sans = Geist({
@@ -42,7 +43,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en-GB" className={`${sans.variable} ${display.variable}`}>
+    // suppressHydrationWarning: the text-size script below sets one attribute on this element before the page is drawn.
+    <html lang="en-GB" className={`${sans.variable} ${display.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: TEXT_SIZE_BOOT }} />
+      </head>
       <body>
         <AppShell>{children}</AppShell>
       </body>

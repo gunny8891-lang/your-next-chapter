@@ -1,0 +1,22 @@
+.line {
+  margin: var(--space-8) 0 0;
+  font-size: var(--text-small);
+  line-height: 1.5;
+  color: var(--color-ink-soft);
+}
+
+/* On its own line, so the large tap area does not stretch the spacing of the sentence above it. */
+.link {
+  display: block;
+  width: fit-content;
+  padding: 10px 0;
+  color: var(--color-primary);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.link:hover,
+.link:focus-visible {
+  color: var(--color-ink);
+}

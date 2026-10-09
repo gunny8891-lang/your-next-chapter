@@ -3,12 +3,15 @@
 import Link from "next/link";
 import { useState } from "react";
 import { CalendarCheck } from "lucide-react";
-import { Button, Card, CheckboxField, ErrorNote, Field, Notice, Page, PageHeader, SectionTitle, SelectField, TextareaField } from "@/components/ui";
+import { Button, Card, CheckboxField, Chip, ErrorNote, Field, Notice, Page, PageHeader, SectionTitle, SelectField, TextareaField } from "@/components/ui";
 import { AdminLinks } from "@/components/AdminLinks";
 import { logout } from "@/app/auth/actions";
 import { LOCATION_HINT_ACCOUNT, LOCATION_LABEL, LOCATION_PLACEHOLDER } from "@/lib/geo/locationCopy";
 import { BUDGET_CHOICES } from "@/lib/onboarding/choices";
 import { setDailyQuoteVisible, useDailyQuoteVisible } from "@/lib/quotes/visibility";
+import { setTextSize, useTextSize } from "@/lib/prefs/textSize";
+import { feedbackHref, FEEDBACK_EMAIL } from "@/lib/feedback";
+import { TEXT_SIZES } from "@/lib/prefs/textSizeShared";
 import styles from "@/components/Account.module.css";
 
 type Profile = {
@@ -102,6 +105,7 @@ export function AccountSettingsForm({
   const [clearError, setClearError] = useState<string | null>(null);
   // A choice for this device, kept in the browser: it is not part of the saved profile.
   const showQuote = useDailyQuoteVisible();
+  const textSize = useTextSize();
   const [weeklyPlanEmail, setWeeklyPlanEmail] = useState(emailPrefs.weeklyPlan);
   const [remindersEmail, setRemindersEmail] = useState(emailPrefs.reminders);
   const [emailStep, setEmailStep] = useState<"idle" | "busy" | "saved">("idle");
@@ -293,6 +297,18 @@ export function AccountSettingsForm({
         )}
       </section>
 
+      <section aria-labelledby="text-size-title" id="text-size" className={styles.section}>
+        <SectionTitle id="text-size-title">Text size</SectionTitle>
+        <p className={styles.plain}>Choose what is easiest to read. It changes straight away, and applies to this device only.</p>
+        <div className={styles.sizeChoices} role="group" aria-label="Text size">
+          {TEXT_SIZES.map((s) => (
+            <Chip key={s.value} selected={textSize === s.value} onClick={() => setTextSize(s.value)}>
+              {s.label}
+            </Chip>
+          ))}
+        </div>
+      </section>
+
       <section aria-labelledby="today-title" id="on-today" className={styles.section}>
         <SectionTitle id="today-title">On Today</SectionTitle>
         <div className={styles.checks}>
@@ -363,8 +379,8 @@ export function AccountSettingsForm({
         <SectionTitle id="feedback">Tell us what you think</SectionTitle>
         <p className={styles.plain}>
           Lark Hour is new, and what you tell us shapes it. If something is confusing, broken or missing, or an idea was a good one, write to{" "}
-          <a href="mailto:hello@larkhour.com?subject=Lark%20Hour%20feedback" className={styles.textLink}>
-            hello@larkhour.com
+          <a href={feedbackHref("Account")} className={styles.textLink}>
+            {FEEDBACK_EMAIL}
           </a>
           . A real person reads every message.
         </p>

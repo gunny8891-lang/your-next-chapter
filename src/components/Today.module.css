@@ -56,7 +56,7 @@
 
 .row {
   display: grid;
-  grid-template-columns: 84px 1fr;
+  grid-template-columns: calc(var(--text-label) * 6) 1fr;
   gap: var(--space-4);
   padding: var(--space-4) 0;
   border-top: 1px solid var(--color-line);
@@ -112,7 +112,7 @@
 /* A part of the day with nothing in it: quiet, and tappable. */
 .freeRow {
   display: grid;
-  grid-template-columns: 84px 1fr;
+  grid-template-columns: calc(var(--text-label) * 6) 1fr;
   align-items: center;
   gap: var(--space-4);
   width: 100%;

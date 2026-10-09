@@ -65,6 +65,19 @@ html {
   color-scheme: light;
 }
 
+/* The person's own text size (Account, kept on the device; see lib/prefs/textSize.ts): the body sizes grow, headings are already large. */
+html[data-text-size="large"] {
+  --text-body: 19px;
+  --text-small: 18px;
+  --text-label: 16px;
+}
+
+html[data-text-size="larger"] {
+  --text-body: 21px;
+  --text-small: 20px;
+  --text-label: 18px;
+}
+
 html,
 body {
   max-width: 100vw;

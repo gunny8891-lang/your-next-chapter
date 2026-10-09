@@ -11,6 +11,7 @@ import { Button, Card, EmptyState, Notice, Page, PageHeader } from "@/components
 import { ItemSheet, type CalendarOffer } from "@/components/ItemSheet";
 import { SwapSheet } from "@/components/SwapSheet";
 import { SkippedPrompt } from "@/components/SkippedPrompt";
+import { FeedbackLink } from "@/components/FeedbackLink";
 import { GenerateWeekButton } from "@/components/GenerateWeekButton";
 import type { ItineraryItemView, SurpriseView, MemberAction, SwapAlternative } from "@/lib/types";
 import styles from "@/components/ThisWeek.module.css";
@@ -331,6 +332,8 @@ export function ThisWeekView({
           onClose={() => setSwapItemId(null)}
         />
       )}
+
+      <FeedbackLink where="My Week" />
     </Page>
   );
 }

@@ -11,6 +11,7 @@ import type { DailyState } from "@/lib/experience/dailyState";
 import type { Reflection } from "@/lib/experience/reflections";
 import { TimeSheet, type DogInfo, type TimeSheetInitial } from "@/components/TimeSheet";
 import { DailyQuote } from "@/components/DailyQuote";
+import { FeedbackLink } from "@/components/FeedbackLink";
 import type { DailyQuote as Quote } from "@/lib/quotes/daily";
 import { nextCommitment, type Commitment } from "@/lib/someTime/choices";
 import { isUnknownDetail } from "@/lib/itinerary/format";
@@ -266,6 +267,8 @@ export function TodayView({
         </a>
         .
       </p>
+
+      <FeedbackLink where="Today" />
     </div>
   );
 }
