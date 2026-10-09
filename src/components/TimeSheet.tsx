@@ -15,9 +15,10 @@ import {
   WHO_OPTIONS,
   type Commitment,
 } from "@/lib/someTime/choices";
+import { londonClock } from "@/lib/someTime/window";
 import { INTENTION_OPTIONS } from "@/lib/experience/dailyState";
 import { SPEND_OPTIONS, type ExperienceContext, type Spend } from "@/lib/context/constraints";
-import type { DurationChoice, Mood, StartChoice } from "@/lib/someTime/request";
+import { isLaterDay, type DurationChoice, type Mood, type StartChoice } from "@/lib/someTime/request";
 import type { SurpriseWho } from "@/lib/surprise/context";
 import type { TimeOption, TimeResult } from "@/lib/someTime/types";
 import styles from "@/components/TimeSheet.module.css";
@@ -132,7 +133,7 @@ export function TimeSheet({ initial, commitment, suggestedMood, nowMin, dog, onF
 
   const until = untilOption(commitment, nowMin);
   const hour = Math.floor(nowMin / 60);
-  const starts = availableStarts(hour);
+  const starts = availableStarts(hour, londonClock(new Date()).date);
   const effectiveStart = starts.some((s) => s.value === start) ? start : "now";
   // Tomorrow has its own lengths of time, and no "until my next thing": that is about the day they are in.
   const durations = durationOptionsFor(effectiveStart);
@@ -201,7 +202,7 @@ export function TimeSheet({ initial, commitment, suggestedMood, nowMin, dog, onF
         )}
 
         <div className={styles.options}>
-          {until && effectiveStart !== "tomorrow" && (
+          {until && !isLaterDay(effectiveStart) && (
             <button type="button" className={`${styles.option} ${styles.optionUntil}`} onClick={() => chooseDuration("until_next", until.untilMin)}>
               <span className={styles.optionLabel}>{until.label}</span>
               <span className={styles.optionHint}>{until.hint}</span>

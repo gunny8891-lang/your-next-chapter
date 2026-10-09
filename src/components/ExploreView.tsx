@@ -3,11 +3,13 @@
 import { useState, useTransition } from "react";
 import { Clock, Heart } from "lucide-react";
 import { Button, Card, Chip, ErrorNote, Page, PageHeader, SectionTitle, Skeleton } from "@/components/ui";
+import { AreaLearningNote } from "@/components/AreaLearningNote";
 import { ExperienceCard, type FeedbackReason } from "@/components/ExperienceCard";
 import type { TimeSheet } from "@/components/TimeSheet";
-import { exploreDuration, MOOD_OPTIONS } from "@/lib/someTime/choices";
+import { exploreDays, exploreDurationFor, MOOD_OPTIONS } from "@/lib/someTime/choices";
+import { londonClock } from "@/lib/someTime/window";
 import { placeLabel, priceBand } from "@/lib/someTime/format";
-import type { Mood } from "@/lib/someTime/request";
+import type { Mood, StartChoice } from "@/lib/someTime/request";
 import type { SavedIdea } from "@/lib/someTime/saved";
 import type { TimeOption, TimeResult } from "@/lib/someTime/types";
 import { CATEGORY_COLOR } from "@/lib/theme";
@@ -15,6 +17,12 @@ import styles from "@/components/Explore.module.css";
 
 type Flow = React.ComponentProps<typeof TimeSheet>;
 type CardState = "idle" | "planning" | "planned";
+
+/** The hour in London now, which is what "today" and "this afternoon" mean wherever the phone thinks it is. */
+const londonHour = () => Math.floor(londonClock(new Date()).minutes / 60);
+
+/** "today" and "tomorrow" in a sentence, but a day's name keeps its capital: "Sunday". */
+const dayInSentence = (label: string | undefined) => (label === "Today" || label === "Tomorrow" ? label.toLowerCase() : (label ?? "today"));
 
 const toSaved = (o: TimeOption): SavedIdea => ({
   id: o.id,
@@ -32,6 +40,7 @@ const toSaved = (o: TimeOption): SavedIdea => ({
  */
 export function ExploreView({
   saved: initialSaved,
+  learningArea = false,
   onFind,
   onAccept,
   onFeedback,
@@ -39,12 +48,19 @@ export function ExploreView({
   onUnsave,
 }: {
   saved: SavedIdea[];
+  /** The area has few places so far: say so. */
+  learningArea?: boolean;
   onFind: Flow["onFind"];
   onAccept: Flow["onAccept"];
   onFeedback: Flow["onFeedback"];
   onSave: (activityId: string, meta?: { surface?: string; who?: string }) => Promise<{ error: string | null }>;
   onUnsave: (activityId: string) => Promise<{ error: string | null }>;
 }) {
+  const [days] = useState(() => {
+    const clock = londonClock(new Date());
+    return exploreDays(Math.floor(clock.minutes / 60), clock.date);
+  });
+  const [when, setWhen] = useState<StartChoice>(days[0].value);
   const [mood, setMood] = useState<Mood | null>(null);
   const [result, setResult] = useState<TimeResult | null>(null);
   const [shown, setShown] = useState<string[]>([]);
@@ -57,7 +73,7 @@ export function ExploreView({
 
   const savedIds = new Set(savedList.map((s) => s.id));
 
-  const find = (chosen: Mood, exclude: string[]) => {
+  const find = (chosen: Mood, exclude: string[], day: StartChoice = when) => {
     setMood(chosen);
     setError(null);
     setResult(null);
@@ -65,8 +81,8 @@ export function ExploreView({
     setErrors({});
     startTransition(async () => {
       const res = await onFind({
-        start: "now",
-        duration: exploreDuration(new Date().getHours()),
+        start: day,
+        duration: exploreDurationFor(day, londonHour()),
         who: "just_me",
         mood: chosen,
         exclude,
@@ -80,10 +96,11 @@ export function ExploreView({
     });
   };
 
-  const plan = async (id: string, foodStopId?: string) => {
+  // A saved idea is planned for today; one just found is planned for the day it was found for.
+  const plan = async (id: string, foodStopId?: string, day: StartChoice = "now") => {
     setErrors((e) => ({ ...e, [id]: null }));
     setStates((s) => ({ ...s, [id]: "planning" }));
-    const res = await onAccept(id, { start: "now", duration: exploreDuration(new Date().getHours()) }, foodStopId, { surface: "explore" });
+    const res = await onAccept(id, { start: day, duration: exploreDurationFor(day, londonHour()) }, foodStopId, { surface: "explore" });
     if (res.error) {
       setErrors((e) => ({ ...e, [id]: res.error }));
       setStates((s) => ({ ...s, [id]: "idle" }));
@@ -109,13 +126,33 @@ export function ExploreView({
     return res;
   };
 
+  // Another day starts afresh: what was shown for the last one no longer counts, and a mood already chosen is asked again.
+  const chooseDay = (day: StartChoice) => {
+    setWhen(day);
+    setShown([]);
+    if (mood) find(mood, [], day);
+  };
+
   const loading = isPending && !result && !error;
 
   return (
     <Page>
-      <PageHeader title="Explore" lead="Ideas for today, whatever you feel like." />
+      <PageHeader title="Explore" lead={`Ideas for ${dayInSentence(days.find((d) => d.value === when)?.label)}, whatever you feel like.`} />
+      {learningArea && <AreaLearningNote />}
 
       <section aria-labelledby="feel">
+        {days.length > 1 && (
+          <div className={styles.when}>
+            <SectionTitle id="when">When?</SectionTitle>
+            <div className={styles.chips} role="group" aria-labelledby="when">
+              {days.map((d) => (
+                <Chip key={d.value} selected={when === d.value} onClick={() => chooseDay(d.value)} disabled={isPending}>
+                  {d.label}
+                </Chip>
+              ))}
+            </div>
+          </div>
+        )}
         <SectionTitle id="feel">What do you feel like?</SectionTitle>
         <div className={styles.chips} role="group" aria-label="What you feel like">
           {MOOD_OPTIONS.map((m) => (
@@ -159,7 +196,7 @@ export function ExploreView({
               state={states[option.id] ?? "idle"}
               error={errors[option.id]}
               saved={savedIds.has(option.id)}
-              onPlan={() => plan(option.id, option.foodStop?.id)}
+              onPlan={() => plan(option.id, option.foodStop?.id, when)}
               onSave={() => save(option)}
               onUnsave={() => unsave(option.id)}
               onNotForMe={(reason) => notForMe(option, reason)}

@@ -1,5 +1,5 @@
-import { clockLabel, durationLabel } from "@/lib/someTime/window";
-import type { DurationChoice, Mood, StartChoice } from "@/lib/someTime/request";
+import { clockLabel, durationLabel, laterStartsFrom } from "@/lib/someTime/window";
+import { isLaterDay, type DurationChoice, type Mood, type StartChoice } from "@/lib/someTime/request";
 import type { SurpriseWho } from "@/lib/surprise/context";
 
 /**
@@ -29,7 +29,7 @@ export const TOMORROW_DURATION_OPTIONS: { value: Exclude<DurationChoice, "until_
 
 /** The lengths of time worth offering for a start. */
 export function durationOptionsFor(start: StartChoice): typeof DURATION_OPTIONS {
-  return start === "tomorrow" ? TOMORROW_DURATION_OPTIONS : DURATION_OPTIONS;
+  return isLaterDay(start) ? TOMORROW_DURATION_OPTIONS : DURATION_OPTIONS;
 }
 
 /** Surprise me first and most prominent; the rest are ways to steer it. */
@@ -50,6 +50,22 @@ export function exploreDuration(hour: number): Exclude<DurationChoice, "until_ne
   return hour < 15 ? "half_day" : "rest_of_day";
 }
 
+/**
+ * The days Explore offers: today (until it is too late for anything), tomorrow, and the coming weekend. A day that has
+ * not started is browsed as half a day from the morning.
+ */
+export function exploreDays(hour: number, today: string): { value: StartChoice; label: string }[] {
+  const days: { value: StartChoice; label: string }[] = [];
+  if (hour < 21) days.push({ value: "now", label: "Today" });
+  days.push({ value: "tomorrow", label: "Tomorrow" }, ...laterStartsFrom(today));
+  return days;
+}
+
+/** How long Explore plans for on a day: what is left of today, or half a day from the morning of another. */
+export function exploreDurationFor(start: StartChoice, hour: number): Exclude<DurationChoice, "until_next"> {
+  return isLaterDay(start) ? "half_day" : exploreDuration(hour);
+}
+
 export const WHO_OPTIONS: { value: SurpriseWho; label: string }[] = [
   { value: "just_me", label: "Just me" },
   { value: "partner", label: "Partner" },
@@ -62,14 +78,17 @@ const START_LABEL: Record<StartChoice, string> = {
   afternoon: "This afternoon",
   evening: "This evening",
   tomorrow: "Tomorrow",
+  saturday: "Saturday",
+  sunday: "Sunday",
 };
 
 /** The starts still worth offering at this hour: "this afternoon" is no use at 6pm. Tomorrow is always there. */
-export function availableStarts(hour: number): { value: StartChoice; label: string }[] {
+export function availableStarts(hour: number, today?: string): { value: StartChoice; label: string }[] {
   const starts: { value: StartChoice; label: string }[] = [{ value: "now", label: "Now" }];
   if (hour < 17) starts.push({ value: "afternoon", label: "This afternoon" });
   if (hour < 21) starts.push({ value: "evening", label: "This evening" });
   starts.push({ value: "tomorrow", label: "Tomorrow" });
+  if (today) starts.push(...laterStartsFrom(today));
   return starts;
 }
 

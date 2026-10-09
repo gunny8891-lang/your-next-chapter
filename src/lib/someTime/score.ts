@@ -8,7 +8,7 @@ import { mealLabel, suitsMealTime, typicalSpend } from "@/lib/someTime/food";
 import { openStatus } from "@/lib/someTime/openingHours";
 import type { Mood, TimeRequest } from "@/lib/someTime/request";
 import { estimateTravel, type TravelMode, type TravelProfile } from "@/lib/someTime/travel";
-import { clockLabel, durationLabel, type TimeWindow } from "@/lib/someTime/window";
+import { clockLabel, durationLabel, onDay, type TimeWindow } from "@/lib/someTime/window";
 import { dailyStateAdjustment, type DailyState } from "@/lib/experience/dailyState";
 import type { RecommendationMemory } from "@/lib/memory/memory";
 import { checkConstraints, stopWorks, withinSpend, type PlaceFacts } from "@/lib/context/constraints";
@@ -48,6 +48,8 @@ export type ScoringInput = {
   dailyState?: DailyState | null;
   window: TimeWindow;
   request: TimeRequest;
+  /** "today", "tomorrow" or a day's name: which day the window is on. Taken from the request when not given. */
+  dayWord?: string;
   member: MemberContext;
   affinity: AffinityScores;
   history: RepetitionHistory;
@@ -280,6 +282,7 @@ function distanceFromHome(c: OpportunityCandidate, home: MemberContext["home"]):
 export function evaluateCandidate(c: OpportunityCandidate, input: ScoringInput): Evaluated | null {
   const { window, request, member, affinity, history } = input;
   const weekday = weekdayOf(window.date);
+  const day = input.dayWord ?? (request.start === "tomorrow" ? "tomorrow" : "today");
   const kind = foodKindOf(c.tags);
 
   const km = distanceFromHome(c, member.home);
@@ -384,7 +387,7 @@ export function evaluateCandidate(c: OpportunityCandidate, input: ScoringInput):
 
   if (input.pleasantWeather && c.tags.some((t) => OUTDOOR_TAGS.includes(t))) {
     score += 1;
-    whyNow.push("the weather suits being outdoors");
+    whyNow.push(day === "today" ? "the weather suits being outdoors" : `the weather suits being outdoors ${onDay(day)}`);
   }
 
   // A wet day is a day for indoors. (Outdoor places are already left out when every day asked about is wet.)
@@ -395,7 +398,7 @@ export function evaluateCandidate(c: OpportunityCandidate, input: ScoringInput):
 
   if (event) {
     score += request.mood === "food" ? 0 : 1.5;
-    whyNow.push(request.start === "tomorrow" ? "it is actually happening tomorrow" : "it is actually happening today");
+    whyNow.push(`it is actually happening ${onDay(day)}`);
   }
 
   // Something that runs for a while but ends soon: now is the time, and it is true because the end date is recorded.

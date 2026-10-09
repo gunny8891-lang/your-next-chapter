@@ -17,6 +17,7 @@ import { londonClock } from "@/lib/someTime/window";
 import type { CategoryName } from "@/lib/categories";
 import type { ItineraryItemView } from "@/lib/types";
 import { quoteForDate } from "@/lib/quotes/daily";
+import { countNearbyPlaces, isThinArea } from "@/lib/coverage/nearbyPlaces";
 
 type ActivityRow = {
   id: string;
@@ -90,7 +91,7 @@ export default async function TodayPage() {
   const { latitude, longitude } = weatherCoordinates(profile);
   // The weather and the featured idea are independent, so fetch them together. The
   // idea is a bonus: if anything about it fails, Today simply shows without it.
-  const [weather, featured, dailyState, reflections] = await Promise.all([
+  const [weather, featured, dailyState, reflections, nearbyPlaces] = await Promise.all([
     getTodayWeather(latitude, longitude),
     getFeaturedOption(supabase, user.id).catch((err) => {
       console.warn("today: could not build the featured idea:", err instanceof Error ? err.message : err);
@@ -98,6 +99,7 @@ export default async function TodayPage() {
     }),
     loadDailyState(supabase, user.id, londonToday()),
     loadReflections(supabase, user.id, londonToday()),
+    countNearbyPlaces(supabase, profile.location_lat, profile.location_lng),
   ]);
 
   if (featured) scheduleImageLookups([featured]);
@@ -114,6 +116,7 @@ export default async function TodayPage() {
       firstName={cleanFirstName(user.user_metadata?.first_name)}
       featured={featured}
       quote={quoteForDate(londonToday())}
+      learningArea={isThinArea(nearbyPlaces)}
       dog={{ hasDog: profile.has_dog === true, usuallyComes: profile.dog_usually_comes === true, name: profile.dog_name ?? null }}
       dateLabel={dateLabel}
       weather={weather}

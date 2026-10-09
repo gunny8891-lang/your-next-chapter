@@ -11,6 +11,8 @@ const FRIENDLY: [RegExp, (match: RegExpMatchArray) => string][] = [
   [/^it matches your interest in (.+)$/, (m) => `it matches your interest in ${m[1]}`],
   [/^it is actually happening today$/, () => "it is on today"],
   [/^it is actually happening tomorrow$/, () => "it is on tomorrow"],
+  [/^it is actually happening on (.+)$/, (m) => `it is on ${m[1]}`],
+  [/^the weather suits being outdoors (tomorrow|on .+)$/, (m) => `it should be good weather for it ${m[1]}`],
   [/^it is a wet day and this is indoors$/, () => "it is a wet day and this is under cover"],
   [/^it fits before your next plan$/, () => "it fits neatly before your next plan"],
   [/^it suits a (.+) mood$/, (m) => `it suits a ${m[1]} mood`],

@@ -12,6 +12,7 @@ import type { Reflection } from "@/lib/experience/reflections";
 import { TimeSheet, type DogInfo, type TimeSheetInitial } from "@/components/TimeSheet";
 import { DailyQuote } from "@/components/DailyQuote";
 import { FeedbackLink } from "@/components/FeedbackLink";
+import { AreaLearningNote } from "@/components/AreaLearningNote";
 import type { DailyQuote as Quote } from "@/lib/quotes/daily";
 import { nextCommitment, type Commitment } from "@/lib/someTime/choices";
 import { isUnknownDetail } from "@/lib/itinerary/format";
@@ -88,6 +89,7 @@ export function TodayView({
   featured,
   dog,
   quote,
+  learningArea = false,
   onItemAction,
   onFindTime,
   onAcceptTime,
@@ -109,6 +111,8 @@ export function TodayView({
   dog?: DogInfo;
   /** The day's quotation, the same for everyone; shown under the date unless they have hidden it. */
   quote?: Quote;
+  /** The area has few places so far: say so. */
+  learningArea?: boolean;
   onItemAction: (itemId: string, action: "accepted" | "swapped" | "skipped") => Promise<void>;
   onFindTime: FlowActions["onFind"];
   onAcceptTime: FlowActions["onAccept"];
@@ -156,6 +160,7 @@ export function TodayView({
           <WeatherLine weather={weather} />
         </p>
         {quote && <DailyQuote quote={quote} />}
+        {learningArea && <AreaLearningNote />}
       </header>
 
       <DailyStateStrip initial={initialDailyState} onSave={onSaveDailyState} onClear={onClearDailyState} onChange={setDailyState} />

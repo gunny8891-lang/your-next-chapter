@@ -40,6 +40,43 @@ export function londonClock(now: Date): { date: string; minutes: number } {
   return { date: `${get("year")}-${get("month")}-${get("day")}`, minutes: Number(get("hour")) * 60 + Number(get("minute")) };
 }
 
+const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+/** The day of the week of a calendar date: 0 is Sunday. */
+export function weekdayNumber(date: string): number {
+  return new Date(`${date}T00:00:00Z`).getUTCDay();
+}
+
+/** How many days from `from` to the next Saturday or Sunday, 0 when `from` is that day. */
+function daysUntil(weekday: 0 | 6, from: string): number {
+  return (weekday - weekdayNumber(from) + 7) % 7;
+}
+
+/**
+ * The weekend days worth offering beyond today and tomorrow, for the coming weekend: Saturday from Monday to Thursday, and
+ * Sunday from Monday to Friday (a Saturday that is tomorrow is "Tomorrow"). On a Saturday or Sunday neither is offered,
+ * rather than the weekend after.
+ */
+export function laterStartsFrom(today: string): { value: "saturday" | "sunday"; label: string }[] {
+  const days: { value: "saturday" | "sunday"; label: string }[] = [];
+  const weekday = weekdayNumber(today);
+  if (weekday >= 1 && weekday <= 4) days.push({ value: "saturday", label: "Saturday" });
+  if (weekday >= 1 && weekday <= 5) days.push({ value: "sunday", label: "Sunday" });
+  return days;
+}
+
+/** What to call a day for someone: "today", "tomorrow", or its name ("Saturday"). */
+export function dayWordFor(date: string, today: string): string {
+  if (date === today) return "today";
+  if (date === addDays(today, 1)) return "tomorrow";
+  return WEEKDAY_NAMES[weekdayNumber(date)];
+}
+
+/** "today", "tomorrow", "on Saturday": the day as it reads in a sentence. */
+export function onDay(dayWord: string): string {
+  return dayWord === "today" || dayWord === "tomorrow" ? dayWord : `on ${dayWord}`;
+}
+
 const roundUp5 = (minutes: number) => Math.ceil(minutes / 5) * 5;
 
 /** "14:05" for minutes after midnight (past-midnight values wrap). */
@@ -68,10 +105,15 @@ export function resolveWindow(
 ): WindowResult {
   const clock = londonClock(now);
   const nowMin = roundUp5(clock.minutes);
-  const tomorrow = request.start === "tomorrow";
-  const date = tomorrow ? addDays(clock.date, 1) : clock.date;
+  // A weekend day that is today is simply today, from now.
+  const weekendDay = request.start === "saturday" ? 6 : request.start === "sunday" ? 0 : null;
+  const later = request.start === "tomorrow" || (weekendDay !== null && daysUntil(weekendDay, clock.date) > 0);
+  const date =
+    request.start === "tomorrow" ? addDays(clock.date, 1)
+    : weekendDay !== null && later ? addDays(clock.date, daysUntil(weekendDay, clock.date))
+    : clock.date;
   const startMin =
-    tomorrow ? TOMORROW_START_MIN
+    later ? TOMORROW_START_MIN
     : request.start === "afternoon" ? Math.max(nowMin, AFTERNOON_START_MIN)
     : request.start === "evening" ? Math.max(nowMin, EVENING_START_MIN)
     : nowMin;
@@ -83,7 +125,7 @@ export function resolveWindow(
   const untilDayEnd = DAY_END_MIN - startMin;
 
   // Time before the next thing already in their day: free until then, and back for it.
-  if (request.duration === "until_next" && !tomorrow) {
+  if (request.duration === "until_next" && !later) {
     const gap = (request.untilMin ?? 0) - startMin;
     if (gap < MIN_USABLE_MIN) {
       return { ok: false, reason: "There is not enough time before your next plan — try a different amount of time." };

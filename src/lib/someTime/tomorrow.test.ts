@@ -88,7 +88,7 @@ describe("what the sheet offers", () => {
     const sheet = read("src/components/TimeSheet.tsx");
     expect(sheet).toContain("durationOptionsFor(effectiveStart)");
     expect(sheet).toContain("durations.map((d)");
-    expect(sheet).toContain('until && effectiveStart !== "tomorrow"');
+    expect(sheet).toContain('until && !isLaterDay(effectiveStart)');
   });
 });
 

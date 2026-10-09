@@ -47,7 +47,7 @@ import {
   type ScoringInput,
 } from "@/lib/someTime/score";
 import type { FoodStopOption, TimeOption, TimeResult } from "@/lib/someTime/types";
-import { clockLabel, resolveWindow, type TimeWindow } from "@/lib/someTime/window";
+import { clockLabel, dayWordFor, londonClock, resolveWindow, type TimeWindow } from "@/lib/someTime/window";
 import type { Mood } from "@/lib/someTime/request";
 
 /** How many scored candidates the model sees. Enough for variety, small enough to keep the call cheap. */
@@ -66,6 +66,8 @@ export type Ask = (system: string, user: string) => Promise<string>;
 export type RecommendInputs = {
   request: TimeRequest;
   window: TimeWindow;
+  /** "today", "tomorrow" or a day's name. Taken from the request when not given. */
+  dayWord?: string;
   /** Already narrowed for the day, the weather and who they are with (see applyOpenTimeContext). */
   candidates: OpportunityCandidate[];
   weatherNote: string | null;
@@ -118,8 +120,7 @@ function toFoodStopOption(stop: FoodStop): FoodStopOption {
   };
 }
 
-function toTimeOption(ctx: { request: TimeRequest; date: string }, entry: ShortlistEntry, why: string, includeFood: boolean, modelTitle: string | null = null): TimeOption {
-  const { request } = ctx;
+function toTimeOption(ctx: { date: string; dayWord: string }, entry: ShortlistEntry, why: string, includeFood: boolean, modelTitle: string | null = null): TimeOption {
   const { evaluated: e, foodStop } = entry;
   const c = e.candidate;
   const stop = includeFood ? foodStop : null;
@@ -156,7 +157,7 @@ function toTimeOption(ctx: { request: TimeRequest; date: string }, entry: Shortl
     travelMinutes: e.travelMinutes,
     isFood: isFoodVenue(c),
     happeningToday: eventDate(c) !== null,
-    dayWord: request.start === "tomorrow" ? "tomorrow" : "today",
+    dayWord: ctx.dayWord,
     tags: c.tags,
     role: null,
     act: ideaActLinks({
@@ -197,7 +198,9 @@ export async function buildRecommendations(inputs: RecommendInputs): Promise<{ o
   const dailyState = inputs.dailyState ?? null;
   // What they feel like today stands in for a mood they did not choose for this request.
   const request = requestWithDailyState(inputs.request, dailyState);
-  const scoring: ScoringInput = { window, request, member, affinity, history, pleasantWeather: inputs.pleasantWeather, wetDay: inputs.wetDay, daylight: inputs.daylight, dailyState };
+  const dayWord = inputs.dayWord ?? (request.start === "tomorrow" ? "tomorrow" : "today");
+  const optionCtx = { request, date: window.date, dayWord };
+  const scoring: ScoringInput = { window, request, dayWord, member, affinity, history, pleasantWeather: inputs.pleasantWeather, wetDay: inputs.wetDay, daylight: inputs.daylight, dailyState };
 
   // A mood they CHOSE for this request is a requirement, not a nudge: an idea that does not fit it is left out. (A
   // mood that only comes from how they said they feel today stays a gentle preference, so Today is never left bare.)
@@ -260,8 +263,8 @@ export async function buildRecommendations(inputs: RecommendInputs): Promise<{ o
         options: withRoles(
           kept.map(({ ch, entry }) => {
             // An explanation that talks like the app's internals ("a category you have not touched") is replaced by one built from the facts.
-            if (!ch) return toTimeOption({ request, date: window.date }, entry, fallbackWhy(entry.evaluated), entry.foodStop !== null && window.availableMinutes >= 90);
-            return toTimeOption({ request, date: window.date }, entry, containsJargon(ch.why) ? fallbackWhy(entry.evaluated) : ch.why, ch.withFood, ch.title);
+            if (!ch) return toTimeOption(optionCtx, entry, fallbackWhy(entry.evaluated), entry.foodStop !== null && window.availableMinutes >= 90);
+            return toTimeOption(optionCtx, entry, containsJargon(ch.why) ? fallbackWhy(entry.evaluated) : ch.why, ch.withFood, ch.title);
           }),
           request
         ),
@@ -276,7 +279,7 @@ export async function buildRecommendations(inputs: RecommendInputs): Promise<{ o
   }
 
   const options = withRoles(
-    shortlist.slice(0, MAX_OPTIONS).map((s) => toTimeOption({ request, date: window.date }, s, fallbackWhy(s.evaluated), s.foodStop !== null && window.availableMinutes >= 90)),
+    shortlist.slice(0, MAX_OPTIONS).map((s) => toTimeOption(optionCtx, s, fallbackWhy(s.evaluated), s.foodStop !== null && window.availableMinutes >= 90)),
     request
   );
   return { options, notice };
@@ -313,6 +316,9 @@ function defaultAsk(supabase: SupabaseClient, memberId: string): Ask {
     const response = await callClaude(new Anthropic({ apiKey }), supabase, { userId: memberId, feature: "some_time" }, {
       model: MODEL,
       max_tokens: MAX_TOKENS,
+      // Choosing three of eight and writing a sentence each is not a task for deliberation. With thinking left on
+      // it took about 20 seconds; with it off, about 5, for answers of the same quality.
+      thinking: { type: "disabled" },
       system,
       messages: [{ role: "user", content: user }],
     });
@@ -362,7 +368,7 @@ export async function getTimeOptions(
   const hasHome = profile?.location_lat != null && profile?.location_lng != null;
   const [{ candidates: ranked, affinity }, forecast, history, goalRows, dailyState] = await Promise.all([
     fetchRankedOpportunities(supabase, memberId, { excludeActivityIds: exclude, foodVenues: "include" }),
-    hasHome ? getDailyForecast(profile!.location_lat, profile!.location_lng, 2) : Promise.resolve(null as DayForecast[] | null),
+    hasHome ? getDailyForecast(profile!.location_lat, profile!.location_lng, 7) : Promise.resolve(null as DayForecast[] | null),
     loadRepetitionHistory(supabase, memberId, window.date),
     supabase.from("goals").select("text").eq("member_id", memberId).eq("status", "active"),
     loadDailyState(supabase, memberId, window.date),
@@ -398,6 +404,7 @@ export async function getTimeOptions(
   const { options, notice } = await buildRecommendations({
     request: requestForThisOuting,
     window,
+    dayWord: dayWordFor(window.date, londonClock(now).date),
     candidates,
     weatherNote,
     pleasantWeather: todayForecast ? isStrongOutdoorWeather(todayForecast) : false,

@@ -66,8 +66,8 @@ export type TimeOption = {
   isFood: boolean;
   /** A one-off event actually on that day, as opposed to a place or an ongoing thing. */
   happeningToday: boolean;
-  /** Which day the idea is for: "today", or "tomorrow" when that is what they asked for. */
-  dayWord: "today" | "tomorrow";
+  /** Which day the idea is for: "today", "tomorrow", or the name of the day ("Saturday") when that is what they asked for. */
+  dayWord: string;
   /** What kind of place it is, in the catalogue's own words. */
   tags: string[];
   /** Best match, something different, something social: only among two or more ideas, and only where true. */
