@@ -30,8 +30,10 @@ export const OSM_NOTE_PREFIX = "Place data from OpenStreetMap";
 export const OSM_PLACES_NOTE_PREFIX = `${OSM_NOTE_PREFIX} (©`;
 /** Notes of the food & drink layer (cafés, pubs, restaurants, tea rooms) start with this. */
 export const OSM_FOOD_NOTE_PREFIX = `${OSM_NOTE_PREFIX} (food`;
+/** Notes of the things-to-do layer (bowling, adventure golf, attractions, historic houses, galleries, more leisure centres) start with this. */
+export const OSM_THINGS_NOTE_PREFIX = `${OSM_NOTE_PREFIX} (things`;
 
-export type OsmLayer = "places" | "food";
+export type OsmLayer = "places" | "food" | "things";
 
 const NOMINATIM_SEARCH = "https://nominatim.openstreetmap.org/search";
 const MIN_REQUEST_GAP_MS = 1100;
@@ -46,7 +48,9 @@ type PlaceType =
   | "museum" | "castle" | "nature_reserve" | "garden"
   | "library" | "arts_centre" | "community_centre"
   | "theatre" | "cinema" | "playground"
-  | "restaurant" | "cafe" | "pub" | "tea_room";
+  | "restaurant" | "cafe" | "pub" | "tea_room"
+  | "leisure_centre" | "bowling_alley" | "mini_golf" | "trampoline_park" | "ice_rink" | "golf" | "dance_studio"
+  | "attraction" | "heritage_house" | "zoo" | "theme_park" | "aquarium" | "art_gallery";
 
 type TypeConfig = {
   category: CategoryName;
@@ -87,6 +91,21 @@ const TYPES: Record<PlaceType, TypeConfig> = {
   cafe: { category: "Joy", label: "Café", keep: 24, minutes: 45, layer: "food", tags: [FOOD, "cafe", "coffee", "brunch", "lunch"] },
   pub: { category: "Joy", label: "Pub", keep: 18, minutes: 60, layer: "food", tags: [FOOD, "pub", "lunch", "dinner", "drinks"] },
   tea_room: { category: "Joy", label: "Tea room", keep: 8, minutes: 90, layer: "food", tags: [FOOD, "cafe", "afternoon-tea"] },
+  // Things to do. A second pass over what the places layer leaves out or caps: the places layer keeps only the best few
+  // leisure centres, and never asked for bowling, adventure golf, attractions, historic houses or galleries at all.
+  leisure_centre: { category: "Move", label: "Leisure centre or pool", keep: 6, minutes: 60, layer: "things", tags: ["fitness", "swimming", "indoor"] },
+  bowling_alley: { category: "Joy", label: "Bowling alley", keep: 3, minutes: 90, layer: "things", tags: ["bowling", "social", "indoor", "family"] },
+  mini_golf: { category: "Joy", label: "Adventure or mini golf", keep: 3, minutes: 60, layer: "things", tags: ["mini golf", "social", "family", "grandchildren"] },
+  trampoline_park: { category: "Move", label: "Trampoline and active play park", keep: 2, minutes: 60, layer: "things", tags: ["active play", "family", "grandchildren", "indoor"] },
+  ice_rink: { category: "Move", label: "Ice rink", keep: 2, minutes: 60, layer: "things", tags: ["skating", "family", "indoor"] },
+  golf: { category: "Move", label: "Golf course or driving range", keep: 3, minutes: 120, layer: "things", tags: ["golf", "outdoors"] },
+  dance_studio: { category: "Move", label: "Dance studio", keep: 3, minutes: 60, layer: "things", tags: ["dance", "fitness", "social"] },
+  attraction: { category: "Explore", label: "Visitor attraction", keep: 6, minutes: 120, layer: "things", tags: ["attraction"] },
+  heritage_house: { category: "Explore", label: "Historic house", keep: 3, minutes: 150, layer: "things", tags: ["heritage", "history", "gardens", "house tour"] },
+  zoo: { category: "Explore", label: "Zoo or wildlife park", keep: 2, minutes: 180, layer: "things", tags: ["wildlife", "family", "grandchildren", "outdoors"] },
+  theme_park: { category: "Joy", label: "Theme park", keep: 2, minutes: 240, layer: "things", tags: ["family", "grandchildren"] },
+  aquarium: { category: "Explore", label: "Aquarium", keep: 2, minutes: 120, layer: "things", tags: ["wildlife", "family", "grandchildren", "indoor"] },
+  art_gallery: { category: "Explore", label: "Art gallery", keep: 4, minutes: 60, layer: "things", tags: ["art", "gallery", "culture", "indoor"] },
 };
 
 /**
@@ -112,6 +131,18 @@ const OSM_KIND_TO_TYPE: Record<string, PlaceType> = {
   "amenity=cafe": "cafe",
   // Only pubs, not amenity=bar: that is cocktail bars and members' clubs.
   "amenity=pub": "pub",
+  "leisure=bowling_alley": "bowling_alley",
+  "leisure=miniature_golf": "mini_golf",
+  "leisure=trampoline_park": "trampoline_park",
+  "leisure=ice_rink": "ice_rink",
+  "leisure=golf_course": "golf",
+  "leisure=dance": "dance_studio",
+  "tourism=attraction": "attraction",
+  "historic=manor": "heritage_house",
+  "tourism=zoo": "zoo",
+  "tourism=theme_park": "theme_park",
+  "tourism=aquarium": "aquarium",
+  "tourism=gallery": "art_gallery",
 };
 
 /**
@@ -126,7 +157,40 @@ const SEARCH_TERMS: Record<OsmLayer, string[]> = {
     "theatre", "cinema", "playground",
   ],
   food: ["tea room", "restaurant", "cafe", "pub"],
+  // "leisure centre" and "swimming centre" turn a sports centre or pool into the leisure_centre type (see classifyPlace).
+  things: [
+    "leisure centre", "swimming centre", "bowling alley", "miniature golf", "trampoline park", "ice rink", "golf course",
+    "dance studio", "attraction", "manor", "zoo", "theme park", "aquarium", "art gallery",
+  ],
 };
+/**
+ * What is actually sent for a search term. A plain phrase is ranked by relevance and often finds nothing ("bowling alley"
+ * found no bowling alley in Stevenage, where Hollywood Bowl is one); Nominatim's [key=value] form asks for exactly that
+ * kind of place and finds it. Terms not listed here are sent as they are.
+ */
+const TERM_QUERY: Record<string, string> = {
+  "leisure centre": "[leisure=sports_centre]",
+  "swimming centre": "[leisure=swimming_pool]",
+  "bowling alley": "[leisure=bowling_alley]",
+  "miniature golf": "[leisure=miniature_golf]",
+  "trampoline park": "[leisure=trampoline_park]",
+  "ice rink": "[leisure=ice_rink]",
+  "golf course": "[leisure=golf_course]",
+  "dance studio": "[leisure=dance]",
+  attraction: "[tourism=attraction]",
+  manor: "[historic=manor]",
+  zoo: "[tourism=zoo]",
+  "theme park": "[tourism=theme_park]",
+  aquarium: "[tourism=aquarium]",
+  "art gallery": "[tourism=gallery]",
+};
+/** The searches whose sports centres and pools are kept as leisure_centre (see classifyPlace). */
+const LEISURE_CENTRE_TERMS = new Set(["leisure centre", "swimming centre"]);
+const SCHOOL_HALL_NAME = /\b(sports hall|boys|girls|school|prep)\b/i;
+// Things tagged as attractions that are a statue or a viewpoint, not somewhere to spend a few hours.
+const NOT_AN_ATTRACTION = /\b(station|platform|whipping post|stocks|statue|memorial|monument|viewpoint|view point|fountain|plaque|sculpture|bench|gate|gates|bridge|cross|well|pump|stone|mural|sign|trail marker|picnic|car park)\b/i;
+// A building you can visit: an attraction named as a house, hall, castle, abbey, palace, manor or estate.
+const HERITAGE_HOUSE_NAME = /\b(house|hall|castle|abbey|priory|palace|manor|estate|court|lodge|mansion)\b/i;
 
 export type NominatimPlace = {
   osm_type?: string;
@@ -176,7 +240,9 @@ export function viewboxQuadrants(centre: Coordinates, radiusKm: number): string[
 }
 
 // Names that say what a place is but not which one — useless on a card.
-const GENERIC_NAME = /^(the |a )?(main |kids |childrens |children's |learner |competition |training |outdoor |indoor |sports? |leisure |community |public |local )*(swimming pool|pool|sports? ?centre|leisure ?centre|community ?centre|park|garden|gym|library|theatre|cinema|playground|museum|hall|cafe|café|restaurant|pub|coffee shop|tea ?room|bar)$/i;
+const GENERIC_NAME = /^(the |a )?(main |kids |childrens |children's |learner |competition |training |outdoor |indoor |sports? |leisure |community |public |local )*(swimming pool|pool|sports? ?centre|leisure ?centre|community ?centre|park|garden|gym|library|theatre|cinema|playground|museum|hall|cafe|café|restaurant|pub|coffee shop|tea ?room|bar|bowling alley|ice rink|golf course|attraction|art gallery|gallery|zoo|aquarium|dance studio)$/i;
+// A name that is a label rather than a place: "Sports: Swimming Pool", "Leisure: Sports Hall".
+const GENERIC_LABEL_NAME = /^[a-z ]{3,20}:\s/i;
 // A community centre run for one age group isn't a place to send a retiree.
 const NOT_FOR_RETIREES = /\b(youth|young|children|child|nursery|scout|guide|cadet|acf|atc|detachment|barracks|school|college|academy)\b/i;
 const PRIVATE_CLUB_NAME = /\b(clubs?|ground|grounds|memorial|rugby|cricket|football|fc|hockey|boxing|mma)\b/i;
@@ -208,12 +274,18 @@ function sportIsYoga(extratags: Record<string, string> | undefined): boolean {
 export function classifyPlace(place: NominatimPlace, term: string): PlaceType | null {
   const name = place.name?.trim();
   if (!name || place.lat == null || place.lon == null) return null;
-  if (GENERIC_NAME.test(name)) return null;
-
-  const access = place.extratags?.access;
-  if (access === "private" || access === "no" || access === "customers" || access === "permit") return null;
+  if (GENERIC_NAME.test(name) || GENERIC_LABEL_NAME.test(name)) return null;
 
   let type: PlaceType | undefined = OSM_KIND_TO_TYPE[`${place.category}=${place.type}`];
+
+  // In the things pass a sports centre or pool is a leisure_centre, kept in larger numbers than the places pass keeps.
+  if (LEISURE_CENTRE_TERMS.has(term) && (type === "sports_centre" || type === "swimming_pool")) type = "leisure_centre";
+
+  // Not open to the public. "Customers" is a place only for those who use it, which excludes a café inside a shop but not a
+  // swimming pool, a bowling alley or an attraction: they are for customers, and anyone can be one.
+  const access = place.extratags?.access;
+  if (access === "private" || access === "no" || access === "permit") return null;
+  if (access === "customers" && !(type && TYPES[type].layer === "things")) return null;
 
   // A tea room is a café or restaurant that says so; only the "tea room" search can class one.
   if (term === "tea room") {
@@ -240,12 +312,14 @@ export function classifyPlace(place: NominatimPlace, term: string): PlaceType | 
   }
   if (!type) return null;
 
-  if ((type === "community_centre" || type === "sports_centre" || type === "swimming_pool") && NOT_FOR_RETIREES.test(name)) return null;
+  if ((type === "community_centre" || type === "sports_centre" || type === "swimming_pool" || type === "leisure_centre") && NOT_FOR_RETIREES.test(name)) return null;
   // "Sports centre" in OSM also covers members' clubs, club grounds and combat
   // gyms. Keep only what reads as a public leisure facility.
-  if (type === "sports_centre" || type === "swimming_pool") {
+  if (type === "sports_centre" || type === "swimming_pool" || type === "leisure_centre") {
     const e = place.extratags ?? {};
     if (e.club || PRIVATE_CLUB_NAME.test(name) || PITCH_NAME.test(name)) return null;
+    // A school's own hall is not a public leisure centre.
+    if (type === "leisure_centre" && SCHOOL_HALL_NAME.test(name)) return null;
     const sports = (e.sport ?? "").split(";").map((s) => s.trim()).filter(Boolean);
     if (sports.length > 0 && sports.every((s) => NOT_RETIREE_SPORTS.has(s))) return null;
     if (!LEISURE_FACILITY_NAME.test(name) && !e.opening_hours && !e.fee) return null;
@@ -258,6 +332,20 @@ export function classifyPlace(place: NominatimPlace, term: string): PlaceType | 
     if (!(e.website || e["contact:website"] || e.opening_hours || e.fee)) return null;
   }
   if (type === "sports_centre" && YOGA_LIKE.test(name)) type = "yoga";
+  // A yoga studio belongs to the places pass, which already has its own kind for it.
+  if (type === "leisure_centre" && YOGA_LIKE.test(name)) return null;
+
+  // Visitor attractions, houses and galleries: only ones that say something a visitor could use, and not a statue or a viewpoint.
+  if (type === "attraction" || type === "heritage_house" || type === "zoo" || type === "theme_park" || type === "aquarium" || type === "art_gallery") {
+    const e = place.extratags ?? {};
+    if (!(e.website || e["contact:website"] || e.opening_hours || e.fee)) return null;
+    if (type === "attraction") {
+      if (NOT_AN_ATTRACTION.test(name)) return null;
+      if (HERITAGE_HOUSE_NAME.test(name)) type = "heritage_house";
+    }
+  }
+  // Golf clubs are members' clubs; a pay-and-play course or driving range is not.
+  if (type === "golf" && (PRIVATE_CLUB_NAME.test(name) || place.extratags?.club)) return null;
   return type;
 }
 
@@ -447,7 +535,9 @@ export function selectPlaces(
       status: "active",
       adminNotes: isFood
         ? `${OSM_FOOD_NOTE_PREFIX} & drink; © OpenStreetMap contributors, ODbL) — a venue listing, not a scheduled event.`
-        : `${OSM_PLACES_NOTE_PREFIX} OpenStreetMap contributors, ODbL) — a venue listing, not a scheduled event.`,
+        : cfg.layer === "things"
+          ? `${OSM_THINGS_NOTE_PREFIX} to do; © OpenStreetMap contributors, ODbL) — a venue listing, not a scheduled event.`
+          : `${OSM_PLACES_NOTE_PREFIX} OpenStreetMap contributors, ODbL) — a venue listing, not a scheduled event.`,
     };
   });
 }
@@ -493,7 +583,7 @@ export function createOpenStreetMapSource(
   const wait = deps.sleep ?? sleep;
 
   return {
-    name: layer === "food" ? "openstreetmap-food" : "openstreetmap",
+    name: layer === "food" ? "openstreetmap-food" : layer === "things" ? "openstreetmap-things" : "openstreetmap",
     async fetchCandidates(): Promise<RawActivityCandidate[]> {
       let lastRequestAt = 0;
       let requests = 0;
@@ -505,7 +595,7 @@ export function createOpenStreetMapSource(
         lastRequestAt = Date.now();
         requests += 1;
         const url = new URL(NOMINATIM_SEARCH);
-        url.searchParams.set("q", term);
+        url.searchParams.set("q", TERM_QUERY[term] ?? term);
         url.searchParams.set("viewbox", viewbox);
         url.searchParams.set("bounded", "1");
         url.searchParams.set("countrycodes", "gb");

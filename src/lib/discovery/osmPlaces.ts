@@ -4,6 +4,7 @@ import {
   createOpenStreetMapSource,
   OSM_FOOD_NOTE_PREFIX,
   OSM_PLACES_NOTE_PREFIX,
+  OSM_THINGS_NOTE_PREFIX,
   type OpenStreetMapDeps,
   type OsmLayer,
 } from "@/lib/discovery/sources/openStreetMap";
@@ -28,6 +29,7 @@ export function coverageBox(centre: Coordinates, km: number = COVERED_RADIUS_KM)
 const LAYERS: { layer: OsmLayer; notePrefix: string }[] = [
   { layer: "places", notePrefix: OSM_PLACES_NOTE_PREFIX },
   { layer: "food", notePrefix: OSM_FOOD_NOTE_PREFIX },
+  { layer: "things", notePrefix: OSM_THINGS_NOTE_PREFIX },
 ];
 
 export type OsmRegionOutcome = {
