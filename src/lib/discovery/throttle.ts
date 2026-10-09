@@ -57,7 +57,7 @@ export function nearestRegion<T extends { lat?: number | null; lng?: number | nu
   return best?.region;
 }
 
-export function decideSearch(state: RegionState | undefined, now: Date): SearchDecision {
+export function decideSearch(state: RegionState | undefined, now: Date, baseDays: number = BASE_REFRESH_DAYS): SearchDecision {
   if (!state) return { due: true, reason: "never_searched" };
 
   const sinceAttempt = now.getTime() - new Date(state.last_attempt_at).getTime();
@@ -74,7 +74,7 @@ export function decideSearch(state: RegionState | undefined, now: Date): SearchD
   }
 
   const lastSuccess = state.last_success_at ? new Date(state.last_success_at).getTime() : 0;
-  const intervalDays = BASE_REFRESH_DAYS * 2 ** Math.min(state.empty_runs, MAX_BACKOFF_DOUBLINGS);
+  const intervalDays = baseDays * 2 ** Math.min(state.empty_runs, MAX_BACKOFF_DOUBLINGS);
   return now.getTime() - lastSuccess >= intervalDays * DAY_MS
     ? { due: true, reason: "refresh_due" }
     : { due: false, reason: "recently_searched" };

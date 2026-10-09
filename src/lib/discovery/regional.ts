@@ -9,20 +9,33 @@ import { createClaudeWebSearchSource } from "@/lib/discovery/sources/claudeWebSe
 import { searchAllowed } from "@/lib/ai/limits";
 import { ensureOpenStreetMapPlaces } from "@/lib/discovery/osmPlaces";
 import { memberAreas } from "@/lib/discovery/areas";
+import { mergeDuplicateVenues } from "@/lib/discovery/duplicates";
+import { DISCOVERY_THEMES, isThemedKey, THEME_REFRESH_DAYS, themedKey } from "@/lib/discovery/themes";
 import { createTicketmasterSource } from "@/lib/discovery/sources/ticketmaster";
 import { generateAndSaveItinerary } from "@/lib/itinerary/generateAndSave";
 import { decideSearch, nearestRegion, normalizeRegionKey, type RegionState, type SearchDecision } from "@/lib/discovery/throttle";
 import { geocodeLocation, sleep, type Coordinates } from "@/lib/geo/geocode";
 
 /** A place to search: the words, and where it is when that is already known (so it is not looked up again). */
-export type RegionRequest = { label: string; lat?: number | null; lng?: number | null };
+export type RegionRequest = {
+  label: string;
+  lat?: number | null;
+  lng?: number | null;
+  /** A focused search for one kind of thing in this place (see themes.ts), throttled on its own and less often. */
+  theme?: string;
+};
+
+/** One request per focused search for a place: the same place, once for each theme. */
+export function themedRequests(place: RegionRequest, themes: { key: string }[] = DISCOVERY_THEMES): RegionRequest[] {
+  return themes.map((t) => ({ ...place, theme: t.key }));
+}
 
 /**
  * Runs the real search for one region and saves what it found (phase 1 only —
  * see persistDiscovery). Injectable so the orchestration can be tested without
  * spending tokens.
  */
-export type RunSearch = (region: string) => Promise<{ results: DiscoveryRunResult[]; pending: PendingGeocode[] }>;
+export type RunSearch = (region: string, theme?: string) => Promise<{ results: DiscoveryRunResult[]; pending: PendingGeocode[] }>;
 
 export type RegionOutcome = {
   region: string;
@@ -74,7 +87,7 @@ export async function searchRegionsThrottled(
   const maxSearches = options.maxSearches ?? 1;
   const nowIso = () => (options.now ?? new Date()).toISOString();
   const runSearch: RunSearch =
-    options.runSearch ?? ((region) => persistDiscovery(supabase, [createClaudeWebSearchSource([region], { memberId: options.memberId })]));
+    options.runSearch ?? ((region, theme) => persistDiscovery(supabase, [createClaudeWebSearchSource([region], { memberId: options.memberId, theme })]));
 
   const requests: RegionRequest[] = regions
     .map((r) => (typeof r === "string" ? { label: r } : r))
@@ -92,11 +105,13 @@ export async function searchRegionsThrottled(
   if (stateError) {
     throw new Error(`Couldn't read discovery_regions (is the migration applied?): ${stateError.message}`);
   }
-  const known = (stateRows ?? []) as RegionState[];
-  const stateByKey = new Map(known.map((r) => [r.region_key, r]));
+  const allStates = (stateRows ?? []) as RegionState[];
+  // A focused search keeps its own state under its own key; it is never what a place is matched to.
+  const known = allStates.filter((r) => !isThemedKey(r.region_key));
+  const stateByKey = new Map(allStates.map((r) => [r.region_key, r]));
   const geocode = options.geocode ?? geocodeLocation;
 
-  type Wanted = { key: string; label: string; state: RegionState | undefined; point: Coordinates | null };
+  type Wanted = { key: string; label: string; state: RegionState | undefined; point: Coordinates | null; theme?: string };
   const wanted = new Map<string, Wanted>();
   let lookedUp = 0;
   for (const request of requests) {
@@ -110,26 +125,35 @@ export async function searchRegionsThrottled(
     const near = point ? nearestRegion(known, point) : undefined;
     // Two new requests for the same place in one run (a postcode and the town) are one search too.
     const sibling = !near && point ? nearestRegion([...wanted.values()].map((w) => ({ ...w, ...(w.point ?? {}) })), point) : undefined;
-    const key = near?.region_key ?? sibling?.key ?? normalizeRegionKey(request.label);
-    if (!key || wanted.has(key)) continue;
+    const placeKey = near?.region_key ?? sibling?.key ?? normalizeRegionKey(request.label);
+    if (!placeKey) continue;
+    // A focused search for the same place is its own entry, with its own state.
+    const key = request.theme ? themedKey(placeKey.split("#")[0], request.theme) : placeKey;
+    if (wanted.has(key)) continue;
     // An existing region keeps its own name, so what is searched is the place that was searched before, not a postcode.
-    const stored = near ?? stateByKey.get(key);
-    wanted.set(key, { key, label: stored?.region_label ?? request.label, state: stored, point });
+    const stored = near ?? stateByKey.get(placeKey);
+    wanted.set(key, {
+      key,
+      label: stored?.region_label ?? request.label,
+      state: request.theme ? stateByKey.get(key) : stored,
+      point,
+      theme: request.theme,
+    });
   }
 
-  const due: { key: string; label: string; state: RegionState | undefined; point: Coordinates | null }[] = [];
-  for (const { key, label, state, point } of wanted.values()) {
-    const decision = decideSearch(state, options.now ?? new Date());
+  const due: Wanted[] = [];
+  for (const w of wanted.values()) {
+    const decision = decideSearch(w.state, options.now ?? new Date(), w.theme ? THEME_REFRESH_DAYS : undefined);
     const runnable = decision.due || (options.force && decision.reason !== "just_attempted");
-    if (runnable) due.push({ key, label, state, point });
-    else summary.skipped.push({ region: label, reason: decision.reason });
+    if (runnable) due.push(w);
+    else summary.skipped.push({ region: w.theme ? `${w.label} (${w.theme})` : w.label, reason: decision.reason });
   }
 
   due.sort((a, b) => lastSuccessMs(a.state) - lastSuccessMs(b.state));
   const toRun = due.slice(0, maxSearches);
-  summary.deferred = due.slice(maxSearches).map((d) => d.label);
+  summary.deferred = due.slice(maxSearches).map((d) => (d.theme ? `${d.label} (${d.theme})` : d.label));
 
-  for (const { key, label, state, point } of toRun) {
+  for (const { key, label, state, point, theme } of toRun) {
     // Claim first. The failure count is bumped pessimistically and cleared on
     // success, so a search that gets killed mid-way (no chance to record
     // anything) still backs off instead of looking like it never happened —
@@ -140,8 +164,9 @@ export async function searchRegionsThrottled(
         region_label: label,
         last_attempt_at: nowIso(),
         consecutive_failures: (state?.consecutive_failures ?? 0) + 1,
-        // Where the region is, recorded once and not moved by later requests from nearby addresses.
-        ...(point && state?.lat == null ? { lat: point.lat, lng: point.lng } : {}),
+        // Where the region is, recorded once and not moved by later requests from nearby addresses. Not for a focused
+        // search: with a position it could be matched as the place itself, and take the place's own throttle with it.
+        ...(point && state?.lat == null && !theme ? { lat: point.lat, lng: point.lng } : {}),
       },
       { onConflict: "region_key" }
     );
@@ -161,7 +186,7 @@ export async function searchRegionsThrottled(
     let results: DiscoveryRunResult[] = [];
     let pending: PendingGeocode[] = [];
     try {
-      ({ results, pending } = await runSearch(label));
+      ({ results, pending } = await runSearch(label, theme));
       const errors = results.flatMap((r) => r.errors);
       outcome = {
         region: label,
@@ -249,6 +274,7 @@ export type TriggerDeps = {
   ensurePlaces?: typeof ensureOpenStreetMapPlaces;
   events?: (supabase: SupabaseClient, memberId: string) => Promise<number>;
   rebuildWeek?: typeof generateAndSaveItinerary;
+  mergeDuplicates?: typeof mergeDuplicateVenues;
 };
 
 export async function triggerDiscoveryForRegion(
@@ -275,7 +301,11 @@ export async function triggerDiscoveryForRegion(
       (deps.events ?? fetchTicketmasterNear)(supabase, memberId).catch(() => 0),
     ]);
     const newlyActive = summary.searched.reduce((sum, o) => sum + o.insertedActive, 0) + places.inserted + events;
-    if (newlyActive > 0) await (deps.rebuildWeek ?? generateAndSaveItinerary)(supabase, memberId);
+    if (newlyActive > 0) {
+      // The same place found by two sources is one place, before a week is built from them.
+      await (deps.mergeDuplicates ?? mergeDuplicateVenues)(supabase);
+      await (deps.rebuildWeek ?? generateAndSaveItinerary)(supabase, memberId);
+    }
   } catch {
     // Best-effort — the nightly job will pick this region up when it's due.
   }

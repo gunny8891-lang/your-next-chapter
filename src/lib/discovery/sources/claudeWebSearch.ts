@@ -5,6 +5,7 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { DATE_FIELD_PROMPT, isValidIso, parseAvailableUntil } from "@/lib/discovery/dateFields";
 import { callClaude } from "@/lib/ai/client";
 import { AI_MODELS } from "@/lib/ai/models";
+import { themeByKey, type DiscoveryTheme } from "@/lib/discovery/themes";
 
 // Kept on the smart tier: this does agentic multi-step tool orchestration
 // (web_search/web_fetch loops), not a simple single-pass task, and has
@@ -42,14 +43,34 @@ type ExtractedItem = {
  * by default; run.ts auto-activates a candidate without a human pass only when
  * it has both a genuine per-event booking URL and a resolved location.
  */
-async function findActivitiesForRegion(apiKey: string, regionLabel: string, memberId: string | null): Promise<RawActivityCandidate[]> {
+/**
+ * The instructions for a focused search: one kind of thing, found properly, from the organiser's own page. It asks for the
+ * group or the session as it is described there (when it meets, what it costs, how to join), and says to leave out what it
+ * cannot find on a real page, since an unknown is better than a guess.
+ */
+export function themedSystemPrompt(theme: DiscoveryTheme): string {
+  return `You find real, current local activities for "Lark Hour", a concierge app for people who are retired or approaching it. \
+This search is for one kind of thing only: ${theme.focus}. Use web_search to find the local organisers and web_fetch to read their \
+own pages (the group's page, the council's or the venue's what's-on page, the national scheme's local listing). Extract only groups \
+and sessions genuinely described on a page you read, one entry per group or per dated session, never invented, and never a \
+general directory page in place of the group. For a group that meets regularly, say in the description when and where it meets \
+and how to join, as the page does, and leave dateTime null; give dateTime only for a single dated event or one session. Put the \
+organiser's own page in sourceUrl. Leave priceEstimate null unless the page states a price (0 if it says free). Say "unknown" in the \
+description rather than guessing a time, a price or an address. Map each to exactly one category: ${CATEGORIES.join(", ")}. \
+Tag each with what it is (for example "social", "walking", "volunteering", "craft", "history", "fitness") and add "grandchildren" \
+only for something a grandparent could do with a grandchild. When you are done, respond with ONLY valid JSON, no prose, no \
+markdown fences: {"items": [{"title": string, "description": string, "category": string, "address": string|null, ${DATE_FIELD_PROMPT}, \
+"priceEstimate": number|null, "tags": string[], "sourceUrl": string}]}. If you find nothing genuine, return {"items": []}.`;
+}
+
+async function findActivitiesForRegion(apiKey: string, regionLabel: string, memberId: string | null, theme?: DiscoveryTheme): Promise<RawActivityCandidate[]> {
   const client = new Anthropic({ apiKey });
   const admin = createAdminClient();
   // Attributed to the member whose sign-up or location change started it (null for the nightly job), so
   // the per-member limit can see it. Spend is never member-capped here: see searchAllowed.
   const usageContext = { userId: memberId, feature: "discovery_claude_web_search" };
 
-  const system = `You find real, current local activities suitable for retirees (walks, talks, classes, \
+  const genericSystem = `You find real, current local activities suitable for retirees (walks, talks, classes, \
 volunteering, social groups, visits) near a given region, for "Lark Hour", a retirement concierge app. \
 Search for things like: the local council's health walks or "what's on" page, the local U3A (University of the \
 Third Age) branch, National Trust properties nearby, and local Age UK volunteering opportunities. Also search for \
@@ -61,7 +82,10 @@ respond with ONLY valid JSON, no prose, no markdown fences: {"items": [{"title":
 "category": string, "address": string|null, ${DATE_FIELD_PROMPT}, "priceEstimate": number|null, \
 "tags": string[], "sourceUrl": string}]}. If you find nothing genuine, return {"items": []}.`;
 
-  const user = `Find current local activities suitable for retirees near ${regionLabel}, including places they \
+  const system = theme ? themedSystemPrompt(theme) : genericSystem;
+  const user = theme
+    ? `Find ${theme.focus}, in or near ${regionLabel}.`
+    : `Find current local activities suitable for retirees near ${regionLabel}, including places they \
 could take a grandchild for a family-friendly outing (soft play, parks, playgrounds).`;
 
   const tools: Anthropic.Tool[] = [
@@ -125,14 +149,16 @@ could take a grandchild for a family-friendly outing (soft play, parks, playgrou
         bookingUrlVerified: Boolean(item.sourceUrl),
         tags: item.tags ?? [],
         status: "needs_review",
-        adminNotes: `Auto-discovered by Claude web search for "${regionLabel}" — verify details before activating.`,
+        adminNotes: `Auto-discovered by Claude web search for "${regionLabel}"${theme ? ` (${theme.label.toLowerCase()})` : ""} — verify details before activating.`,
       };
     });
 }
 
-export function createClaudeWebSearchSource(regions: string[], options: { memberId?: string | null } = {}): DiscoverySource {
+export function createClaudeWebSearchSource(regions: string[], options: { memberId?: string | null; theme?: string } = {}): DiscoverySource {
+  const theme = options.theme ? themeByKey(options.theme) : undefined;
+  if (options.theme && !theme) throw new Error(`Unknown discovery theme "${options.theme}"`);
   return {
-    name: "claude-web-search",
+    name: theme ? `claude-web-search:${theme.key}` : "claude-web-search",
     async fetchCandidates(): Promise<RawActivityCandidate[]> {
       const apiKey = process.env.ANTHROPIC_API_KEY;
       if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
@@ -141,7 +167,7 @@ export function createClaudeWebSearchSource(regions: string[], options: { member
       let lastError: unknown = null;
       for (const region of regions) {
         try {
-          results.push(...(await findActivitiesForRegion(apiKey, region, options.memberId ?? null)));
+          results.push(...(await findActivitiesForRegion(apiKey, region, options.memberId ?? null, theme)));
         } catch (err) {
           lastError = err;
           continue;

@@ -17,6 +17,7 @@ function deps(found: { search?: number; places?: number; events?: number; allowe
     ensurePlaces: (async () => ({ region: "x", status: "added", inserted: found.places ?? 0 })) as never,
     events: async () => found.events ?? 0,
     rebuildWeek: rebuildWeek as never,
+    mergeDuplicates: async () => ({ merged: 0, error: null }),
     ...overrides,
   };
   return { built, rebuildWeek, searchRegions };
