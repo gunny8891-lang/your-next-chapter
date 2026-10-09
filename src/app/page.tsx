@@ -4,6 +4,7 @@ import { Clock, Footprints, Heart } from "lucide-react";
 import { createClient } from "@/utils/supabase/server";
 import { Button } from "@/components/ui";
 import { Wordmark } from "@/components/Wordmark";
+import { randomLandingPhoto } from "@/lib/landing/photos";
 import styles from "@/app/Landing.module.css";
 
 const POINTS = [
@@ -17,13 +18,15 @@ export default async function LandingPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  // A different picture on different visits: see lib/landing/photos.ts.
+  const photo = randomLandingPhoto();
 
   return (
     <main className={styles.page}>
       <div className={styles.photo}>
         <Image
-          src="/images/fallback/woodland.jpg"
-          alt="A sunlit path through the woods"
+          src={photo.src}
+          alt={photo.alt}
           fill
           priority
           sizes="(min-width: 900px) 50vw, 100vw"
