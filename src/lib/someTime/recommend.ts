@@ -17,6 +17,8 @@ import { preferVerified } from "@/lib/context/constraints";
 import { costTierOf } from "@/lib/opportunities/facts";
 import { assignRoles } from "@/lib/someTime/roles";
 import { distanceHint, withDistanceHint } from "@/lib/account/distanceHint";
+import { ideaActLinks } from "@/lib/act/links";
+import { worthSharing } from "@/lib/act/share";
 import { loadRepetitionHistory } from "@/lib/someTime/history";
 import {
   buildUserPrompt,
@@ -116,7 +118,8 @@ function toFoodStopOption(stop: FoodStop): FoodStopOption {
   };
 }
 
-function toTimeOption(request: TimeRequest, entry: ShortlistEntry, why: string, includeFood: boolean, modelTitle: string | null = null): TimeOption {
+function toTimeOption(ctx: { request: TimeRequest; date: string }, entry: ShortlistEntry, why: string, includeFood: boolean, modelTitle: string | null = null): TimeOption {
+  const { request } = ctx;
   const { evaluated: e, foodStop } = entry;
   const c = e.candidate;
   const stop = includeFood ? foodStop : null;
@@ -156,6 +159,20 @@ function toTimeOption(request: TimeRequest, entry: ShortlistEntry, why: string, 
     dayWord: request.start === "tomorrow" ? "tomorrow" : "today",
     tags: c.tags,
     role: null,
+    act: ideaActLinks({
+      activityId: c.id,
+      experienceTitle,
+      placeTitle: c.title,
+      address: c.address,
+      lat: c.location_lat,
+      lng: c.location_lng,
+      mode: e.travelMode,
+      date: ctx.date,
+      start: clockLabel(e.eventStartMin ?? e.arriveMin),
+      end: clockLabel(stop ? stop.endMin : e.endMin),
+      foodId: stop ? stop.candidate.id : null,
+      moreUrl: worthSharing(c.booking_url),
+    }),
     checkWhatsOn,
     contextNotes: e.unverified ?? [],
     foodStop: stop ? toFoodStopOption(stop) : null,
@@ -243,8 +260,8 @@ export async function buildRecommendations(inputs: RecommendInputs): Promise<{ o
         options: withRoles(
           kept.map(({ ch, entry }) => {
             // An explanation that talks like the app's internals ("a category you have not touched") is replaced by one built from the facts.
-            if (!ch) return toTimeOption(request, entry, fallbackWhy(entry.evaluated), entry.foodStop !== null && window.availableMinutes >= 90);
-            return toTimeOption(request, entry, containsJargon(ch.why) ? fallbackWhy(entry.evaluated) : ch.why, ch.withFood, ch.title);
+            if (!ch) return toTimeOption({ request, date: window.date }, entry, fallbackWhy(entry.evaluated), entry.foodStop !== null && window.availableMinutes >= 90);
+            return toTimeOption({ request, date: window.date }, entry, containsJargon(ch.why) ? fallbackWhy(entry.evaluated) : ch.why, ch.withFood, ch.title);
           }),
           request
         ),
@@ -259,7 +276,7 @@ export async function buildRecommendations(inputs: RecommendInputs): Promise<{ o
   }
 
   const options = withRoles(
-    shortlist.slice(0, MAX_OPTIONS).map((s) => toTimeOption(request, s, fallbackWhy(s.evaluated), s.foodStop !== null && window.availableMinutes >= 90)),
+    shortlist.slice(0, MAX_OPTIONS).map((s) => toTimeOption({ request, date: window.date }, s, fallbackWhy(s.evaluated), s.foodStop !== null && window.availableMinutes >= 90)),
     request
   );
   return { options, notice };

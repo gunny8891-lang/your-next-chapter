@@ -18,6 +18,10 @@ import type { CategoryName } from "@/lib/categories";
 import type { ItineraryItemView, SurpriseView } from "@/lib/types";
 import { distanceHint } from "@/lib/account/distanceHint";
 import { imageForRow } from "@/lib/imagery/forRow";
+import { directionsUrl, travelModeToward } from "@/lib/act/directions";
+import { itemCalendarUrl } from "@/lib/act/links";
+import { longDate, shareMessage } from "@/lib/act/share";
+import { dateOfDay } from "@/lib/calendar/event";
 
 type ActivityRow = {
   id: string;
@@ -119,6 +123,24 @@ export default async function WeekPage() {
           bookingUrl: activity.booking_url,
           behaviorNote: rationale ? formatBehavioralRationale(rationale) : null,
           image: imageForRow(activity),
+          act: {
+            directions: directionsUrl(
+              { lat: activity.location_lat, lng: activity.location_lng },
+              travelModeToward({ lat: profile.location_lat, lng: profile.location_lng }, { lat: activity.location_lat, lng: activity.location_lng }, {
+                drives: profile.drives,
+                uses_public_transport: profile.uses_public_transport,
+                mobility_notes: profile.mobility_notes,
+              })
+            ),
+            calendar: row.member_action === "accepted" ? itemCalendarUrl(row.id) : null,
+            share: shareMessage({
+              title: activity.title,
+              when: dateOfDay(shownWeek, row.day_of_week) ? longDate(dateOfDay(shownWeek, row.day_of_week)!) : `${row.day_of_week} ${row.slot}`,
+              at: activity.date_time ? activity.date_time.slice(11, 16) : null,
+              address: activity.address,
+              moreUrl: activity.booking_url && !/openstreetmap\.org/i.test(activity.booking_url) ? activity.booking_url : null,
+            }),
+          },
           details: buildItemDetails({
             title: activity.title,
             description: activity.description,

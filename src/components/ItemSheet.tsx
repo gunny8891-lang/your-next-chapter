@@ -5,6 +5,7 @@ import { Accessibility, Banknote, CalendarCheck, CalendarClock, CalendarPlus, Ch
 import { Button, Cover, ErrorNote, Sheet } from "@/components/ui";
 import { isUnknownDetail } from "@/lib/itinerary/format";
 import { CATEGORY_COLOR } from "@/lib/theme";
+import { OutAndAbout } from "@/components/OutAndAbout";
 import type { ItineraryItemView, SurpriseView } from "@/lib/types";
 import styles from "@/components/WeekSheets.module.css";
 
@@ -149,6 +150,8 @@ export function ItemSheet({
           {item.category}
         </p>
         <h2 className={styles.title}>{item.title}</h2>
+
+        {"act" in item && item.act && <OutAndAbout act={item.act} />}
 
         <ul className={styles.details}>
           {details.map(({ icon: Icon, text, href }) => (

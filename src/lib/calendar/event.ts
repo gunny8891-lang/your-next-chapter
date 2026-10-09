@@ -1,6 +1,7 @@
 import { addDays, type DayName } from "@/lib/opportunities/schedule";
 import { DAYS_OF_WEEK } from "@/lib/itinerary/schema";
 import { isUnknownDetail } from "@/lib/itinerary/format";
+import { worthSharing } from "@/lib/act/share";
 
 /**
  * Turns one planned item into a calendar event. Pure: no network, no database.
@@ -93,7 +94,8 @@ export function buildCalendarEvent(item: ItemForCalendar): CalendarEventBody | n
 
   const lines: string[] = [];
   if (item.why) lines.push(item.why);
-  if (item.bookingUrl) lines.push(`More information or booking: ${item.bookingUrl}`);
+  const more = worthSharing(item.bookingUrl);
+  if (more) lines.push(`More information or booking: ${more}`);
   if (!hasOwnTime) lines.push(`Planned for ${item.day} ${item.slot}. The time here is a suggestion: adjust it to suit you.`);
   lines.push("Added from Lark Hour.");
 

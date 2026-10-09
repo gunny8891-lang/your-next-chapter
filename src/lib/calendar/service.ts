@@ -60,7 +60,7 @@ async function forgetConnection(admin: SupabaseClient, memberId: string) {
   await admin.from("calendar_connections").delete().eq("member_id", memberId);
 }
 
-async function readItem(member: SupabaseClient, itemId: string): Promise<ItemForCalendar | null> {
+export async function readItem(member: SupabaseClient, itemId: string): Promise<ItemForCalendar | null> {
   const { data } = await member
     .from("itinerary_items")
     .select("day_of_week, slot, member_action, rationale_text, itineraries(week_start_date), activities(title, address, date_time, expires_at, duration_minutes, booking_url)")

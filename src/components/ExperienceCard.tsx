@@ -5,6 +5,7 @@ import { Check, ChevronDown, Heart, Sparkles, Star, Users } from "lucide-react";
 import { Button, Card, Chip, Cover, Timeline } from "@/components/ui";
 import { costLabelFor, doorToDoorMinutes, friendlyDuration, placeLabel, planLabelFor } from "@/lib/someTime/format";
 import { trackSeen } from "@/components/trackExperience";
+import { OutAndAbout } from "@/components/OutAndAbout";
 import type { Surface } from "@/lib/experience/events";
 import type { TimeOption } from "@/lib/someTime/types";
 import { ROLE_LABEL, type OptionRole } from "@/lib/someTime/roles";
@@ -149,6 +150,7 @@ export function ExperienceCard({ option, reason, variant, surface, who, state, e
           <div className={styles.planInner} inert={!showPlan}>
             <div className={styles.planPad}>
               <Timeline stops={option.stops} legs={option.legs} summary={summary} />
+              <OutAndAbout act={option.act} />
             </div>
           </div>
         </div>

@@ -2,6 +2,7 @@ import type { CategoryName } from "@/lib/categories";
 import type { PlaceImage } from "@/lib/imagery/types";
 import type { CostTier } from "@/lib/opportunities/facts";
 import type { OptionRole } from "@/lib/someTime/roles";
+import type { ActLinks } from "@/lib/act/links";
 
 /** A café, pub, restaurant or tea room to finish at. */
 export type FoodStopOption = {
@@ -71,6 +72,8 @@ export type TimeOption = {
   tags: string[];
   /** Best match, something different, something social: only among two or more ideas, and only where true. */
   role: OptionRole | null;
+  /** How to get there, a file for their calendar, and a message for a friend. */
+  act: ActLinks;
   /** A theatre or cinema with no show listed: the card says to check what is on before going. */
   checkWhatsOn: boolean;
   /** What still needs checking given what they said about this outing ("Check dog access"); empty when all is certain. */
