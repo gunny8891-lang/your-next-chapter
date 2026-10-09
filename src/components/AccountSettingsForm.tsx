@@ -8,6 +8,7 @@ import { AdminLinks } from "@/components/AdminLinks";
 import { logout } from "@/app/auth/actions";
 import { LOCATION_HINT_ACCOUNT, LOCATION_LABEL, LOCATION_PLACEHOLDER } from "@/lib/geo/locationCopy";
 import { BUDGET_CHOICES } from "@/lib/onboarding/choices";
+import { setDailyQuoteVisible, useDailyQuoteVisible } from "@/lib/quotes/visibility";
 import styles from "@/components/Account.module.css";
 
 type Profile = {
@@ -99,6 +100,8 @@ export function AccountSettingsForm({
   const [hasDog, setHasDog] = useState(profile.has_dog);
   const [clearStep, setClearStep] = useState<"idle" | "confirm" | "busy" | "done">("idle");
   const [clearError, setClearError] = useState<string | null>(null);
+  // A choice for this device, kept in the browser: it is not part of the saved profile.
+  const showQuote = useDailyQuoteVisible();
   const [weeklyPlanEmail, setWeeklyPlanEmail] = useState(emailPrefs.weeklyPlan);
   const [remindersEmail, setRemindersEmail] = useState(emailPrefs.reminders);
   const [emailStep, setEmailStep] = useState<"idle" | "busy" | "saved">("idle");
@@ -288,6 +291,14 @@ export function AccountSettingsForm({
             </div>
           </div>
         )}
+      </section>
+
+      <section aria-labelledby="today-title" id="on-today" className={styles.section}>
+        <SectionTitle id="today-title">On Today</SectionTitle>
+        <div className={styles.checks}>
+          <CheckboxField label="Show a quotation each day, from a writer's own work" checked={showQuote} onChange={(e) => setDailyQuoteVisible(e.target.checked)} />
+          <p className={styles.hint}>This applies to this device only, and takes effect straight away.</p>
+        </div>
       </section>
 
       <section aria-labelledby="emails-title" id="emails" className={styles.section}>

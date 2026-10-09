@@ -10,6 +10,8 @@ import { Reflections } from "@/components/Reflections";
 import type { DailyState } from "@/lib/experience/dailyState";
 import type { Reflection } from "@/lib/experience/reflections";
 import { TimeSheet, type DogInfo, type TimeSheetInitial } from "@/components/TimeSheet";
+import { DailyQuote } from "@/components/DailyQuote";
+import type { DailyQuote as Quote } from "@/lib/quotes/daily";
 import { nextCommitment, type Commitment } from "@/lib/someTime/choices";
 import { isUnknownDetail } from "@/lib/itinerary/format";
 import { placeLabel } from "@/lib/someTime/format";
@@ -84,6 +86,7 @@ export function TodayView({
   slots,
   featured,
   dog,
+  quote,
   onItemAction,
   onFindTime,
   onAcceptTime,
@@ -103,6 +106,8 @@ export function TodayView({
   featured: TimeOption | null;
   /** Their dog, if they have one: the sheet only asks about the dog for someone who does. */
   dog?: DogInfo;
+  /** The day's quotation, the same for everyone; shown under the date unless they have hidden it. */
+  quote?: Quote;
   onItemAction: (itemId: string, action: "accepted" | "swapped" | "skipped") => Promise<void>;
   onFindTime: FlowActions["onFind"];
   onAcceptTime: FlowActions["onAccept"];
@@ -149,6 +154,7 @@ export function TodayView({
           <span>{dateLabel}</span>
           <WeatherLine weather={weather} />
         </p>
+        {quote && <DailyQuote quote={quote} />}
       </header>
 
       <DailyStateStrip initial={initialDailyState} onSave={onSaveDailyState} onClear={onClearDailyState} onChange={setDailyState} />

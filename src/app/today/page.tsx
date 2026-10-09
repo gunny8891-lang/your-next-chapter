@@ -16,6 +16,7 @@ import { cleanFirstName, greetingFor } from "@/lib/someTime/format";
 import { londonClock } from "@/lib/someTime/window";
 import type { CategoryName } from "@/lib/categories";
 import type { ItineraryItemView } from "@/lib/types";
+import { quoteForDate } from "@/lib/quotes/daily";
 
 type ActivityRow = {
   id: string;
@@ -112,6 +113,7 @@ export default async function TodayPage() {
       greeting={greetingFor(Math.floor(londonClock(new Date()).minutes / 60))}
       firstName={cleanFirstName(user.user_metadata?.first_name)}
       featured={featured}
+      quote={quoteForDate(londonToday())}
       dog={{ hasDog: profile.has_dog === true, usuallyComes: profile.dog_usually_comes === true, name: profile.dog_name ?? null }}
       dateLabel={dateLabel}
       weather={weather}
