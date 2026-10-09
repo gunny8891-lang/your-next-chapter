@@ -176,3 +176,40 @@ describe("what is kept when entries are merged", () => {
     expect(keeperUpdates).toEqual([{ dog_access: "allowed", dog_confidence: "reported", dog_source: "OpenStreetMap contributors (dog=yes)" }]);
   });
 });
+
+describe("a name with more said", () => {
+  const at = (title: string, lat: number, extra: Partial<VenueRow> = {}) => row({ title, location_lat: lat, location_lng: -0.21, address: "Stevenage Leisure Park, Six Hills Way, Stevenage", ...extra });
+
+  it("is the same place when the longer name only adds the town, on the same spot (the map's 'Hollywood Bowl' and the venue's own 'Hollywood Bowl Stevenage')", () => {
+    expect(sameVenue(at("Hollywood Bowl", 51.901), at("Hollywood Bowl Stevenage", 51.9011))).toBe(true);
+  });
+
+  it("is not the same place when only the first word is shared", () => {
+    expect(sameVenue(at("Marriotts Sports Center", 51.9054), at("Marriotts Gymnastics", 51.9057))).toBe(false);
+    expect(sameVenue(at("Fairlands Valley Park", 51.8992), at("Fairlands Valley Sailing Centre", 51.8993))).toBe(false);
+  });
+
+  it("is not the same place when the longer name adds something that is not the town: a farm and its café", () => {
+    expect(sameVenue(at("Church Farm", 51.9272), at("Church Farm Cafe", 51.9273))).toBe(false);
+  });
+
+  it("is never a class held in a park, which once merged a park and six classes into one entry", () => {
+    const park = at("Hampson Park", 51.9101, { address: "Hampson Park, Stevenage" });
+    const zumba = at("Zumba Gold – Hampson Park", 51.9101, { address: "Hampson Park Community Centre, Webb Rise, Stevenage" });
+    const chairYoga = at("Chair Yoga – Hampson Park Community Centre", 51.9102, { address: "Hampson Park Community Centre, Webb Rise, Stevenage" });
+    expect(sameVenue(park, zumba)).toBe(false);
+    expect(sameVenue(zumba, chairYoga)).toBe(false);
+    expect(planMerges([park, zumba, chairYoga, at("Positive Movement – Hampson Park", 51.9101, { address: "Hampson Park Community Centre, Stevenage" })])).toEqual([]);
+  });
+
+  it("is not the same place when they are far apart, or the shorter name is too short to mean anything", () => {
+    expect(sameVenue(at("Hollywood Bowl", 51.901), at("Hollywood Bowl Stevenage", 51.95))).toBe(false);
+    expect(sameVenue(at("The Bull", 51.901), at("The Bull Inn", 51.9011))).toBe(false);
+  });
+
+  it("keeps the venue's own page and merges away the map's entry", () => {
+    const map = at("Hollywood Bowl", 51.901, { id: "map" });
+    const own = at("Hollywood Bowl Stevenage", 51.9011, { id: "own", booking_url: "https://www.hollywoodbowl.co.uk/stevenage", admin_notes: "Auto-discovered by Claude web search (indoor entertainment)", description: "Ten-pin bowling centre with 28 lanes at Stevenage Leisure Park, suitable for families." });
+    expect(planMerges([map, own])).toEqual([{ keepId: "own", dropIds: ["map"], upgradeUrl: null, carry: {} }]);
+  });
+});

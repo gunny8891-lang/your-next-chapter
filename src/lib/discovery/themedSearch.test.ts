@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { searchRegionsThrottled, themedRequests } from "@/lib/discovery/regional";
@@ -192,5 +194,32 @@ describe("how the reasons read", () => {
     expect(humanReason(["it suits a outdoors mood"])).toBe("It suits an outdoors mood.");
     expect(humanReason(["it suits a social mood"])).toBe("It suits a social mood.");
     expect(humanReason(["it suits a active mood"])).toBe("It suits an active mood.");
+  });
+});
+
+describe("keeping a focused search from wasting its searches", () => {
+  const prompt = themedSystemPrompt(themeByKey("creative")!);
+
+  it("tells the model to search one step at a time and never to batch its searches in code, which spent all of them at once and left none to read pages", () => {
+    expect(prompt).toMatch(/one step at a time/);
+    expect(prompt).toMatch(/never write code to run several searches at once/);
+    expect(prompt).toMatch(/after each search fetch/);
+  });
+
+  it("thinks a little, at low effort, so the thinking does not use up the room for the answer", () => {
+    const source = readFileSync(join(process.cwd(), "src/lib/discovery/sources/claudeWebSearch.ts"), "utf8");
+    expect(source.match(/\.\.\.\(theme \? QUICK_THINKING : \{\}\)/g)).toHaveLength(2);
+  });
+
+  it("gives up on a search that keeps pausing, rather than paying for turn after turn", () => {
+    const source = readFileSync(join(process.cwd(), "src/lib/discovery/sources/claudeWebSearch.ts"), "utf8");
+    expect(source).toContain("const MAX_CONTINUATIONS = 6;");
+    expect(source).toContain("did not finish after");
+  });
+});
+
+describe("a pattern the app cannot read", () => {
+  it("holds a group the model describes as the first Monday of the month, so it is not suggested on other Mondays", () => {
+    expect(scheduleOf({ recurring: true, schedule: "Mo[1] 14:00-15:30" })).toEqual({ openingHours: null, holdForReview: true });
   });
 });

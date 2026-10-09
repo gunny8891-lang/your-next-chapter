@@ -32,11 +32,15 @@ export type VenueRow = {
   dog_confidence?: string | null;
   dog_source?: string | null;
   accessibility_notes?: string | null;
+  address?: string | null;
 };
 
 const PARK_LIKE_KM = 1.5;
 const SHOP_LIKE_KM = 0.4;
 const CHAIN_KM = 0.05;
+/** A name that is part of another's must be at least this long, and the two within this distance, to be one place. */
+const MIN_CONTAINED_NAME = 8;
+const CONTAINED_KM = 0.4;
 
 const normalise = (name: string) =>
   name.toLowerCase().replace(/&/g, " and ").replace(/[^a-z0-9]+/g, " ").replace(/\b(the|and)\b/g, " ").replace(/\s+/g, " ").trim();
@@ -55,9 +59,20 @@ function limitKm(a: VenueRow, b: VenueRow): number {
 export function sameVenue(a: VenueRow, b: VenueRow): boolean {
   if (a.id === b.id || a.date_time || b.date_time) return false;
   const name = normalise(a.title);
-  if (!name || name !== normalise(b.title)) return false;
+  const other = normalise(b.title);
+  if (!name || !other) return false;
   if (a.location_lat == null || a.location_lng == null || b.location_lat == null || b.location_lng == null) return false;
-  return haversineKm({ lat: a.location_lat, lng: a.location_lng }, { lat: b.location_lat, lng: b.location_lng }) <= limitKm(a, b);
+  const apart = haversineKm({ lat: a.location_lat, lng: a.location_lng }, { lat: b.location_lat, lng: b.location_lng });
+  if (name === other) return apart <= limitKm(a, b);
+  // One name is the other with more said ("Hollywood Bowl" and "Hollywood Bowl Stevenage", from a map and from the venue's
+  // own page). Only when what is added AFTER the name is a place that appears in the address (the town): "Church Farm" and
+  // "Church Farm Cafe" are two places, and so are a park and "Zumba Gold - Hampson Park", a class held in it, which a looser
+  // rule once merged away along with every other class held there.
+  const [shorter, longer, shorterRow, longerRow] = name.length <= other.length ? [name, other, a, b] : [other, name, b, a];
+  if (shorter.length < MIN_CONTAINED_NAME || !longer.startsWith(`${shorter} `)) return false;
+  const placeWords = normalise(`${shorterRow.address ?? ""} ${longerRow.address ?? ""}`).split(" ");
+  const extra = longer.slice(shorter.length).trim().split(" ");
+  return extra.every((word) => placeWords.includes(word)) && apart <= Math.min(limitKm(a, b), CONTAINED_KM);
 }
 
 /** How much a row says for itself: the one with more is kept. A hand-curated entry outranks one found by search, which outranks a bare map listing. */
@@ -134,7 +149,7 @@ export function planMerges(rows: VenueRow[]): MergePlan[] {
 export async function mergeDuplicateVenues(admin: SupabaseClient): Promise<{ merged: number; error: string | null }> {
   const { data, error } = await admin
     .from("activities")
-    .select("id, title, location_lat, location_lng, date_time, status, tags, booking_url, recurrence_rule, description, admin_notes, source, created_at, dog_access, dog_restrictions, dog_confidence, dog_source, accessibility_notes")
+    .select("id, title, location_lat, location_lng, date_time, status, tags, booking_url, recurrence_rule, description, admin_notes, source, created_at, dog_access, dog_restrictions, dog_confidence, dog_source, accessibility_notes, address")
     .eq("status", "active")
     .is("date_time", null)
     .not("location_lat", "is", null)

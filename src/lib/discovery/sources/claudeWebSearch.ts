@@ -4,7 +4,7 @@ import type { DiscoverySource, RawActivityCandidate } from "@/lib/discovery/type
 import { createAdminClient } from "@/utils/supabase/admin";
 import { DATE_FIELD_PROMPT, isValidIso, parseAvailableUntil } from "@/lib/discovery/dateFields";
 import { callClaude } from "@/lib/ai/client";
-import { AI_MODELS } from "@/lib/ai/models";
+import { AI_MODELS, QUICK_THINKING } from "@/lib/ai/models";
 import { themeByKey, type DiscoveryTheme } from "@/lib/discovery/themes";
 import { parseOpeningHours } from "@/lib/someTime/openingHours";
 
@@ -19,6 +19,8 @@ const CATEGORIES: readonly CategoryName[] = ["Move", "Connect", "Learn", "Explor
 // more searches — 6 was observed to run out mid-search for a real region
 // ("Guildford, Surrey"), ending in a refusal instead of a JSON answer.
 const MAX_TOOL_USES = 10;
+/** How many times a paused search is continued before it is given up as stuck. */
+const MAX_CONTINUATIONS = 6;
 // A heavier search (more pages read, more narration between tool calls) can
 // exhaust a small budget before reaching a final answer — 4096 was observed
 // to truncate mid-search for a genuinely real region ("Chelmsford"), and 8192 did the same for "Stevenage".
@@ -67,7 +69,9 @@ export function scheduleOf(item: Pick<ExtractedItem, "recurring" | "schedule" | 
  */
 export function themedSystemPrompt(theme: DiscoveryTheme): string {
   return `You find real, current local activities for "Lark Hour", a concierge app for people who are retired or approaching it. \
-This search is for one kind of thing only: ${theme.focus}. Use web_search to find the local organisers and web_fetch to read their \
+This search is for one kind of thing only: ${theme.focus}. Work one step at a time, calling web_search and web_fetch directly: \
+never write code to run several searches at once (that spends every search in one step and leaves none to read pages with), and \
+after each search fetch the one or two most promising organiser pages from its results before you search again. Use web_search to find the local organisers and web_fetch to read their \
 own pages (the group's page, the council's or the venue's what's-on page, the national scheme's local listing). Extract only groups \
 and sessions genuinely described on a page you read, one entry per group or per dated session, never invented, and never a \
 general directory page in place of the group. For a group that meets regularly, say in the description when and where it meets \
@@ -111,13 +115,16 @@ could take a grandchild for a family-friendly outing (soft play, parks, playgrou
   ];
 
   const messages: Anthropic.MessageParam[] = [{ role: "user", content: user }];
-  let response = await callClaude(client, admin, usageContext, { model: MODEL, max_tokens: MAX_TOKENS, system, tools, messages });
+  let response = await callClaude(client, admin, usageContext, { model: MODEL, max_tokens: MAX_TOKENS, system, tools, messages, ...(theme ? QUICK_THINKING : {}) });
 
   // Server-side tool loop caps at 10 internal iterations; pause_turn means it needs
   // another request to keep going with the same tool-use context.
+  let continuations = 0;
   while (response.stop_reason === "pause_turn") {
+    // A search that keeps pausing is stuck (it has been seen waiting for a tool limit that never lifts); each turn costs.
+    if (++continuations > MAX_CONTINUATIONS) throw new Error(`Search for "${regionLabel}" did not finish after ${MAX_CONTINUATIONS} continuations`);
     messages.push({ role: "assistant", content: response.content });
-    response = await callClaude(client, admin, usageContext, { model: MODEL, max_tokens: MAX_TOKENS, system, tools, messages });
+    response = await callClaude(client, admin, usageContext, { model: MODEL, max_tokens: MAX_TOKENS, system, tools, messages, ...(theme ? QUICK_THINKING : {}) });
   }
 
   // A heavier search (more pages fetched, more narration) can exhaust the token
