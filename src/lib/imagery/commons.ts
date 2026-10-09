@@ -77,7 +77,10 @@ const OTHER_SUBJECT = new Set(["church", "school", "station", "cemetery", "hospi
 const OUTDOOR_FEATURE = new Set(["park", "pool", "lake", "pond", "bridge"]);
 
 /** Words that make a file a poor cover even when it is of the right place. */
-const UNWANTED = /\b(logo|map|diagram|plan of|floor ?plan|coat of arms|flag|poster|advert|menu|screenshot|locator|signature|crest|badge|icon|timetable|ticket|brochure|leaflet|portrait|wedding|funeral|memorial plaque|interior of|sign|signage)\b/i;
+/** An occasion, not a view: a funfair on a park, a procession down a street. Matched against single words ("parade" is left out: it is also a street name). */
+const EVENT_WORD = /^(funfair|fair|fairs|fete|fête|carnival|festival|fireworks|procession|protest|demonstration|bonfire|marathon)$/i;
+
+const UNWANTED =/\b(logo|map|diagram|plan of|floor ?plan|coat of arms|flag|poster|advert|menu|screenshot|locator|signature|crest|badge|icon|timetable|ticket|brochure|leaflet|portrait|wedding|funeral|memorial plaque|interior of|sign|signage)\b/i;
 
 const STOP_WORDS = new Set(["the", "a", "an", "of", "and", "at", "in", "on", "for", "to", "by", "with"]);
 
@@ -168,6 +171,9 @@ export function assess(place: Place, c: CommonsCandidate): Verdict {
   // mentions it ("Houses on Galley Lane, Arkley" is not a picture of the pub called The Arkley).
   // A park, by contrast, turns up in the middle of a title ("Deer in Richmond Park").
   if (small && !containsPhrase(baseTitle, needed, true)) return { ok: false, reason: "name is not what the photograph is titled" };
+  // A picture of something held at a place (a funfair on a park, a procession through a street) is not how the place
+  // looks. Words that are part of the place's own name are exempt: "The Fair Maid" is a pub, not a fair.
+  if (words(baseTitle).some((w) => EVENT_WORD.test(w) && !needed.includes(w))) return { ok: false, reason: "a photograph of an event, not the place" };
   const named = new Set(needed);
   if (words(baseTitle).some((w) => !named.has(w) && (OTHER_SUBJECT.has(w) || (small && OUTDOOR_FEATURE.has(w))))) return { ok: false, reason: "a photograph of something else nearby" };
 

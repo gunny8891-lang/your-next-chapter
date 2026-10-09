@@ -243,3 +243,24 @@ describe("parseCommonsPages", () => {
     expect(parseCommonsPages({ error: { code: "busy" } })).toEqual([]);
   });
 });
+
+describe("a photograph of an event is not a photograph of the place", () => {
+  const park: Place = { title: "Butts Close", lat: 51.9487, lng: -0.2813, radiusKm: 0.6, locality: ["hitchin"] };
+  const nearby = { lat: 51.9488, lng: -0.2812 };
+
+  it("refuses a funfair held on a park, a carnival, fireworks and the like", () => {
+    for (const title of ["Funfair on Butt's Close, Hitchin", "Butts Close carnival, Hitchin", "Fireworks over Butts Close", "Butts Close fete 2012"]) {
+      const v = assess(park, file({ fileTitle: `File:${title}.jpg`, coords: nearby }));
+      expect(v.ok, title).toBe(false);
+    }
+  });
+
+  it("still accepts an ordinary photograph of the same place", () => {
+    expect(assess(park, file({ fileTitle: "File:Butts Close, Hitchin.jpg", coords: nearby })).ok).toBe(true);
+  });
+
+  it("does not mistake an event word that is part of the place's own name", () => {
+    const pub: Place = { title: "The Fair Maid", lat: 51.65, lng: -0.2, radiusKm: 0.35, locality: ["barnet"] };
+    expect(assess(pub, file({ fileTitle: "File:The Fair Maid, High Barnet.jpg", coords: { lat: 51.6501, lng: -0.2001 } })).ok).toBe(true);
+  });
+});
