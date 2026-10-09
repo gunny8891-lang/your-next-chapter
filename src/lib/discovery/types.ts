@@ -26,6 +26,8 @@ export type RawActivityCandidate = {
    * otherwise-needs_review candidates without a human review pass. */
   bookingUrlVerified?: boolean;
   tags: string[];
+  /** A group that meets on a pattern the app cannot check (the 2nd and 4th Monday). It would be suggested on days it does not meet, so it waits for a person to look at it rather than going live on its own. */
+  holdForReview?: boolean;
   /** Defaults to 'active' in the pipeline if omitted. Sources with lower-confidence
    * extraction (e.g. LLM-parsed pages) should set 'needs_review' + adminNotes. */
   status?: "active" | "needs_review";

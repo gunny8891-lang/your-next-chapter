@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { searchRegionsThrottled, themedRequests } from "@/lib/discovery/regional";
-import { createClaudeWebSearchSource, themedSystemPrompt } from "@/lib/discovery/sources/claudeWebSearch";
+import { createClaudeWebSearchSource, scheduleOf, themedSystemPrompt } from "@/lib/discovery/sources/claudeWebSearch";
+import { qualifiesForAutoActivation } from "@/lib/discovery/run";
+import { humanReason } from "@/lib/someTime/copy";
 import { DISCOVERY_THEMES, isThemedKey, THEME_REFRESH_DAYS, themeByKey, themedKey } from "@/lib/discovery/themes";
 import { BASE_REFRESH_DAYS, decideSearch, nearestRegion, type RegionState } from "@/lib/discovery/throttle";
 
@@ -149,5 +151,46 @@ describe("asking for focused searches of a place", () => {
     expect(themedKey("stevenage", "groups")).toBe("stevenage#groups");
     expect(isThemedKey("stevenage#groups")).toBe(true);
     expect(isThemedKey("stevenage")).toBe(false);
+  });
+});
+
+describe("a group that meets on a pattern", () => {
+  it("keeps a schedule the app can read, so the group is only suggested when it meets", () => {
+    expect(scheduleOf({ recurring: true, schedule: "Th 14:00-16:00" })).toEqual({ openingHours: "Th 14:00-16:00", holdForReview: false });
+    expect(scheduleOf({ recurring: true, schedule: "Mo,We 10:00-12:00" })).toEqual({ openingHours: "Mo,We 10:00-12:00", holdForReview: false });
+  });
+
+  it("holds a recurring group whose pattern cannot be read (the 2nd and 4th Monday) for a person to look at", () => {
+    expect(scheduleOf({ recurring: true, schedule: null })).toEqual({ openingHours: null, holdForReview: true });
+    expect(scheduleOf({ recurring: true, schedule: "Mo[2,4] 10:00-12:00" })).toEqual({ openingHours: null, holdForReview: true });
+    expect(scheduleOf({ recurring: true, schedule: "second Monday" })).toEqual({ openingHours: null, holdForReview: true });
+  });
+
+  it("leaves a venue, or a single dated event, alone: nothing to schedule", () => {
+    expect(scheduleOf({ recurring: false, schedule: null })).toEqual({ openingHours: null, holdForReview: false });
+    expect(scheduleOf({})).toEqual({ openingHours: null, holdForReview: false });
+    expect(scheduleOf({ recurring: true, schedule: null, dateTime: "2026-10-20T10:00:00" })).toEqual({ openingHours: null, holdForReview: false });
+  });
+
+  it("is never made live without a person when it is held, however well it is otherwise verified", () => {
+    const candidate = { status: "needs_review" as const, bookingUrlVerified: true };
+    expect(qualifiesForAutoActivation({ ...candidate } as never, true)).toBe(true);
+    expect(qualifiesForAutoActivation({ ...candidate, holdForReview: true } as never, true)).toBe(false);
+  });
+
+  it("is asked of the model, with an example of the syntax", () => {
+    const prompt = themedSystemPrompt(themeByKey("groups")!);
+    expect(prompt).toContain('"recurring": boolean');
+    expect(prompt).toContain('"schedule": string|null');
+    expect(prompt).toContain("Th 14:00-16:00");
+    expect(prompt).toMatch(/2nd and 4th Monday/);
+  });
+});
+
+describe("how the reasons read", () => {
+  it("says 'an outdoors mood' and 'a social mood'", () => {
+    expect(humanReason(["it suits a outdoors mood"])).toBe("It suits an outdoors mood.");
+    expect(humanReason(["it suits a social mood"])).toBe("It suits a social mood.");
+    expect(humanReason(["it suits a active mood"])).toBe("It suits an active mood.");
   });
 });

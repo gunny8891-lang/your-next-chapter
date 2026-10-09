@@ -30,8 +30,8 @@ const MIN_GEOCODE_GAP_MS = 1100; // Nominatim asks for no more than ~1 request/s
  * fallback) AND a resolved, geocodable location. Anything short of that —
  * vague addresses, no real link — still needs review.
  */
-function qualifiesForAutoActivation(c: RawActivityCandidate, hasCoordinates: boolean): boolean {
-  return c.status === "needs_review" && Boolean(c.bookingUrlVerified) && hasCoordinates;
+export function qualifiesForAutoActivation(c: RawActivityCandidate, hasCoordinates: boolean): boolean {
+  return c.status === "needs_review" && Boolean(c.bookingUrlVerified) && hasCoordinates && !c.holdForReview;
 }
 
 function activatedNote(c: RawActivityCandidate): string | null {

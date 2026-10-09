@@ -6,6 +6,7 @@ import { DATE_FIELD_PROMPT, isValidIso, parseAvailableUntil } from "@/lib/discov
 import { callClaude } from "@/lib/ai/client";
 import { AI_MODELS } from "@/lib/ai/models";
 import { themeByKey, type DiscoveryTheme } from "@/lib/discovery/themes";
+import { parseOpeningHours } from "@/lib/someTime/openingHours";
 
 // Kept on the smart tier: this does agentic multi-step tool orchestration
 // (web_search/web_fetch loops), not a simple single-pass task, and has
@@ -33,7 +34,23 @@ type ExtractedItem = {
   priceEstimate?: number;
   tags?: string[];
   sourceUrl?: string;
+  /** True for a group that meets on a regular pattern; false or absent for a venue or a single dated event. */
+  recurring?: boolean;
+  /** When a recurring group meets, in OpenStreetMap opening-hours syntax ("Th 14:00-16:00"); null when the pattern cannot be written that way. */
+  schedule?: string | null;
 };
+
+/**
+ * What to keep of a group's schedule. A pattern the app can read ("Th 14:00-16:00") is kept, so the group is only
+ * suggested for the days and times it meets. A recurring group whose pattern cannot be read (the 2nd and 4th Monday of the
+ * month) is held for a person to look at, because suggested without it, it would be offered on days it does not meet.
+ */
+export function scheduleOf(item: Pick<ExtractedItem, "recurring" | "schedule" | "dateTime">): { openingHours: string | null; holdForReview: boolean } {
+  if (item.dateTime || !item.recurring) return { openingHours: null, holdForReview: false };
+  const schedule = item.schedule?.trim() ?? "";
+  if (schedule && parseOpeningHours(schedule) !== null) return { openingHours: schedule, holdForReview: false };
+  return { openingHours: null, holdForReview: true };
+}
 
 /**
  * Location-dynamic Discovery Agent source: uses Claude's server-side web_search
@@ -54,13 +71,13 @@ This search is for one kind of thing only: ${theme.focus}. Use web_search to fin
 own pages (the group's page, the council's or the venue's what's-on page, the national scheme's local listing). Extract only groups \
 and sessions genuinely described on a page you read, one entry per group or per dated session, never invented, and never a \
 general directory page in place of the group. For a group that meets regularly, say in the description when and where it meets \
-and how to join, as the page does, and leave dateTime null; give dateTime only for a single dated event or one session. Put the \
+and how to join, as the page does, and leave dateTime null; give dateTime only for a single dated event or one session. For a group that meets on a regular pattern set recurring true and give schedule in OpenStreetMap opening-hours syntax, for example "Th 14:00-16:00" or "Mo,We 10:00-12:00"; if the pattern cannot be written that way (the 2nd and 4th Monday of the month, term time only) set schedule null and say so in the description. For a venue or a single dated event set recurring false and schedule null. Put the \
 organiser's own page in sourceUrl. Leave priceEstimate null unless the page states a price (0 if it says free). Say "unknown" in the \
 description rather than guessing a time, a price or an address. Map each to exactly one category: ${CATEGORIES.join(", ")}. \
 Tag each with what it is (for example "social", "walking", "volunteering", "craft", "history", "fitness") and add "grandchildren" \
 only for something a grandparent could do with a grandchild. When you are done, respond with ONLY valid JSON, no prose, no \
 markdown fences: {"items": [{"title": string, "description": string, "category": string, "address": string|null, ${DATE_FIELD_PROMPT}, \
-"priceEstimate": number|null, "tags": string[], "sourceUrl": string}]}. If you find nothing genuine, return {"items": []}.`;
+"priceEstimate": number|null, "tags": string[], "sourceUrl": string, "recurring": boolean, "schedule": string|null}]}. If you find nothing genuine, return {"items": []}.`;
 }
 
 async function findActivitiesForRegion(apiKey: string, regionLabel: string, memberId: string | null, theme?: DiscoveryTheme): Promise<RawActivityCandidate[]> {
@@ -133,6 +150,7 @@ could take a grandchild for a family-friendly outing (soft play, parks, playgrou
   return items
     .filter((item) => item.title && CATEGORIES.includes(item.category as CategoryName))
     .map((item): RawActivityCandidate => {
+      const { openingHours, holdForReview } = scheduleOf(item);
       const bookingUrl = item.sourceUrl || `https://search.local/${encodeURIComponent(regionLabel)}#${encodeURIComponent(item.title!)}`;
       return {
         title: item.title!,
@@ -147,6 +165,8 @@ could take a grandchild for a family-friendly outing (soft play, parks, playgrou
         priceEstimate: item.priceEstimate ?? null,
         bookingUrl,
         bookingUrlVerified: Boolean(item.sourceUrl),
+        openingHours,
+        holdForReview,
         tags: item.tags ?? [],
         status: "needs_review",
         adminNotes: `Auto-discovered by Claude web search for "${regionLabel}"${theme ? ` (${theme.label.toLowerCase()})` : ""} — verify details before activating.`,

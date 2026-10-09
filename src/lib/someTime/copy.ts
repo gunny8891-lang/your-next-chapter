@@ -15,7 +15,7 @@ const FRIENDLY: [RegExp, (match: RegExpMatchArray) => string][] = [
   [/^the weather suits being outdoors (tomorrow|on .+)$/, (m) => `it should be good weather for it ${m[1]}`],
   [/^it is a wet day and this is indoors$/, () => "it is a wet day and this is under cover"],
   [/^it fits before your next plan$/, () => "it fits neatly before your next plan"],
-  [/^it suits a (.+) mood$/, (m) => `it suits a ${m[1]} mood`],
+  [/^it suits a (.+) mood$/, (m) => `it suits ${/^[aeiou]/i.test(m[1]) ? "an" : "a"} ${m[1]} mood`],
 ];
 
 function friendly(reason: string): string {
