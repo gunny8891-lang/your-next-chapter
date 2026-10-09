@@ -4,7 +4,7 @@ import { summarizeAffinity } from "@/lib/memory/scoring";
 import { fetchRankedOpportunities, selectBalanced, type OpportunityCandidate } from "@/lib/opportunities/engine";
 import { getCurrentWeekStart } from "@/lib/itinerary/generateAndSave";
 import { callClaude } from "@/lib/ai/client";
-import { AI_MODELS } from "@/lib/ai/models";
+import { AI_MODELS, QUICK_THINKING } from "@/lib/ai/models";
 import { careGuidance, type CareAssessment } from "@/lib/chat/care";
 import { PLAIN_WORDS_RULE } from "@/lib/ai/plainWords";
 import { loadRecentIdeas, recentIdeasText, type RecentIdea } from "@/lib/chat/recentIdeas";
@@ -157,7 +157,9 @@ export async function answerChatQuestion(
 
   const response = await callClaude(client, supabase, { userId: memberId, feature: "concierge_chat" }, {
     model: MODEL,
-    max_tokens: 400,
+    // Replies are short, but any thinking is counted here too: at 400 a thoughtful reply could be cut off.
+    max_tokens: 700,
+    ...QUICK_THINKING,
     system,
     messages,
   });

@@ -6,7 +6,7 @@ import { summarizeAffinity } from "@/lib/memory/scoring";
 import { fetchRankedOpportunities, selectBalanced, type OpportunityCandidate } from "@/lib/opportunities/engine";
 import { alignToEvents, describeWhen, fitsDates, getCurrentWeekStart, londonToday, weekDates } from "@/lib/opportunities/schedule";
 import { callClaude } from "@/lib/ai/client";
-import { AI_MODELS } from "@/lib/ai/models";
+import { AI_MODELS, QUICK_THINKING } from "@/lib/ai/models";
 import { PLAIN_WORDS_RULE } from "@/lib/ai/plainWords";
 import { limitSignUpRoles } from "@/lib/itinerary/limitSignUpRoles";
 import { isHallVenue } from "@/lib/opportunities/kinds";
@@ -105,7 +105,9 @@ async function requestItinerary(
 
   const response = await callClaude(client, supabase, { userId: memberId, feature: "itinerary_agent" }, {
     model: MODEL,
-    max_tokens: 2048,
+    // Headroom: any thinking is counted here too, and a plan cut off mid-JSON is a wasted call and a retry.
+    max_tokens: 4096,
+    ...QUICK_THINKING,
     system,
     messages,
   });
