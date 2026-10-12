@@ -57,3 +57,11 @@ describe("what the page says", () => {
     expect(authErrorMessage("__proto__")).toBe(generic);
   });
 });
+
+describe("when there is no address left to send to", () => {
+  it("says so kindly, and what to do", () => {
+    const message = authErrorMessage("nothing_to_resend")!;
+    expect(message).toMatch(/create your account again/);
+    expect(message).toMatch(/[.]$/);
+  });
+});

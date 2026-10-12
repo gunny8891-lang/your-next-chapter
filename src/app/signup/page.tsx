@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { signup } from "@/app/auth/actions";
 import { AuthLink, AuthLinks, AuthPage } from "@/components/AuthPage";
-import { Button, CheckboxField, ErrorNote, Field } from "@/components/ui";
+import { cookies } from "next/headers";
+import { Button, CheckboxField, ErrorNote, Field, Notice } from "@/components/ui";
+import { ResendConfirmation } from "@/components/ResendConfirmation";
+import { PENDING_EMAIL_COOKIE, readPendingEmail } from "@/lib/auth/pendingEmail";
 import styles from "@/components/AuthPage.module.css";
 import { authErrorMessage } from "@/lib/auth/messages";
 
@@ -10,13 +13,17 @@ export const metadata = { title: "Sign up" };
 export default async function SignupPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; checkEmail?: string }>;
+  searchParams: Promise<{ error?: string; checkEmail?: string; resent?: string }>;
 }) {
-  const { error, checkEmail } = await searchParams;
+  const { error, checkEmail, resent } = await searchParams;
 
   if (checkEmail) {
+    const pending = readPendingEmail((await cookies()).get(PENDING_EMAIL_COOKIE)?.value);
     return (
       <AuthPage title="Check your email" lead="We've sent you a link. Open it to finish signing up, and we'll take it from there.">
+        {resent && <Notice>We&apos;ve sent it again. Give it a couple of minutes, and look in your spam folder too.</Notice>}
+        {error && <ErrorNote>{authErrorMessage(error)}</ErrorNote>}
+        <ResendConfirmation email={pending} />
         <AuthLinks>
           <AuthLink href="/login">Back to log in</AuthLink>
         </AuthLinks>

@@ -20,6 +20,7 @@ export type AuthErrorCode =
   | "unconfirmed"
   | "link_expired"
   | "confirm_failed"
+  | "nothing_to_resend"
   | "generic";
 
 const MESSAGES: Record<AuthErrorCode, string> = {
@@ -33,6 +34,7 @@ const MESSAGES: Record<AuthErrorCode, string> = {
   unconfirmed: "Please open the link we emailed you to confirm your address, then log in.",
   link_expired: "That link has expired. Please ask for a new one.",
   confirm_failed: "We couldn't confirm your email from that link. It may have expired, so please try signing up again.",
+  nothing_to_resend: "We no longer have an address to send it to. Please create your account again with your email address, and we'll send a new link.",
   generic: "Something went wrong on our side. Please try again in a few minutes.",
 };
 

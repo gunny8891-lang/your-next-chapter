@@ -90,3 +90,31 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+/* "It hasn't come": what to check, and a way to ask again. */
+.help {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+  font-size: var(--text-small);
+  line-height: 1.5;
+  color: var(--color-ink-soft);
+}
+
+.help p {
+  margin: 0;
+}
+
+.help form {
+  margin-top: 0;
+}
+
+.helpLink {
+  display: block;
+  width: fit-content;
+  padding: 10px 0;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

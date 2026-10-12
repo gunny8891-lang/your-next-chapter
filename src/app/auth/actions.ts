@@ -1,11 +1,12 @@
 "use server";
 
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { classifyAuthError } from "@/lib/auth/messages";
 import { isNewAccount, recordAcceptance } from "@/lib/legal/acceptance";
+import { PENDING_EMAIL_COOKIE, PENDING_EMAIL_OPTIONS, readPendingEmail } from "@/lib/auth/pendingEmail";
 
 async function getSiteUrl() {
   const h = await headers();
@@ -42,7 +43,33 @@ export async function signup(formData: FormData) {
     if (recorded.error) console.warn("could not record the terms agreement:", recorded.error);
   }
 
+  // So "send it again" knows where to: kept an hour, in a cookie and not the address of the page.
+  (await cookies()).set(PENDING_EMAIL_COOKIE, email.trim(), PENDING_EMAIL_OPTIONS);
+
   redirect("/signup?checkEmail=1");
+}
+
+/**
+ * "Send it again": the same confirmation email, to the address just signed up with (or just tried to log in with, when it
+ * was not yet confirmed). The provider limits how often this can be asked for, which comes back as a kind sentence.
+ */
+export async function resendConfirmation() {
+  const email = readPendingEmail((await cookies()).get(PENDING_EMAIL_COOKIE)?.value);
+  if (!email) redirect("/signup?checkEmail=1&error=nothing_to_resend");
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email,
+    options: { emailRedirectTo: `${await getSiteUrl()}/auth/confirm` },
+  });
+
+  if (error) {
+    console.warn("resend confirmation failed:", error.code ?? error.status, error.message);
+    redirect(`/signup?checkEmail=1&error=${classifyAuthError(error)}`);
+  }
+
+  redirect("/signup?checkEmail=1&resent=1");
 }
 
 export async function login(formData: FormData) {
@@ -54,7 +81,10 @@ export async function login(formData: FormData) {
 
   if (error) {
     console.warn("login failed:", error.code ?? error.status, error.message);
-    redirect(`/login?error=${classifyAuthError(error)}`);
+    const code = classifyAuthError(error);
+    // Someone who signed up but never opened the link: remember the address so the page can offer another email.
+    if (code === "unconfirmed") (await cookies()).set(PENDING_EMAIL_COOKIE, email.trim(), PENDING_EMAIL_OPTIONS);
+    redirect(`/login?error=${code}`);
   }
 
   redirect("/today");
