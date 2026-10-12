@@ -52,6 +52,13 @@ export const DATA_CATEGORIES: DataCategory[] = [
     tables: ["member_profiles"],
   },
   {
+    id: "here",
+    title: "Where you are right now, only if you ask",
+    what: "If you tap “Near where I am now”, your device is asked where it is, and you can say no. The position is used for that one search, to find what is near you and to check the weather, and it is not kept: it is not saved with your account, your plans or anything else. The weather service receives it rounded to about a kilometre.",
+    why: "To suggest ideas near where you are when you are out, or away from home.",
+    tables: [],
+  },
+  {
     id: "health",
     title: "Details about your health or beliefs, only if you choose to give them",
     what: "Anything you tell us about getting around (for example “no long walks”) and about food (for example “vegetarian” or “no shellfish”). These can reveal something about your health or your beliefs, so you are never required to fill them in, and you can change or remove them any time in Account.",

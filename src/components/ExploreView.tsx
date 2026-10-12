@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Clock, Heart } from "lucide-react";
 import { Button, Card, Chip, ErrorNote, Page, PageHeader, SectionTitle, Skeleton } from "@/components/ui";
 import { AreaLearningNote } from "@/components/AreaLearningNote";
+import { HereChoice, type Here } from "@/components/HereChoice";
 import { ExperienceCard, type FeedbackReason } from "@/components/ExperienceCard";
 import type { TimeSheet } from "@/components/TimeSheet";
 import { exploreDays, exploreDurationFor, MOOD_OPTIONS } from "@/lib/someTime/choices";
@@ -61,6 +62,8 @@ export function ExploreView({
     return exploreDays(Math.floor(clock.minutes / 60), clock.date);
   });
   const [when, setWhen] = useState<StartChoice>(days[0].value);
+  // Where they are now, if they asked for ideas near here: held for this screen only, never saved.
+  const [here, setHere] = useState<Here | null>(null);
   const [mood, setMood] = useState<Mood | null>(null);
   const [result, setResult] = useState<TimeResult | null>(null);
   const [shown, setShown] = useState<string[]>([]);
@@ -83,6 +86,7 @@ export function ExploreView({
       const res = await onFind({
         start: day,
         duration: exploreDurationFor(day, londonHour()),
+        ...(here ? { here } : {}),
         who: "just_me",
         mood: chosen,
         exclude,
@@ -153,6 +157,14 @@ export function ExploreView({
             </div>
           </div>
         )}
+        <HereChoice
+          here={here}
+          onChange={(next) => {
+            setHere(next);
+            // Where they are is part of the question: a search already shown was for somewhere else.
+            setResult(null);
+          }}
+        />
         <SectionTitle id="feel">What do you feel like?</SectionTitle>
         <div className={styles.chips} role="group" aria-label="What you feel like">
           {MOOD_OPTIONS.map((m) => (

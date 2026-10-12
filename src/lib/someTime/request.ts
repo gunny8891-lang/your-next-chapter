@@ -22,7 +22,27 @@ export type TimeRequest = {
   exclude: string[];
   /** What they have said about THIS outing (the dog is coming): see context/constraints.ts. Absent when they said nothing. */
   context?: ExperienceContext;
+  /**
+   * Where they are right now, when they asked for ideas near here rather than near home. Used for this search only: it is
+   * never stored, and absent means "from home".
+   */
+  here?: HereLocation;
 };
+
+export type HereLocation = { lat: number; lng: number };
+
+/** The United Kingdom's rough bounds: the app is UK-only, and a position outside them is a broken reading, not a place. */
+const UK_BOUNDS = { latMin: 49.8, latMax: 60.9, lngMin: -8.7, lngMax: 1.9 };
+
+/** A position from the browser, kept only if it is a sensible one in the UK. Anything else is treated as "from home". */
+export function parseHere(raw: unknown): HereLocation | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const { lat, lng } = raw as Record<string, unknown>;
+  if (typeof lat !== "number" || typeof lng !== "number" || !Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (lat < UK_BOUNDS.latMin || lat > UK_BOUNDS.latMax || lng < UK_BOUNDS.lngMin || lng > UK_BOUNDS.lngMax) return null;
+  // To about 100 metres: enough to find what is near, and no more precise than the search needs.
+  return { lat: Math.round(lat * 1000) / 1000, lng: Math.round(lng * 1000) / 1000 };
+}
 
 const STARTS: StartChoice[] = ["now", "afternoon", "evening", "tomorrow", "saturday", "sunday"];
 const DURATIONS: DurationChoice[] = ["30m", "1-2h", "half_day", "all_day", "rest_of_day", "until_next"];
@@ -57,6 +77,7 @@ export function parseTimeRequest(raw: unknown): TimeRequest | null {
     : [];
 
   const context = parseContext(r.context);
+  const here = parseHere(r.here);
   return {
     start,
     duration,
@@ -65,6 +86,7 @@ export function parseTimeRequest(raw: unknown): TimeRequest | null {
     untilMin: duration === "until_next" ? rawUntil : null,
     exclude,
     ...(Object.keys(context).length > 0 ? { context } : {}),
+    ...(here ? { here } : {}),
   };
 }
 

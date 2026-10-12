@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { ensurePlacesNearHere } from "@/lib/discovery/hereNow";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { eventDate } from "@/lib/opportunities/schedule";
@@ -35,6 +37,12 @@ export async function getTimeOptionsAction(raw: unknown): Promise<TimeResult> {
 
   const request = parseTimeRequest(raw);
   if (!request) return { error: "That didn't look right — please try again.", notice: null, options: [], windowLabel: null };
+
+  // Asked for ideas near where they are, perhaps somewhere we know little about: learn that place for next time, after answering.
+  if (request.here) {
+    const here = request.here;
+    after(() => ensurePlacesNearHere(user.id, here));
+  }
 
   try {
     const result = await getTimeOptions(supabase, user.id, request);

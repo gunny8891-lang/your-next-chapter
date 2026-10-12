@@ -21,6 +21,7 @@ import { SPEND_OPTIONS, type ExperienceContext, type Spend } from "@/lib/context
 import { isLaterDay, type DurationChoice, type Mood, type StartChoice } from "@/lib/someTime/request";
 import type { SurpriseWho } from "@/lib/surprise/context";
 import type { TimeOption, TimeResult } from "@/lib/someTime/types";
+import { HereChoice, type Here } from "@/components/HereChoice";
 import styles from "@/components/TimeSheet.module.css";
 
 export type TimeSheetInitial = { start?: StartChoice; duration?: DurationChoice };
@@ -34,6 +35,8 @@ type FindRequest = {
   exclude: string[];
   /** What they said about this outing (a spend, the dog coming). Absent when they said nothing. */
   context?: ExperienceContext;
+  /** Where they are right now, when they asked for ideas near here and not near home. Used for this search only. */
+  here?: Here;
 };
 
 /** What the sheet needs to know about the member's dog: only members who have one are asked. */
@@ -118,6 +121,8 @@ export function TimeSheet({ initial, commitment, suggestedMood, nowMin, dog, onF
   const [spend, setSpend] = useState<Spend | "any">("any");
   const [dogComing, setDogComing] = useState<boolean>(dog?.hasDog === true && dog.usuallyComes);
   const [showExtras, setShowExtras] = useState(false);
+  // Where they are now, if they asked for ideas near here: held for this sheet only, never saved.
+  const [here, setHere] = useState<Here | null>(null);
 
   const [result, setResult] = useState<TimeResult | null>(null);
   const [shown, setShown] = useState<string[]>([]);
@@ -153,7 +158,7 @@ export function TimeSheet({ initial, commitment, suggestedMood, nowMin, dog, onF
     writeSaved({ duration: duration === "until_next" ? undefined : duration, who });
     startTransition(async () => {
       const context = extrasContext(spend, dog, dogComing);
-      const res = await onFind({ start: effectiveStart, duration, untilMin, who, mood: chosenMood, exclude, ...(context ? { context } : {}) });
+      const res = await onFind({ start: effectiveStart, duration, untilMin, who, mood: chosenMood, exclude, ...(context ? { context } : {}), ...(here ? { here } : {}) });
       if (res.error) {
         setError(res.error);
         return;
@@ -200,6 +205,8 @@ export function TimeSheet({ initial, commitment, suggestedMood, nowMin, dog, onF
             ))}
           </div>
         )}
+
+        <HereChoice here={here} onChange={setHere} />
 
         <div className={styles.options}>
           {until && !isLaterDay(effectiveStart) && (

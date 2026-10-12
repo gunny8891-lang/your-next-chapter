@@ -128,7 +128,8 @@ describe("where it shows", () => {
   });
 
   it("looks at the forecast for the days ahead, not just two", () => {
-    expect(read("src/lib/someTime/recommend.ts")).toContain("getDailyForecast(profile!.location_lat, profile!.location_lng, 7)");
+    // From where the search is made (home, or where they are now), for a week ahead.
+    expect(read("src/lib/someTime/recommend.ts")).toContain("getDailyForecast(centre.lat, centre.lng, 7)");
   });
 });
 

@@ -365,10 +365,15 @@ export async function getTimeOptions(
     ...request.exclude,
   ]);
 
-  const hasHome = profile?.location_lat != null && profile?.location_lng != null;
+  // Where from: where they are right now if they asked for that, otherwise home.
+  const centre: { lat: number; lng: number } | null = request.here
+    ? request.here
+    : profile?.location_lat != null && profile?.location_lng != null
+      ? { lat: profile.location_lat as number, lng: profile.location_lng as number }
+      : null;
   const [{ candidates: ranked, affinity }, forecast, history, goalRows, dailyState] = await Promise.all([
-    fetchRankedOpportunities(supabase, memberId, { excludeActivityIds: exclude, foodVenues: "include" }),
-    hasHome ? getDailyForecast(profile!.location_lat, profile!.location_lng, 7) : Promise.resolve(null as DayForecast[] | null),
+    fetchRankedOpportunities(supabase, memberId, { excludeActivityIds: exclude, foodVenues: "include", ...(request.here ? { origin: request.here } : {}) }),
+    centre ? getDailyForecast(centre.lat, centre.lng, 7) : Promise.resolve(null as DayForecast[] | null),
     loadRepetitionHistory(supabase, memberId, window.date),
     supabase.from("goals").select("text").eq("member_id", memberId).eq("status", "active"),
     loadDailyState(supabase, memberId, window.date),
@@ -394,7 +399,7 @@ export async function getTimeOptions(
       uses_public_transport: profile?.uses_public_transport ?? null,
       mobility_notes: profile?.mobility_notes ?? null,
     },
-    home: hasHome ? { lat: profile!.location_lat, lng: profile!.location_lng } : null,
+    home: centre,
   };
 
   // Whether the dog is coming: what they said for this outing, otherwise what they usually do. Only ever asked of someone with a dog.

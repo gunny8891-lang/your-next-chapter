@@ -52,6 +52,11 @@ export type FetchOpportunitiesOptions = {
    * asks for them.
    */
   foodVenues?: FoodVenueMode;
+  /**
+   * Measure distance from here instead of from the member's home: where they are right now, for ideas near them. Their
+   * travel radius still applies.
+   */
+  origin?: { lat: number; lng: number };
 };
 
 /**
@@ -127,7 +132,9 @@ export async function fetchRankedOpportunities(
 
   const inRange = filterByDistance(
     allActive,
-    profile ?? { location_lat: null, location_lng: null, travel_radius_km: null }
+    options.origin
+      ? { location_lat: options.origin.lat, location_lng: options.origin.lng, travel_radius_km: profile?.travel_radius_km ?? null }
+      : (profile ?? { location_lat: null, location_lng: null, travel_radius_km: null })
   );
 
   const eligible = options.excludeActivityIds
