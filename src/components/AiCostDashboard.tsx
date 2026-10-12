@@ -22,6 +22,7 @@ const FEATURE_LABEL: Record<string, string> = {
   concierge_chat: "Concierge chat",
   surprise_me_on_demand: "Surprise Me",
   nudge_message: "Nudge messages",
+  operator_alert: "Alerts to you (no cost)",
   discovery_claude_web_search: "Discovery (web search)",
   discovery_claude_web: "Discovery (page extraction)",
 };

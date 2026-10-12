@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { assertWithinMemberLimits } from "@/lib/ai/limits";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { classifyAiFailure, needsOperator, operatorAlert } from "@/lib/ai/unavailable";
+import { maybeAlertOperator } from "@/lib/ai/operatorAlert";
 
 // $ per 1M tokens, current standard (non-intro) rates. Cache read/write tokens
 // aren't priced here — no call site in this app uses prompt caching yet, so
@@ -105,7 +106,11 @@ export async function callClaude(
     // A failure only the person running the app can fix (out of credit, a rejected key) is made impossible to miss in
     // the logs, because every member is affected at once. Members are told something kinder (see unavailable.ts).
     const kind = classifyAiFailure(err);
-    if (needsOperator(kind)) console.error(`ACTION NEEDED (${context.feature}): ${operatorAlert(kind)}`);
+    if (needsOperator(kind)) {
+      console.error(`ACTION NEEDED (${context.feature}): ${operatorAlert(kind)}`);
+      // And an email, once a day: the log and the costs page are only seen by someone who goes looking.
+      await maybeAlertOperator(kind).catch(() => undefined);
+    }
     throw err;
   }
 }

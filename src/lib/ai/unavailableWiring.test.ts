@@ -35,7 +35,9 @@ describe("where a member could see a raw error, they now see a kind sentence", (
 describe("the person running the app is told when only they can fix it", () => {
   it("the call wrapper logs an 'ACTION NEEDED' line for an out-of-credit account or a rejected key", () => {
     const client = read("src/lib/ai/client.ts");
-    expect(client).toContain("if (needsOperator(kind)) console.error(`ACTION NEEDED (${context.feature}): ${operatorAlert(kind)}`);");
+    expect(client).toContain("console.error(`ACTION NEEDED (${context.feature}): ${operatorAlert(kind)}`);");
+    // ...and emails them, once a day, from the same place.
+    expect(client).toContain("await maybeAlertOperator(kind)");
   });
 
   const NOW = new Date("2026-10-07T12:00:00Z").getTime();
