@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { Button, CheckboxField, ErrorNote, Field, Notice } from "@/components/ui";
 import { ResendConfirmation } from "@/components/ResendConfirmation";
 import { PENDING_EMAIL_COOKIE, readPendingEmail } from "@/lib/auth/pendingEmail";
+import { coverageNote } from "@/lib/coverage/strongest";
 import styles from "@/components/AuthPage.module.css";
 import { authErrorMessage } from "@/lib/auth/messages";
 
@@ -34,6 +35,7 @@ export default async function SignupPage({
   return (
     <AuthPage title="Welcome to Lark Hour" lead="It takes about a minute. Then we'll have something good for today.">
       <form action={signup}>
+        <p className={styles.coverage}>{coverageNote()}</p>
         {error && <ErrorNote>{authErrorMessage(error)}</ErrorNote>}
         <Field label="Email" name="email" type="email" autoComplete="email" required />
         <Field

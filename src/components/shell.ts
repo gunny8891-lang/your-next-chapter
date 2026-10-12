@@ -19,7 +19,7 @@ export const TABS: { id: TabId; href: string; label: string }[] = [
 
 // Signed-in member screens. The landing page, sign-in, onboarding and the admin
 // tools have their own full-page layouts and get no member navigation.
-const SHELL_ROUTES = ["/today", "/week", "/explore", "/chapter", "/people", "/chat", "/account"];
+const SHELL_ROUTES = ["/today", "/week", "/explore", "/chapter", "/people", "/chat", "/account", "/feedback"];
 
 const under = (pathname: string, route: string) => pathname === route || pathname.startsWith(`${route}/`);
 

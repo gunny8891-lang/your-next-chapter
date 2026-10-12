@@ -1,7 +1,7 @@
 "use server";
 
 import { cookies, headers } from "next/headers";
-import { after } from "next/server";
+import { afterResponse } from "@/lib/afterResponse";
 import { notifyNewSignup } from "@/lib/email/signupNotice";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
@@ -9,6 +9,7 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { classifyAuthError } from "@/lib/auth/messages";
 import { isNewAccount, recordAcceptance } from "@/lib/legal/acceptance";
 import { PENDING_EMAIL_COOKIE, PENDING_EMAIL_OPTIONS, readPendingEmail } from "@/lib/auth/pendingEmail";
+import { recordAppEvent } from "@/lib/appEvents";
 
 async function getSiteUrl() {
   const h = await headers();
@@ -35,7 +36,10 @@ export async function signup(formData: FormData) {
   if (error) {
     // The provider’s wording is for us, not the member: log it, and send only a code.
     console.warn("signup failed:", error.code ?? error.status, error.message);
-    redirect(`/signup?error=${classifyAuthError(error)}`);
+    const code = classifyAuthError(error);
+    // Only our own code, so a problem can be seen without reading server logs: never the address or the provider's words.
+    afterResponse(() => recordAppEvent("signup_failed", code));
+    redirect(`/signup?error=${code}`);
   }
 
   // Keep the record of what they agreed to and when. A failure here must not undo a sign-up that
@@ -45,7 +49,7 @@ export async function signup(formData: FormData) {
     if (recorded.error) console.warn("could not record the terms agreement:", recorded.error);
     // Tell whoever runs the app, once the response has gone: a note about a new sign-up must never slow or break one.
     const registered = data.user.email ?? email;
-    after(() => notifyNewSignup(registered));
+    afterResponse(() => notifyNewSignup(registered));
   }
 
   // So "send it again" knows where to: kept an hour, in a cookie and not the address of the page.
@@ -71,7 +75,9 @@ export async function resendConfirmation() {
 
   if (error) {
     console.warn("resend confirmation failed:", error.code ?? error.status, error.message);
-    redirect(`/signup?checkEmail=1&error=${classifyAuthError(error)}`);
+    const code = classifyAuthError(error);
+    afterResponse(() => recordAppEvent("resend_failed", code));
+    redirect(`/signup?checkEmail=1&error=${code}`);
   }
 
   redirect("/signup?checkEmail=1&resent=1");
@@ -87,6 +93,8 @@ export async function login(formData: FormData) {
   if (error) {
     console.warn("login failed:", error.code ?? error.status, error.message);
     const code = classifyAuthError(error);
+    // A wrong password is ordinary and not worth a record; the rest (unconfirmed, refused, a failure) is.
+    if (code !== "bad_credentials") afterResponse(() => recordAppEvent("login_failed", code));
     // Someone who signed up but never opened the link: remember the address so the page can offer another email.
     if (code === "unconfirmed") (await cookies()).set(PENDING_EMAIL_COOKIE, email.trim(), PENDING_EMAIL_OPTIONS);
     redirect(`/login?error=${code}`);
@@ -124,7 +132,9 @@ export async function updatePassword(formData: FormData) {
   const { error } = await supabase.auth.updateUser({ password });
   if (error) {
     console.warn("password update failed:", error.code ?? error.status, error.message);
-    redirect(`/reset-password?error=${classifyAuthError(error)}`);
+    const code = classifyAuthError(error);
+    afterResponse(() => recordAppEvent("reset_failed", code));
+    redirect(`/reset-password?error=${code}`);
   }
 
   redirect("/today");

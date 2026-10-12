@@ -89,7 +89,7 @@ describe("where it happens", () => {
 
   it("happens for a genuinely new account only, after the response, and not for a repeat sign-up of an existing address", () => {
     const block = actions.slice(actions.indexOf("if (isNewAccount(data.user))"));
-    expect(block).toContain("after(() => notifyNewSignup(registered));");
+    expect(block).toContain("afterResponse(() => notifyNewSignup(registered));");
     // It is inside the new-account branch, before the redirect to "check your email".
     expect(block.indexOf("notifyNewSignup")).toBeLessThan(block.indexOf('redirect("/signup?checkEmail=1")'));
   });

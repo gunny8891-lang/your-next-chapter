@@ -378,7 +378,11 @@ export function AccountSettingsForm({
       <section aria-labelledby="feedback" className={styles.section}>
         <SectionTitle id="feedback">Tell us what you think</SectionTitle>
         <p className={styles.plain}>
-          Lark Hour is new, and what you tell us shapes it. If something is confusing, broken or missing, or an idea was a good one, write to{" "}
+          Lark Hour is new, and what you tell us shapes it. If something is confusing, broken or missing, or an idea was a good one,{" "}
+          <Link href="/feedback?from=Account" className={styles.textLink}>
+            tell us here
+          </Link>{" "}
+          or write to{" "}
           <a href={feedbackHref("Account")} className={styles.textLink}>
             {FEEDBACK_EMAIL}
           </a>

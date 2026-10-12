@@ -27,7 +27,7 @@ export type DataCategory = {
 };
 
 /** Tables that hold no personal data (the shared catalogue of places and events). */
-export const NON_PERSONAL_TABLES = ["partners", "activities", "discovery_regions"];
+export const NON_PERSONAL_TABLES = ["partners", "activities", "discovery_regions", "app_events"];
 
 export const DATA_CATEGORIES: DataCategory[] = [
   {
@@ -57,6 +57,13 @@ export const DATA_CATEGORIES: DataCategory[] = [
     what: "If you tap “Near where I am now”, your device is asked where it is, and you can say no. The position is used for that one search, to find what is near you and to check the weather, and it is not kept: it is not saved with your account, your plans or anything else. The weather service receives it rounded to about a kilometre.",
     why: "To suggest ideas near where you are when you are out, or away from home.",
     tables: [],
+  },
+  {
+    id: "feedback",
+    title: "What you tell us about the app",
+    what: "If you use “Tell us what you think” in the app: what you wrote, and which screen you were on. We are also emailed it, with your email address so we can reply.",
+    why: "To make the app better, and to answer you if you want an answer.",
+    tables: ["member_feedback"],
   },
   {
     id: "health",

@@ -3,6 +3,7 @@ import { ChevronLeft, Users } from "lucide-react";
 import { T } from "@/lib/theme";
 import { RETURNING_DAYS_NEEDED } from "@/lib/admin/memberStats";
 import type { MemberStatsResult } from "@/lib/admin/memberStatsLoader";
+import { kindLabel, type ProblemsSummary } from "@/lib/admin/problemsLoader";
 
 const card = {
   background: T.surface,
@@ -29,7 +30,7 @@ function dayLabel(iso: string): string {
   return new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 }
 
-export function MembersDashboard({ stats }: { stats: MemberStatsResult }) {
+export function MembersDashboard({ stats, problems = null }: { stats: MemberStatsResult; problems?: ProblemsSummary | null }) {
   const busiest = Math.max(1, ...stats.daily.map((d) => d.members));
   const of = (n: number) => (stats.registered ? `${Math.round((n / stats.registered) * 100)}% of members` : undefined);
 
@@ -54,6 +55,35 @@ export function MembersDashboard({ stats }: { stats: MemberStatsResult }) {
           <div style={{ background: "#F5E9E2", border: "1px solid #D3A98C", borderRadius: 10, padding: "12px 14px", marginBottom: 20, fontSize: 14, color: "#8A4A28" }}>
             There is more data than this page reads in one go, so some figures below undercount.
           </div>
+        )}
+
+        {problems && (
+          <>
+            <h2 style={heading}>What went wrong, last {problems.days} days</h2>
+            <div style={{ ...card, marginBottom: 28 }}>
+              {problems.total === 0 ? (
+                <p style={{ margin: 0, fontSize: 14, color: T.inkSoft }}>Nothing recorded. That includes sign-up, log-in and broken screens.</p>
+              ) : (
+                <ul style={{ margin: 0, paddingLeft: 18, fontSize: 14, color: T.ink, display: "grid", gap: 4 }}>
+                  {problems.byKind.map((k) => (
+                    <li key={k.kind}>
+                      {kindLabel(k.kind)}: <strong>{k.count}</strong>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {problems.topCodes.length > 0 && (
+                <p style={{ fontSize: 12.5, color: T.inkSoft, margin: "10px 0 0" }}>
+                  Most common: {problems.topCodes.map((c) => `${c.label} (${c.count})`).join("; ")}
+                </p>
+              )}
+              {problems.feedbackThisWeek !== null && (
+                <p style={{ fontSize: 12.5, color: T.inkSoft, margin: "10px 0 0" }}>
+                  Messages written in the app this week: <strong>{problems.feedbackThisWeek}</strong> (they are also emailed to you).
+                </p>
+              )}
+            </div>
+          </>
         )}
 
         <h2 style={heading}>Signed up</h2>

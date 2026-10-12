@@ -67,11 +67,18 @@ export async function defaultRecipients(admin: SupabaseClient): Promise<string[]
   return addresses;
 }
 
-export async function defaultSend(to: string[], message: { subject: string; text: string; html: string }): Promise<void> {
+export async function defaultSend(to: string[], message: { subject: string; text: string; html: string; replyTo?: string }): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) throw new Error("RESEND_API_KEY is not set");
   const { from } = senderSettings();
-  const { error } = await new Resend(apiKey).emails.send({ from, to, subject: message.subject, text: message.text, html: message.html });
+  const { error } = await new Resend(apiKey).emails.send({
+    from,
+    to,
+    subject: message.subject,
+    text: message.text,
+    html: message.html,
+    ...(message.replyTo ? { replyTo: message.replyTo } : {}),
+  });
   if (error) throw new Error(error.message);
 }
 

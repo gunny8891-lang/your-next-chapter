@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { Button, Page } from "@/components/ui";
 import { MainLandmark } from "@/components/MainLandmark";
+import { reportPageError } from "@/app/error-actions";
 
 /**
  * What a member sees when something breaks while a screen is being built. It says
@@ -12,6 +13,8 @@ import { MainLandmark } from "@/components/MainLandmark";
 export default function Error({ error, unstable_retry }: { error: Error & { digest?: string }; unstable_retry: () => void }) {
   useEffect(() => {
     console.error(error);
+    // Leave a record we can see without the server logs: the reference only.
+    void reportPageError(error.digest);
   }, [error]);
 
   return (

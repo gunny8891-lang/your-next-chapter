@@ -9,6 +9,7 @@ import { createTicketmasterSource, RICHMOND_AREA } from "@/lib/discovery/sources
 import { memberAreas } from "@/lib/discovery/areas";
 import { createClaudeWebSource } from "@/lib/discovery/sources/claudeWeb";
 import { mergeDuplicateVenues } from "@/lib/discovery/duplicates";
+import { purgeOldAppEvents } from "@/lib/appEvents";
 
 // A regional web search has been observed taking ~4.5 minutes, so one
 // invocation only runs one. Regions beyond that are reported as "deferred" and
@@ -109,5 +110,8 @@ export async function GET(request: Request) {
   // After everything above has added what it found: the same place from two sources becomes one. A bonus, it never fails the run.
   const duplicates = await mergeDuplicateVenues(admin).catch((err: unknown) => ({ merged: 0, error: err instanceof Error ? err.message : "Merge failed" }));
 
-  return NextResponse.json({ results, regional, regionalError, themed, themedError, places, images, duplicates, ticketmasterSkipped, searchBudget });
+  // Records of what went wrong are kept 90 days. A bonus: it never fails the run.
+  const eventsPurged = await purgeOldAppEvents(admin);
+
+  return NextResponse.json({ results, regional, regionalError, themed, themedError, places, images, duplicates, eventsPurged, ticketmasterSkipped, searchBudget });
 }
