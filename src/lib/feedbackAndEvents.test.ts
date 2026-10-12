@@ -218,10 +218,10 @@ describe("telling people where it is strongest", () => {
     expect(coverageNote(["Barnet", "Stevenage", "Hitchin"])).toContain("Barnet, Stevenage and Hitchin");
   });
 
-  it("is on the sign-up page, before the form", () => {
+  it("is not on the sign-up page for now (kept ready to put back)", () => {
     const page = read("src/app/signup/page.tsx");
-    expect(page).toContain("{coverageNote()}");
-    expect(page.indexOf("coverageNote()")).toBeLessThan(page.indexOf('name="email"'));
+    expect(page).not.toContain("coverageNote");
+    expect(page).not.toMatch(/strongest around/);
   });
 });
 
