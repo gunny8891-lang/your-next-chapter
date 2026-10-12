@@ -5,7 +5,8 @@ import { scoreActivity, type AffinityScores } from "@/lib/memory/scoring";
 import { haversineDistanceKm } from "@/lib/geo/haversine";
 import { estimateDurationMinutes } from "@/lib/someTime/duration";
 import { mealLabel, suitsMealTime, typicalSpend } from "@/lib/someTime/food";
-import { openStatus } from "@/lib/someTime/openingHours";
+import { intervalsOnDate, openStatus, parseSchedule } from "@/lib/someTime/openingHours";
+import { meetsText } from "@/lib/someTime/meets";
 import type { Mood, TimeRequest } from "@/lib/someTime/request";
 import { estimateTravel, type TravelMode, type TravelProfile } from "@/lib/someTime/travel";
 import { clockLabel, durationLabel, onDay, type TimeWindow } from "@/lib/someTime/window";
@@ -279,6 +280,34 @@ function distanceFromHome(c: OpportunityCandidate, home: MemberContext["home"]):
  * it will not fit the time, is shut when they would arrive, is the wrong sort of
  * place for the time of day, or is far beyond their budget.
  */
+/**
+ * The next time a group that meets at set times is on, on this date, that can be reached from `earliestArrival`: its start and
+ * end in minutes, or null for an ordinary venue (long opening hours), a schedule that is not understood, or a day it is not on.
+ */
+/** The longest a meeting lasts: a parkrun, a class, a club afternoon. Longer than this is opening hours, not a session. */
+const LONGEST_SESSION_MIN = 4 * 60;
+
+/**
+ * Whether a schedule is a group that meets (a class on Thursday afternoons, a club on the 2nd Monday) rather than a place's
+ * opening hours (a café open at weekends, a museum shut on Mondays): it keeps to few days, or to some weeks of the month,
+ * and each time it is on is a few hours at most.
+ */
+export function isSessionRule(rule: string | null | undefined): boolean {
+  if (!rule || meetsText(rule) === null) return false;
+  const schedule = parseSchedule(rule);
+  if (!schedule) return false;
+  const all = [...schedule.week.flat(), ...schedule.monthly.flatMap((m) => m.intervals)];
+  return all.length > 0 && all.every(([start, end]) => end - start <= LONGEST_SESSION_MIN);
+}
+
+export function nextSession(rule: string | null | undefined, date: string, earliestArrival: number): { start: number; end: number } | null {
+  if (!isSessionRule(rule)) return null;
+  const intervals = intervalsOnDate(rule, date);
+  if (!intervals || intervals.length === 0) return null;
+  const next = [...intervals].sort((a, b) => a[0] - b[0]).find(([start]) => start >= earliestArrival);
+  return next ? { start: next[0], end: next[1] } : null;
+}
+
 export function evaluateCandidate(c: OpportunityCandidate, input: ScoringInput): Evaluated | null {
   const { window, request, member, affinity, history } = input;
   const weekday = weekdayOf(window.date);
@@ -299,17 +328,30 @@ export function evaluateCandidate(c: OpportunityCandidate, input: ScoringInput):
       ? Math.min(fullDuration, Math.max(minVisit, window.availableMinutes - 2 * travel.minutes))
       : fullDuration;
 
+  // A group that meets at set times (a parkrun at nine, a class at half past ten) is, for planning, like an event: it starts
+  // when it meets, and is no use before or after. Ordinary opening hours are not: a museum can be visited at any time it is open.
+  const from = window.eventsFromMin ?? window.startMin;
+  const session = event ? null : nextSession(c.recurrence_rule, window.date, from + travel.minutes);
+  // A group that is not on that day, or has started by the time they could get there, is not joined late.
+  if (!event && !session && isSessionRule(c.recurrence_rule)) return null;
+  const fixedTime = event !== null || session !== null;
+
   // --- when would it happen? ---
   let arriveMin: number;
   let endMin: number;
   let eventStartMin: number | null = null;
-  if (event) {
+  if (session) {
+    eventStartMin = session.start;
+    arriveMin = session.start - Math.min(EVENT_EARLY_ARRIVAL_MIN, session.start - (from + travel.minutes));
+    endMin = session.start + Math.min(fullDuration, session.end - session.start);
+  } else if (event) {
     if (event.date !== window.date) return null;
     const startsAt = new Date(c.date_time!).getUTCHours() * 60 + new Date(c.date_time!).getUTCMinutes();
     eventStartMin = startsAt;
-    // They must be able to get there from the start of their free time.
-    if (window.startMin + travel.minutes > startsAt) return null;
-    arriveMin = startsAt - Math.min(EVENT_EARLY_ARRIVAL_MIN, startsAt - (window.startMin + travel.minutes));
+    // They must be able to get there from the start of their free time (for an event on a day that has not started, from the
+    // early morning: see EARLIEST_EVENT_MIN in window.ts).
+    if (from + travel.minutes > startsAt) return null;
+    arriveMin = startsAt - Math.min(EVENT_EARLY_ARRIVAL_MIN, startsAt - (from + travel.minutes));
     endMin = startsAt + durationMinutes;
   } else {
     arriveMin = window.startMin + travel.minutes;
@@ -321,7 +363,7 @@ export function evaluateCandidate(c: OpportunityCandidate, input: ScoringInput):
 
   // --- is it open, and does it suit the time of day? ---
   let openUntil: number | null = null;
-  if (!event) {
+  if (!fixedTime) {
     const status = openStatus(c.recurrence_rule, weekday, arriveMin, durationMinutes, window.date);
     if (status.status === "closed") return null;
     if (status.status === "open") openUntil = status.closesAt;
@@ -382,8 +424,8 @@ export function evaluateCandidate(c: OpportunityCandidate, input: ScoringInput):
 
   const total = homeMin - window.startMin;
   const fill = total / window.availableMinutes;
-  if (!event && fill >= 0.5) score += 1;
-  if (!event && total < window.minUsefulMinutes) score -= 2;
+  if (!fixedTime && fill >= 0.5) score += 1;
+  if (!fixedTime && total < window.minUsefulMinutes) score -= 2;
 
   if (input.pleasantWeather && c.tags.some((t) => OUTDOOR_TAGS.includes(t))) {
     score += 1;
@@ -441,6 +483,7 @@ export function evaluateCandidate(c: OpportunityCandidate, input: ScoringInput):
   if (cost) facts.push(cost);
   facts.push(...fit.facts, ...fit.unverified);
   if (event) facts.push(`starts ${clockLabel(new Date(c.date_time!).getUTCHours() * 60 + new Date(c.date_time!).getUTCMinutes())}`);
+  else if (session) facts.push(`meets at ${clockLabel(session.start)}`);
   else if (openUntil != null) facts.push(`open until ${clockLabel(openUntil)}`);
 
   return {

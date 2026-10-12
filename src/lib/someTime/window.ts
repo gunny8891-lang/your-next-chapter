@@ -9,6 +9,12 @@ const EVENING_START_MIN = 18 * 60;
 const TOMORROW_START_MIN = 10 * 60;
 /** "All day": from the start to the evening, about nine hours. */
 const ALL_DAY_MIN = 9 * 60;
+/**
+ * On a day that has not started, events are looked at from here: a parkrun at nine, a walk at half past, a swim at eight.
+ * Visits to places still start at ten (when most open), so nothing is suggested at an hour it would be shut; it is only
+ * the things with a time of their own that are not missed for starting before the day "begins".
+ */
+const EARLIEST_EVENT_MIN = 7 * 60;
 /** Below this there is no time to go anywhere. */
 const MIN_USABLE_MIN = 25;
 
@@ -18,6 +24,8 @@ export type TimeWindow = {
   /** Minutes after midnight. */
   startMin: number;
   endMin: number;
+  /** From when something with a time of its own (an event) may start. Absent means from startMin. */
+  eventsFromMin?: number;
   availableMinutes: number;
   /** A suggestion filling less than this is not "a way to spend" the time. */
   minUsefulMinutes: number;
@@ -133,7 +141,7 @@ export function resolveWindow(
     const available = Math.min(gap, untilDayEnd, 600);
     return {
       ok: true,
-      window: { date, startMin, endMin: startMin + available, availableMinutes: available, minUsefulMinutes: Math.min(45, available) },
+      window: { date, startMin, endMin: startMin + available, eventsFromMin: startMin, availableMinutes: available, minUsefulMinutes: Math.min(45, available) },
     };
   }
 
@@ -151,6 +159,7 @@ export function resolveWindow(
       date,
       startMin,
       endMin: startMin + availableMinutes,
+      eventsFromMin: later ? Math.min(startMin, EARLIEST_EVENT_MIN) : startMin,
       availableMinutes,
       minUsefulMinutes: Math.min(minUseful, availableMinutes),
     },

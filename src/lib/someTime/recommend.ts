@@ -306,7 +306,7 @@ function weekdayDateLabel(window: TimeWindow): string {
     month: "short",
     timeZone: "UTC",
   });
-  return `${date}, ${clockLabel(window.startMin)} – ${clockLabel(window.endMin)}`;
+  return `${date}, ${clockLabel(window.eventsFromMin ?? window.startMin)} – ${clockLabel(window.endMin)}`;
 }
 
 function defaultAsk(supabase: SupabaseClient, memberId: string): Ask {

@@ -101,7 +101,9 @@ function candidateLine({ evaluated: e, foodStop }: ShortlistEntry): string {
 export function buildUserPrompt(ctx: PromptContext, shortlist: ShortlistEntry[]): string {
   const { window, request, profile } = ctx;
   const lines = [
-    `Free time: ${ctx.weekdayLabel}, from ${clockLabel(window.startMin)} for about ${durationLabel(window.availableMinutes)} (back by ${clockLabel(window.endMin)}).`,
+    `Free time: ${ctx.weekdayLabel}, from ${clockLabel(window.startMin)} for about ${durationLabel(window.availableMinutes)} (back by ${clockLabel(window.endMin)}).${
+      window.eventsFromMin !== undefined && window.eventsFromMin < window.startMin ? ` Events that start from ${clockLabel(window.eventsFromMin)} are included.` : ""
+    }`,
     `Who with: ${WHO_LABEL[request.who]}.`,
     `Mood: ${request.mood ? MOOD_LABEL[request.mood] : "not specified"}.`,
     ctx.weatherNote ? `Weather: ${ctx.weatherNote}` : null,
