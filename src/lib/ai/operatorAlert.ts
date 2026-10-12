@@ -51,7 +51,7 @@ export function alertMessage(kind: AiFailureKind, now: Date, siteUrl: string): {
   return { subject, text, html };
 }
 
-async function defaultRecipients(admin: SupabaseClient): Promise<string[]> {
+export async function defaultRecipients(admin: SupabaseClient): Promise<string[]> {
   const fromSetting = (process.env.OPERATOR_ALERT_EMAIL ?? "")
     .split(",")
     .map((a) => a.trim())
@@ -67,7 +67,7 @@ async function defaultRecipients(admin: SupabaseClient): Promise<string[]> {
   return addresses;
 }
 
-async function defaultSend(to: string[], message: { subject: string; text: string; html: string }): Promise<void> {
+export async function defaultSend(to: string[], message: { subject: string; text: string; html: string }): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) throw new Error("RESEND_API_KEY is not set");
   const { from } = senderSettings();

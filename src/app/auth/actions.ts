@@ -1,6 +1,8 @@
 "use server";
 
 import { cookies, headers } from "next/headers";
+import { after } from "next/server";
+import { notifyNewSignup } from "@/lib/email/signupNotice";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
@@ -41,6 +43,9 @@ export async function signup(formData: FormData) {
   if (isNewAccount(data.user)) {
     const recorded = await recordAcceptance(createAdminClient(), data.user.id);
     if (recorded.error) console.warn("could not record the terms agreement:", recorded.error);
+    // Tell whoever runs the app, once the response has gone: a note about a new sign-up must never slow or break one.
+    const registered = data.user.email ?? email;
+    after(() => notifyNewSignup(registered));
   }
 
   // So "send it again" knows where to: kept an hour, in a cookie and not the address of the page.
