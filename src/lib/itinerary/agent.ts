@@ -4,6 +4,7 @@ import { validateGeneratedItinerary, type GeneratedItinerary } from "@/lib/itine
 import { buildFallbackItinerary } from "@/lib/itinerary/fallback";
 import { summarizeAffinity } from "@/lib/memory/scoring";
 import { fetchRankedOpportunities, selectBalanced, type OpportunityCandidate } from "@/lib/opportunities/engine";
+import { meetsText } from "@/lib/someTime/meets";
 import { alignToEvents, describeWhen, fitsDates, getCurrentWeekStart, londonToday, weekDates } from "@/lib/opportunities/schedule";
 import { callClaude } from "@/lib/ai/client";
 import { AI_MODELS, QUICK_THINKING } from "@/lib/ai/models";
@@ -45,7 +46,8 @@ function buildPrompt(
     .map((a) => {
       const accessibility = a.accessibility_notes ? ` | accessibility: ${a.accessibility_notes}` : "";
       const when = describeWhen(a);
-      const whenText = when ? (a.expires_at ? ` | ${when}` : ` | WHEN: ${when} (fixed)`) : "";
+      const meets = meetsText(a.recurrence_rule);
+      const whenText = when ? (a.expires_at ? ` | ${when}` : ` | WHEN: ${when} (fixed)`) : meets ? ` | MEETS: ${meets} (only then)` : "";
       return `- id=${a.id} | ${a.title} | category=${a.category}${whenText} | tags=[${a.tags.join(", ")}] | price=${a.price_estimate ?? "unknown"} | ${a.address ?? ""}${accessibility}`;
     })
     .join("\n");
@@ -194,6 +196,6 @@ export async function generateItinerary(
     }
   }
 
-  const fallback = buildFallbackItinerary(candidateActivities, affinity);
+  const fallback = buildFallbackItinerary(candidateActivities, affinity, weekStart);
   return { itinerary: { items: alignToEvents(fallback.items, candidateActivities, weekStart) }, usedFallback: true };
 }

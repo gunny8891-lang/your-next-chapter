@@ -2,7 +2,7 @@ import { haversineDistanceKm } from "@/lib/geo/haversine";
 import { DAYS_OF_WEEK } from "@/lib/itinerary/schema";
 import { clockLabel } from "@/lib/someTime/window";
 import { friendlyDuration } from "@/lib/someTime/format";
-import { parseOpeningHours } from "@/lib/someTime/openingHours";
+import { monthlyScheduleText, parseOpeningHours } from "@/lib/someTime/openingHours";
 import { estimateTravel, type TravelMode, type TravelProfile } from "@/lib/someTime/travel";
 
 /**
@@ -92,7 +92,7 @@ export function buildItemDetails(input: DetailsInput & { title?: string }): Item
   const url = input.bookingUrl?.trim() ?? "";
   return {
     about: aboutText(input.description, input.title),
-    hours: hoursText(input.recurrenceRule, input.day),
+    hours: hoursText(input.recurrenceRule, input.day) ?? monthlyScheduleText(input.recurrenceRule),
     duration: input.durationMinutes && input.durationMinutes > 0 ? `About ${friendlyDuration(input.durationMinutes)}` : null,
     journey: journeyText(input),
     website: /^https?:\/\//i.test(url) ? url : null,

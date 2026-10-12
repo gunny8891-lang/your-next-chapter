@@ -162,10 +162,15 @@ describe("a group that meets on a pattern", () => {
     expect(scheduleOf({ recurring: true, schedule: "Mo,We 10:00-12:00" })).toEqual({ openingHours: "Mo,We 10:00-12:00", holdForReview: false });
   });
 
-  it("holds a recurring group whose pattern cannot be read (the 2nd and 4th Monday) for a person to look at", () => {
+  it("keeps a group that meets on certain weeks of the month (the 2nd and 4th Monday), which the app now reads", () => {
+    expect(scheduleOf({ recurring: true, schedule: "Mo[2,4] 10:00-12:00" })).toEqual({ openingHours: "Mo[2,4] 10:00-12:00", holdForReview: false });
+    expect(scheduleOf({ recurring: true, schedule: "Fr[-1] 14:00-16:00" })).toEqual({ openingHours: "Fr[-1] 14:00-16:00", holdForReview: false });
+  });
+
+  it("holds a recurring group whose pattern still cannot be read (every other week, term time only) for a person to look at", () => {
     expect(scheduleOf({ recurring: true, schedule: null })).toEqual({ openingHours: null, holdForReview: true });
-    expect(scheduleOf({ recurring: true, schedule: "Mo[2,4] 10:00-12:00" })).toEqual({ openingHours: null, holdForReview: true });
     expect(scheduleOf({ recurring: true, schedule: "second Monday" })).toEqual({ openingHours: null, holdForReview: true });
+    expect(scheduleOf({ recurring: true, schedule: "Mo/2 10:00-12:00" })).toEqual({ openingHours: null, holdForReview: true });
   });
 
   it("leaves a venue, or a single dated event, alone: nothing to schedule", () => {
@@ -218,8 +223,8 @@ describe("keeping a focused search from wasting its searches", () => {
   });
 });
 
-describe("a pattern the app cannot read", () => {
-  it("holds a group the model describes as the first Monday of the month, so it is not suggested on other Mondays", () => {
-    expect(scheduleOf({ recurring: true, schedule: "Mo[1] 14:00-15:30" })).toEqual({ openingHours: null, holdForReview: true });
+describe("a pattern the app can now read", () => {
+  it("keeps a group the model describes as the first Monday of the month, so it is only suggested on that Monday", () => {
+    expect(scheduleOf({ recurring: true, schedule: "Mo[1] 14:00-15:30" })).toEqual({ openingHours: "Mo[1] 14:00-15:30", holdForReview: false });
   });
 });

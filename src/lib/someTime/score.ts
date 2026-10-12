@@ -322,7 +322,7 @@ export function evaluateCandidate(c: OpportunityCandidate, input: ScoringInput):
   // --- is it open, and does it suit the time of day? ---
   let openUntil: number | null = null;
   if (!event) {
-    const status = openStatus(c.recurrence_rule, weekday, arriveMin, durationMinutes);
+    const status = openStatus(c.recurrence_rule, weekday, arriveMin, durationMinutes, window.date);
     if (status.status === "closed") return null;
     if (status.status === "open") openUntil = status.closesAt;
     if (status.status === "unknown" && isDaytimeVenue(c) && (arriveMin < ASSUMED_OPEN_MIN || arriveMin > ASSUMED_LAST_ARRIVAL_MIN)) return null;
@@ -591,7 +591,7 @@ export function findFoodStop(main: Evaluated, foodVenues: OpportunityCandidate[]
     if (homeMin > window.endMin || stay < MIN_FOOD_STOP_MINUTES) continue;
     if (!suitsMealTime(kind, arriveMin)) continue;
 
-    const status = openStatus(venue.recurrence_rule, weekday, arriveMin, stay);
+    const status = openStatus(venue.recurrence_rule, weekday, arriveMin, stay, window.date);
     if (status.status === "closed") continue;
 
     const stopPrice = pricePerPerson(venue, kind);

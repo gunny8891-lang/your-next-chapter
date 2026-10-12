@@ -1,4 +1,6 @@
 import { DAYS_OF_WEEK, SLOTS, type GeneratedItem } from "@/lib/itinerary/schema";
+import { intervalsOnDate } from "@/lib/someTime/openingHours";
+import { slotsOverlapping } from "@/lib/someTime/meets";
 
 /**
  * Date logic shared by every surface that places something in time (the weekly
@@ -16,7 +18,7 @@ import { DAYS_OF_WEEK, SLOTS, type GeneratedItem } from "@/lib/itinerary/schema"
 export type DayName = (typeof DAYS_OF_WEEK)[number];
 export type SlotName = (typeof SLOTS)[number];
 
-type Dated = { date_time: string | null; expires_at: string | null };
+type Dated = { date_time: string | null; expires_at: string | null; /** When it is on, if it keeps to set days or weeks (see openingHours.ts). */ recurrence_rule?: string | null };
 
 /** Monday of the week containing `isoDate` (YYYY-MM-DD), matching itineraries.week_start_date. */
 export function weekStartFor(isoDate: string): string {
@@ -177,12 +179,24 @@ export function alignToEvents(
     const until = activity ? availableUntilDate(activity) : null;
     const dayOk = (day: DayName) => !until || dates[day] <= until;
 
+    // Something that is only on at set times (a group that meets on Thursday afternoons, a museum shut on Mondays) is only
+    // placed when it is on: the model cannot be relied on to have noticed. A schedule that is not understood limits nothing.
+    const rule = activity?.recurrence_rule ?? null;
+    const onDays = rule ? DAYS_OF_WEEK.map((day) => ({ day, intervals: intervalsOnDate(rule, dates[day]) })) : null;
+    const scheduled = onDays !== null && onDays.every((d) => d.intervals !== null);
+    const meets = (day: DayName, slot: SlotName) => {
+      if (!scheduled) return true;
+      return slotsOverlapping(onDays!.find((d) => d.day === day)!.intervals!).includes(slot);
+    };
+
+    const distance = (day: DayName) => Math.abs(DAYS_OF_WEEK.indexOf(day) - DAYS_OF_WEEK.indexOf(item.day));
+    const dayOrder = scheduled ? [...DAYS_OF_WEEK].sort((a, b) => distance(a) - distance(b) || DAYS_OF_WEEK.indexOf(a) - DAYS_OF_WEEK.indexOf(b)) : [...DAYS_OF_WEEK];
     const preferred: { day: DayName; slot: SlotName }[] = [
       { day: item.day, slot: item.slot },
       ...SLOTS.map((slot) => ({ day: item.day, slot })),
-      ...DAYS_OF_WEEK.flatMap((day) => SLOTS.map((slot) => ({ day, slot }))),
+      ...dayOrder.flatMap((day) => SLOTS.map((slot) => ({ day, slot }))),
     ];
-    const spot = preferred.find((p) => dayOk(p.day) && !taken.has(slotKey(p.day, p.slot)));
+    const spot = preferred.find((p) => dayOk(p.day) && meets(p.day, p.slot) && !taken.has(slotKey(p.day, p.slot)));
     if (!spot) continue;
     taken.add(slotKey(spot.day, spot.slot));
     placed.push({ ...item, day: spot.day, slot: spot.slot });

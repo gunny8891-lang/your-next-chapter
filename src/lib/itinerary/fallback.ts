@@ -1,7 +1,8 @@
 import type { GeneratedItem, GeneratedItinerary } from "@/lib/itinerary/schema";
 import { DAYS_OF_WEEK } from "@/lib/itinerary/schema";
 import { scoreActivity, type AffinityScores } from "@/lib/memory/scoring";
-import { parseOpeningHours } from "@/lib/someTime/openingHours";
+import { intervalsOnDate, parseOpeningHours } from "@/lib/someTime/openingHours";
+import { weekDates } from "@/lib/opportunities/schedule";
 
 type CandidateActivity = {
   id: string;
@@ -45,11 +46,24 @@ function slotFor(startMin: number): Slot {
   return hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";
 }
 
-/** The (day, slot) pairs an item with known times can go in: each day it is on, in the part of the day it starts. */
-function slotsFromSchedule(rule: string | null | undefined): { day: Day; slot: Slot }[] | null {
+/**
+ * The (day, slot) pairs an item with known times can go in: each day it is on, in the part of the day it starts. With the
+ * week's start given, a schedule that holds only on some weeks of the month ("the 2nd and 4th Monday") is answered for this
+ * week's actual dates; without it, only a plain weekly schedule can be read.
+ */
+function slotsFromSchedule(rule: string | null | undefined, weekStart?: string): { day: Day; slot: Slot }[] | null {
+  const found: { day: Day; slot: Slot }[] = [];
+  if (weekStart) {
+    const dates = weekDates(weekStart);
+    for (const day of DAYS_OF_WEEK) {
+      const intervals = intervalsOnDate(rule, dates[day]);
+      if (intervals === null) return null;
+      if (intervals[0]) found.push({ day, slot: slotFor(Math.max(intervals[0][0], 0)) });
+    }
+    return found;
+  }
   const week = parseOpeningHours(rule);
   if (!week) return null;
-  const found: { day: Day; slot: Slot }[] = [];
   DAYS_OF_WEEK.forEach((day, index) => {
     const first = week[index][0];
     if (first) found.push({ day, slot: slotFor(Math.max(first[0], 0)) });
@@ -65,8 +79,14 @@ function slotsFromSchedule(rule: string | null | undefined): { day: Day; slot: S
  * and anything that meets on certain days placed on one of them. It uses the same scoring as the planner's own shortlist,
  * so what the member has enjoyed still counts.
  */
-export function buildFallbackItinerary(candidates: CandidateActivity[], affinity: AffinityScores): GeneratedItinerary {
-  const scored = [...candidates].sort((a, b) => scoreActivity(b, affinity) - scoreActivity(a, affinity));
+export function buildFallbackItinerary(candidates: CandidateActivity[], affinity: AffinityScores, weekStart?: string): GeneratedItinerary {
+  // Something whose times are understood and which is not on at all this week (the 2nd and 4th Monday, in a week that has
+  // neither) is not offered: there is no day to put it on.
+  const onThisWeek = (activity: CandidateActivity) => {
+    const own = weekStart ? slotsFromSchedule(activity.recurrence_rule, weekStart) : null;
+    return own === null || own.length > 0;
+  };
+  const scored = candidates.filter(onThisWeek).sort((a, b) => scoreActivity(b, affinity) - scoreActivity(a, affinity));
 
   // First the best of each kind, so the week has variety; then the next best, two of a kind at most.
   const chosen: CandidateActivity[] = [];
@@ -88,7 +108,7 @@ export function buildFallbackItinerary(candidates: CandidateActivity[], affinity
   const picked = chosen.slice(0, MAX_ITEMS);
 
   // Place the ones that are only on certain days first, since they have the fewest choices.
-  const withSchedule = picked.map((activity) => ({ activity, own: slotsFromSchedule(activity.recurrence_rule) }));
+  const withSchedule = picked.map((activity) => ({ activity, own: slotsFromSchedule(activity.recurrence_rule, weekStart) }));
   const order = [...withSchedule].sort((a, b) => (a.own?.length ?? 99) - (b.own?.length ?? 99));
 
   const taken = new Set<string>();
