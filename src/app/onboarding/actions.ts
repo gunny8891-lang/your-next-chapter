@@ -36,7 +36,11 @@ export async function saveOnboardingAction(submitted: OnboardingAnswers) {
   // page); it is not part of the answers kept about their preferences.
   const { firstName: rawFirstName, ...answers } = submitted;
   const firstName = cleanFirstName(rawFirstName);
-  if (firstName) await supabase.auth.updateUser({ data: { first_name: firstName } });
+  if (firstName) {
+    await supabase.auth.updateUser({ data: { first_name: firstName } });
+    // The screens that only read take the name from the sign-in token, so a new one is issued now.
+    await supabase.auth.refreshSession();
+  }
 
   const goalTag = answers.goal ? GOAL_TAG[answers.goal] ?? null : null;
 

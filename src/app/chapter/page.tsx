@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
+import { getSessionUser } from "@/utils/supabase/user";
 import { MyChapterView } from "@/components/MyChapterView";
 import { addGoalAction, updateGoalStatusAction, deleteGoalAction } from "@/app/chapter/actions";
 
@@ -7,9 +8,7 @@ export const metadata = { title: "My chapter" };
 
 export default async function ChapterPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSessionUser(supabase);
   if (!user) redirect("/login");
 
   const { data: goals } = await supabase

@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
+import { getSessionUser } from "@/utils/supabase/user";
 import { LEGAL_VERSION } from "@/lib/legal/details";
 import { AGREE_PATH, AGREEMENT_COOKIE_OPTIONS, LEGAL_COOKIE, agreementCookieValue, hasAgreedToCurrent, pathNeedsAgreement } from "@/lib/legal/gate";
 
@@ -31,10 +32,9 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Refreshes the session cookie if needed — required before reading user
-  // state in Server Components, which can't set cookies themselves.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // state in Server Components, which can't set cookies themselves. The token is checked here against the project's
+  // public key rather than by asking the sign-in service each time (see user.ts), which saves a network trip on every page.
+  const user = await getSessionUser(supabase);
 
   const isAuthRoute = request.nextUrl.pathname.startsWith("/login") ||
     request.nextUrl.pathname.startsWith("/signup") ||

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
+import { getSessionUser } from "@/utils/supabase/user";
 import { ExploreView } from "@/components/ExploreView";
 import {
   acceptTimeOptionAction,
@@ -15,9 +16,7 @@ export const metadata = { title: "Explore" };
 
 export default async function ExplorePage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSessionUser(supabase);
   if (!user) redirect("/login");
 
   const { data: profile } = await supabase.from("member_profiles").select("location_lat, location_lng").eq("user_id", user.id).maybeSingle();

@@ -31,6 +31,8 @@ export async function updateProfileAction(formData: FormData) {
   // The first name lives on the sign-in profile (user_metadata), not in a table, so it needs no migration.
   const firstName = cleanFirstName(formData.get("first_name"));
   await supabase.auth.updateUser({ data: { first_name: firstName } });
+  // The screens that only read take the name from the sign-in token, so a new one is issued now.
+  await supabase.auth.refreshSession();
 
   const radiusRaw = formData.get("travel_radius_km");
   const budgetRaw = String(formData.get("budget_band") ?? "");

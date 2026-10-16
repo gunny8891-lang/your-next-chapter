@@ -1,12 +1,13 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { FeaturedFallback, FeaturedForYou } from "@/app/today/FeaturedForYou";
 import { createClient } from "@/utils/supabase/server";
+import { getSessionUser } from "@/utils/supabase/user";
 import { TodayView, type TodaySlot } from "@/components/TodayView";
 import { updateItineraryItemAction } from "@/app/week/actions";
 import { getTimeOptionsAction, acceptTimeOptionAction, feedbackTimeOptionAction, saveIdeaAction } from "@/app/today/timeActions";
 import { getTodayWeather, weatherCoordinates } from "@/lib/nudges/weather";
 import { formatCost, formatTime, LOCATION_UNKNOWN } from "@/lib/itinerary/format";
-import { scheduleImageLookups } from "@/lib/someTime/imageLookups";
-import { getFeaturedOption } from "@/lib/someTime/recommend";
 import { completeExperienceAction, clearDailyStateAction, planAgainAction, saveDailyStateAction } from "@/app/today/experienceActions";
 import { loadDailyState } from "@/lib/experience/dailyStateStore";
 import { loadReflections } from "@/lib/experience/reflections";
@@ -35,17 +36,8 @@ export const metadata = { title: "Today" };
 
 export default async function TodayPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSessionUser(supabase);
   if (!user) redirect("/login");
-
-  const { data: profile } = await supabase
-    .from("member_profiles")
-    .select("location_lat, location_lng, has_dog, dog_name, dog_usually_comes")
-    .eq("user_id", user.id)
-    .maybeSingle();
-  if (!profile) redirect("/onboarding");
 
   // "Mon".."Sun" — matches itinerary_items.day_of_week exactly.
   // London's calendar, not the server's (UTC on Vercel) — otherwise the evening
@@ -53,16 +45,23 @@ export default async function TodayPage() {
   const todayName = new Date().toLocaleDateString("en-GB", { weekday: "short", timeZone: "Europe/London" });
   const dateLabel = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/London" });
 
-  const { data: itinerary } = await supabase
-    .from("itineraries")
-    .select(
-      "itinerary_items(id, day_of_week, slot, member_action, rationale_text, activities(id, title, category, address, date_time, price_estimate, booking_url))"
-    )
-    .eq("member_id", user.id)
-    // The plan for the week we are in, never the latest: on a Sunday evening the latest is next week's, whose
-    // "Sun" is not today.
-    .eq("week_start_date", londonWeekStart())
-    .maybeSingle();
+  // Everything that needs only who they are is asked for together, not one after another: each is a trip to the database.
+  const [{ data: profile }, { data: itinerary }, dailyState, reflections] = await Promise.all([
+    supabase.from("member_profiles").select("location_lat, location_lng, has_dog, dog_name, dog_usually_comes").eq("user_id", user.id).maybeSingle(),
+    supabase
+      .from("itineraries")
+      .select(
+        "itinerary_items(id, day_of_week, slot, member_action, rationale_text, activities(id, title, category, address, date_time, price_estimate, booking_url))"
+      )
+      .eq("member_id", user.id)
+      // The plan for the week we are in, never the latest: on a Sunday evening the latest is next week's, whose
+      // "Sun" is not today.
+      .eq("week_start_date", londonWeekStart())
+      .maybeSingle(),
+    loadDailyState(supabase, user.id, londonToday()),
+    loadReflections(supabase, user.id, londonToday(), londonClock(new Date()).minutes),
+  ]);
+  if (!profile) redirect("/onboarding");
 
   const todaysItems = (itinerary?.itinerary_items ?? []).filter(
     (row) => row.day_of_week === todayName && row.activities
@@ -89,20 +88,10 @@ export default async function TodayPage() {
   // that onboarding/account settings geocode location) — the pilot coordinate
   // is only a fallback for a profile with no resolved location yet.
   const { latitude, longitude } = weatherCoordinates(profile);
-  // The weather and the featured idea are independent, so fetch them together. The
-  // idea is a bonus: if anything about it fails, Today simply shows without it.
-  const [weather, featured, dailyState, reflections, nearbyPlaces] = await Promise.all([
+  const [weather, nearbyPlaces] = await Promise.all([
     getTodayWeather(latitude, longitude),
-    getFeaturedOption(supabase, user.id).catch((err) => {
-      console.warn("today: could not build the featured idea:", err instanceof Error ? err.message : err);
-      return null;
-    }),
-    loadDailyState(supabase, user.id, londonToday()),
-    loadReflections(supabase, user.id, londonToday(), londonClock(new Date()).minutes),
     countNearbyPlaces(supabase, profile.location_lat, profile.location_lng),
   ]);
-
-  if (featured) scheduleImageLookups([featured]);
 
   // A free part of the day that has already gone is not offered (see daySlots.ts); one with something planned stays.
   const slots: TodaySlot[] = visibleSlots(
@@ -114,7 +103,16 @@ export default async function TodayPage() {
     <TodayView
       greeting={greetingFor(Math.floor(londonClock(new Date()).minutes / 60))}
       firstName={cleanFirstName(user.user_metadata?.first_name)}
-      featured={featured}
+      // The idea for today is the slowest part to work out, so the rest of the page is sent first and this fills in when it is ready.
+      featuredSlot={
+        <Suspense fallback={<FeaturedFallback />}>
+          <FeaturedForYou
+            supabase={supabase}
+            userId={user.id}
+            flow={{ onFind: getTimeOptionsAction, onAccept: acceptTimeOptionAction, onFeedback: feedbackTimeOptionAction, onSave: saveIdeaAction }}
+          />
+        </Suspense>
+      }
       quote={quoteForDate(londonToday())}
       learningArea={isThinArea(nearbyPlaces)}
       dog={{ hasDog: profile.has_dog === true, usuallyComes: profile.dog_usually_comes === true, name: profile.dog_name ?? null }}

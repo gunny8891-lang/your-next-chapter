@@ -33,7 +33,7 @@ const SLOT_START: Record<string, TimeSheetInitial> = {
   evening: { start: "evening", duration: "1-2h" },
 };
 
-type FlowActions = {
+export type FlowActions = {
   onFind: React.ComponentProps<typeof TimeSheet>["onFind"];
   onAccept: React.ComponentProps<typeof TimeSheet>["onAccept"];
   onFeedback: React.ComponentProps<typeof TimeSheet>["onFeedback"];
@@ -41,7 +41,7 @@ type FlowActions = {
 };
 
 /** The best idea for the rest of the day, as the same card the "I've got some time" sheet uses. */
-function FeaturedIdea({ option, flow }: { option: TimeOption; flow: FlowActions }) {
+export function FeaturedIdea({ option, flow }: { option: TimeOption; flow: FlowActions }) {
   const [state, setState] = useState<"idle" | "planning" | "planned" | "hidden">("idle");
   const [error, setError] = useState<string | null>(null);
 
@@ -86,7 +86,7 @@ export function TodayView({
   dateLabel,
   weather,
   slots,
-  featured,
+  featuredSlot,
   dog,
   quote,
   learningArea = false,
@@ -107,7 +107,8 @@ export function TodayView({
   dateLabel: string;
   weather: TodayWeather;
   slots: TodaySlot[];
-  featured: TimeOption | null;
+  /** The idea for the rest of today. Streams in after the rest of the page (see app/today/FeaturedForYou.tsx). */
+  featuredSlot: React.ReactNode;
   /** Their dog, if they have one: the sheet only asks about the dog for someone who does. */
   dog?: DogInfo;
   /** The day's quotation, the same for everyone; shown under the date unless they have hidden it. */
@@ -252,14 +253,7 @@ export function TodayView({
         <h2 id="for-you" className={styles.label}>
           For you today
         </h2>
-        {featured ? (
-          <FeaturedIdea key={featured.id} option={featured} flow={flowActions} />
-        ) : (
-          // Late in the day, or nothing suitable nearby: say so, rather than leave the page ending in silence.
-          <p className={styles.quiet}>
-            Nothing more to suggest for today. If you&apos;d like to look again, tap &ldquo;I&apos;ve got some time&rdquo;.
-          </p>
-        )}
+        {featuredSlot}
       </section>
 
       {/* Place data is OpenStreetMap's, under a licence that asks for this credit; photographs carry their own. */}

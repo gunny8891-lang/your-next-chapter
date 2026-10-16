@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
+import { getSessionUser } from "@/utils/supabase/user";
 import { ChatView } from "@/components/ChatView";
 import { sendChatMessageAction } from "@/app/chat/actions";
 import type { ChatMessageView } from "@/lib/types";
@@ -8,9 +9,7 @@ export const metadata = { title: "Concierge" };
 
 export default async function ChatPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSessionUser(supabase);
   if (!user) redirect("/login");
 
   const { data: profile } = await supabase

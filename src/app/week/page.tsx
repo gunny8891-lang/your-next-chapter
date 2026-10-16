@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
+import { getSessionUser } from "@/utils/supabase/user";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { googleConfig } from "@/lib/calendar/google";
 import { isConnected } from "@/lib/calendar/service";
@@ -50,18 +51,8 @@ export const metadata = { title: "My week" };
 
 export default async function WeekPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSessionUser(supabase);
   if (!user) redirect("/login");
-
-  const { data: profile } = await supabase
-    .from("member_profiles")
-    .select("location_text, location_lat, location_lng, travel_radius_km, drives, uses_public_transport, mobility_notes")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  if (!profile) redirect("/onboarding");
 
   // London's calendar, not the server's: the week opens on today's day.
   const today = new Date().toLocaleDateString("en-GB", { weekday: "short", timeZone: "Europe/London" });
@@ -70,40 +61,47 @@ export default async function WeekPage() {
   // and the button to make one, rather than last week's plan with this week's days on it.
   const now = new Date();
   const thisWeek = londonWeekStart(now);
-  const { data: plans } = await supabase
-    .from("itineraries")
-    .select(
-      "id, week_start_date, itinerary_items(id, day_of_week, slot, member_action, rationale_text, activities(id, title, category, address, date_time, price_estimate, booking_url, tags, description, recurrence_rule, duration_minutes, location_lat, location_lng, accessibility_notes, image_url, image_alt, image_credit, image_license, image_source_url))"
-    )
-    .eq("member_id", user.id)
-    .in("week_start_date", [thisWeek, addDays(thisWeek, 7)]);
+  // "Why this changed": real behavioral signal (last 4 weeks of accepted items),
+  // never a fabricated reason — see computeBehavioralRationale.
+  const fourWeeksAgo = getRecentWindowStartIso(28);
+  // Four independent reads, asked for together: each one is a trip to the database.
+  const [{ data: profile }, { data: plans }, { data: recentLikedSignals }, { data: surpriseCard }] = await Promise.all([
+    supabase
+      .from("member_profiles")
+      .select("location_text, location_lat, location_lng, travel_radius_km, drives, uses_public_transport, mobility_notes")
+      .eq("user_id", user.id)
+      .maybeSingle(),
+    supabase
+      .from("itineraries")
+      .select(
+        "id, week_start_date, itinerary_items(id, day_of_week, slot, member_action, rationale_text, activities(id, title, category, address, date_time, price_estimate, booking_url, tags, description, recurrence_rule, duration_minutes, location_lat, location_lng, accessibility_notes, image_url, image_alt, image_credit, image_license, image_source_url))"
+      )
+      .eq("member_id", user.id)
+      .in("week_start_date", [thisWeek, addDays(thisWeek, 7)]),
+    supabase
+      .from("preference_signals")
+      .select("activity_id, signal_type, created_at, activities(id, tags)")
+      .eq("member_id", user.id)
+      .eq("signal_type", "liked")
+      .gte("created_at", fourWeeksAgo),
+    supabase
+      .from("surprise_me_cards")
+      .select("id, member_response, activities(id, title, category, address, date_time, price_estimate, booking_url, description)")
+      .eq("member_id", user.id)
+      .order("week_start_date", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+  if (!profile) redirect("/onboarding");
   const shownWeek = weekToShow((plans ?? []).map((p) => p.week_start_date as string), now);
   const itinerary = (plans ?? []).find((p) => p.week_start_date === shownWeek) ?? null;
   const showingNextWeek = shownWeek !== thisWeek;
 
   // "Why this changed": real behavioral signal (last 4 weeks of accepted items),
   // never a fabricated reason — see computeBehavioralRationale.
-  const fourWeeksAgo = getRecentWindowStartIso(28);
-  const { data: recentLikedSignals } = await supabase
-    .from("preference_signals")
-    .select("activity_id, signal_type, created_at, activities(id, tags)")
-    .eq("member_id", user.id)
-    .eq("signal_type", "liked")
-    .gte("created_at", fourWeeksAgo);
-
   const recentLikedActivities = (recentLikedSignals ?? [])
     .map((s) => s.activities as unknown as { id: string; tags: string[] } | null)
     .filter((a): a is { id: string; tags: string[] } => a !== null);
-
-  const { data: surpriseCard } = await supabase
-    .from("surprise_me_cards")
-    .select(
-      "id, member_response, activities(id, title, category, address, date_time, price_estimate, booking_url, description)"
-    )
-    .eq("member_id", user.id)
-    .order("week_start_date", { ascending: false })
-    .limit(1)
-    .maybeSingle();
 
   const realItems: ItineraryItemView[] =
     itinerary?.itinerary_items

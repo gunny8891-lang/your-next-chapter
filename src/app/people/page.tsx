@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
+import { getSessionUser } from "@/utils/supabase/user";
 import { PeopleView } from "@/components/PeopleView";
 import { addPersonAction, markSeenTodayAction, toggleWantsToSeeMoreAction, deletePersonAction } from "@/app/people/actions";
 
@@ -7,9 +8,7 @@ export const metadata = { title: "People" };
 
 export default async function PeoplePage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSessionUser(supabase);
   if (!user) redirect("/login");
 
   const { data: people } = await supabase
