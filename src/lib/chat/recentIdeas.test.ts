@@ -30,9 +30,9 @@ describe("how they are listed", () => {
       { id: "2", title: "Arts Depot", category: "Learn", address: null, price_estimate: 0 },
       { id: "3", title: "Southgate Leisure Centre", category: "Move", address: "Southgate", price_estimate: 6 },
     ]);
-    expect(text).toContain("- Chickenshed | Joy | Cockfosters");
-    expect(text).toContain("- Arts Depot | Learn | Free | location TBC");
-    expect(text).toContain("- Southgate Leisure Centre | Move | £6 | Southgate");
+    expect(text).toContain("- id=1 | Chickenshed | Joy | Cockfosters");
+    expect(text).toContain("- id=2 | Arts Depot | Learn | Free | location TBC");
+    expect(text).toContain("- id=3 | Southgate Leisure Centre | Move | £6 | Southgate");
     expect(recentIdeasText([])).toBe("They have not been shown or saved anything recently.");
   });
 });

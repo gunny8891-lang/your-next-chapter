@@ -1,6 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { computeLearnedAffinity, EVENT_WEIGHT, weightOfEvent, weightOfSignal, type LearningEvent, type LearningSignal } from "@/lib/memory/learning";
 import { computeAffinity, scoreActivity, PROTECTED_FLOOR, type PreferenceSignalRow } from "@/lib/memory/scoring";
+
+// These cases are written around a fixed day. Anything that reads the clock (older scoring, with its decay) reads that day too.
+vi.useFakeTimers({ toFake: ["Date"] });
+vi.setSystemTime(new Date("2026-10-05T12:00:00Z"));
+afterAll(() => vi.useRealTimers());
 
 const NOW = new Date("2026-10-05T12:00:00Z");
 const daysAgo = (d: number, extraMs = 0) => new Date(NOW.getTime() - d * 86_400_000 + extraMs).toISOString();

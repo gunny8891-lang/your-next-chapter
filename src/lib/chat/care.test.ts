@@ -77,7 +77,7 @@ describe("the urgent reply", () => {
     const action = read("src/app/chat/actions.ts");
     const urgentBranch = action.slice(action.indexOf('care.level === "urgent"'), action.indexOf("} else {"));
     expect(urgentBranch).toContain("reply = urgentReply();");
-    expect(urgentBranch).not.toContain("answerChatQuestion");
+    expect(urgentBranch).not.toContain("conciergeReply");
   });
 });
 
@@ -133,7 +133,7 @@ describe("how the model is told to answer", () => {
   it("reaches the model's instructions, and the member's care assessment is passed in", () => {
     const agent = read("src/lib/chat/agent.ts");
     expect(agent).toContain("${careGuidance(care)}");
-    expect(read("src/app/chat/actions.ts")).toContain("answerChatQuestion(supabase, user.id, trimmed, history, care)");
+    expect(read("src/app/chat/actions.ts")).toContain("conciergeReply(supabase, user.id, trimmed, history, care)");
   });
 });
 
@@ -141,7 +141,7 @@ describe("how it is wired into the chat", () => {
   const action = read("src/app/chat/actions.ts");
 
   it("adds the note to a good answer and to an apology alike, so the numbers survive an outage", () => {
-    expect(action).toContain("(await answerChatQuestion(supabase, user.id, trimmed, history, care)) + note");
+    expect(action).toContain("reply = answered.reply + note;");
     expect(action).toContain("chatMessage(classifyAiFailure(err)) + note");
   });
 

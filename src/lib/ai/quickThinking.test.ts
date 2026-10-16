@@ -19,7 +19,7 @@ describe("keeping the wait short where a person is waiting", () => {
   it("leaves room in the reply for any thinking, which is counted against its length", () => {
     // At the old limits a long think could use the whole allowance: a plan cut off mid-JSON, a chat reply cut short.
     expect(read("src/lib/itinerary/agent.ts")).toMatch(/max_tokens: 4096/);
-    expect(read("src/lib/chat/agent.ts")).toMatch(/max_tokens: 700/);
+    expect(read("src/lib/chat/agent.ts")).toMatch(/max_tokens: 900/);
   });
 
   it("is not needed where the model is a small one or the choice is simple", () => {

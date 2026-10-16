@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import type { OpportunityCandidate } from "@/lib/opportunities/engine";
 import { computeAffinity, type AffinityScores, type PreferenceSignalRow } from "@/lib/memory/scoring";
 import { computeLearnedAffinity, type LearningEvent } from "@/lib/memory/learning";
@@ -10,6 +10,11 @@ import { buildRecommendations, type RecommendInputs } from "@/lib/someTime/recom
 import { EMPTY_HISTORY, evaluateCandidate, type ScoringInput } from "@/lib/someTime/score";
 import type { TimeRequest } from "@/lib/someTime/request";
 import type { TimeWindow } from "@/lib/someTime/window";
+
+// These cases are written around a fixed day. Anything that reads the clock (older scoring, with its decay) reads that day too.
+vi.useFakeTimers({ toFake: ["Date"] });
+vi.setSystemTime(new Date("2026-10-02T12:00:00Z"));
+afterAll(() => vi.useRealTimers());
 
 /**
  * Personalisation scenarios: does the app behave like something that knows this

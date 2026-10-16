@@ -38,7 +38,11 @@ export type ChatMessageView = {
   id: string;
   role: "user" | "assistant";
   content: string;
+  /** What the concierge actually did in this reply, so the screen can show it plainly (only on replies just given). */
+  done?: ChatDone[];
 };
+
+export type ChatDone = { kind: "plan"; text: string } | { kind: "google"; text: string };
 
 export type SurpriseView = {
   id: string;

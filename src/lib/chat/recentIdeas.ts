@@ -33,7 +33,7 @@ export function recentIdeasText(ideas: RecentIdea[]): string {
   return ideas
     .map((a) => {
       const price = a.price_estimate === null ? "" : a.price_estimate === 0 ? " | Free" : ` | £${a.price_estimate}`;
-      return `- ${a.title} | ${a.category}${price} | ${a.address ?? "location TBC"}`;
+      return `- id=${a.id} | ${a.title} | ${a.category}${price} | ${a.address ?? "location TBC"}`;
     })
     .join("\n");
 }

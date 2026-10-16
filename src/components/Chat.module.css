@@ -69,6 +69,27 @@
   color: var(--color-ink);
 }
 
+/* What the concierge really did, set under its reply so it is plain that it is done. */
+.done {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-line);
+  color: var(--color-ink);
+  font-weight: 600;
+}
+
+.doneLink {
+  margin-left: auto;
+  color: var(--color-primary, var(--color-ink));
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-weight: 600;
+}
+
 .waiting {
   margin-top: var(--space-4);
   color: var(--color-ink-soft);
