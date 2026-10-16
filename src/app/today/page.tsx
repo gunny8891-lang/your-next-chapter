@@ -17,6 +17,7 @@ import { cleanFirstName, greetingFor } from "@/lib/someTime/format";
 import { londonClock } from "@/lib/someTime/window";
 import type { CategoryName } from "@/lib/categories";
 import type { ItineraryItemView } from "@/lib/types";
+import { imageForRow } from "@/lib/imagery/forRow";
 import { quoteForDate } from "@/lib/quotes/daily";
 import { countNearbyPlaces, isThinArea } from "@/lib/coverage/nearbyPlaces";
 
@@ -28,6 +29,12 @@ type ActivityRow = {
   date_time: string | null;
   price_estimate: number | null;
   booking_url: string | null;
+  tags: string[] | null;
+  image_url: string | null;
+  image_alt: string | null;
+  image_credit: string | null;
+  image_license: string | null;
+  image_source_url: string | null;
 };
 
 const SLOT_ORDER = ["morning", "afternoon", "evening"] as const;
@@ -51,7 +58,7 @@ export default async function TodayPage() {
     supabase
       .from("itineraries")
       .select(
-        "itinerary_items(id, day_of_week, slot, member_action, rationale_text, activities(id, title, category, address, date_time, price_estimate, booking_url))"
+        "itinerary_items(id, day_of_week, slot, member_action, rationale_text, activities(id, title, category, address, date_time, price_estimate, booking_url, tags, image_url, image_alt, image_credit, image_license, image_source_url))"
       )
       .eq("member_id", user.id)
       // The plan for the week we are in, never the latest: on a Sunday evening the latest is next week's, whose
@@ -81,6 +88,7 @@ export default async function TodayPage() {
       why: row.rationale_text ?? "",
       status: row.member_action as ItineraryItemView["status"],
       bookingUrl: activity.booking_url,
+      image: imageForRow(activity),
     };
   }
 

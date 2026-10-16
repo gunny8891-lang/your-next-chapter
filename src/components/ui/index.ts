@@ -6,6 +6,7 @@ export { EmptyState } from "@/components/ui/EmptyState";
 export { ErrorNote } from "@/components/ui/ErrorNote";
 export { WeatherLine } from "@/components/ui/WeatherLine";
 export { Cover, type CoverImage } from "@/components/ui/Cover";
+export { Thumb, needsNoCredit } from "@/components/ui/Thumb";
 export { Sheet } from "@/components/ui/Sheet";
 export { Timeline } from "@/components/ui/Timeline";
 export { Field } from "@/components/ui/Field";

@@ -66,6 +66,15 @@
   border-bottom: 1px solid var(--color-line);
 }
 
+/* The time, and under it the picture of the place, in the column the time already had. */
+.whenCol {
+  --thumb-size: 56px;
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: var(--space-2);
+}
+
 .time {
   padding-top: 2px;
   font-size: var(--text-small);

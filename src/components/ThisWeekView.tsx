@@ -7,7 +7,7 @@ import { isUnknownDetail } from "@/lib/itinerary/format";
 import { CATEGORY_COLOR } from "@/lib/theme";
 import { placeLabel } from "@/lib/someTime/format";
 import Link from "next/link";
-import { Button, Card, EmptyState, Notice, Page, PageHeader } from "@/components/ui";
+import { Button, Card, EmptyState, Notice, Page, PageHeader, Thumb } from "@/components/ui";
 import { ItemSheet, type CalendarOffer } from "@/components/ItemSheet";
 import { SwapSheet } from "@/components/SwapSheet";
 import { SkippedPrompt } from "@/components/SkippedPrompt";
@@ -275,7 +275,10 @@ export function ThisWeekView({
                     className={`${styles.item} ${status === "skipped" ? styles.skipped : ""}`}
                     onClick={() => setOpenItemId(item.id)}
                   >
-                    <span className={styles.time}>{item.time}</span>
+                    <span className={styles.whenCol}>
+                      <span className={styles.time}>{item.time}</span>
+                      <Thumb category={item.category} image={item.image} creditNearby />
+                    </span>
                     <span className={styles.itemBody}>
                       <span className={styles.itemTitle}>{item.title}</span>
                       <span className={styles.itemMeta}>

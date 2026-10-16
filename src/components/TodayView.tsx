@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Check, ChevronRight, Hourglass } from "lucide-react";
 import { CATEGORY_COLOR } from "@/lib/theme";
-import { Button, Sheet, WeatherLine } from "@/components/ui";
+import { Button, Sheet, Thumb, WeatherLine } from "@/components/ui";
 import { ExperienceCard, type FeedbackReason } from "@/components/ExperienceCard";
 import { DailyStateStrip } from "@/components/DailyStateStrip";
 import { Reflections } from "@/components/Reflections";
@@ -199,7 +199,10 @@ export function TodayView({
             const place = placeLabel(item.location);
             return (
               <li key={item.id} className={`${styles.row} ${status === "skipped" ? styles.skipped : ""}`}>
-                <span className={styles.time}>{item.time}</span>
+                <span className={styles.whenCol}>
+                  <span className={styles.time}>{item.time}</span>
+                  <Thumb category={item.category} image={item.image} />
+                </span>
                 <div>
                   <h3 className={styles.itemTitle}>{item.title}</h3>
                   <p className={styles.itemMeta}>

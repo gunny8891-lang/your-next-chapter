@@ -30,10 +30,14 @@ describe("the picture for a place", () => {
     expect(stand).toMatchObject({ src: "/images/fallback/pool.jpg", generic: true, alt: "", credit: "" });
   });
 
-  it("is nothing for a pub or a hall with no photograph, rather than a picture of something else", () => {
+  it("is nothing for a pub, a bowling alley or a row with no tags, rather than a picture of something else", () => {
     expect(imageForRow({ tags: ["food-venue", "pub"], image_url: null })).toBeNull();
-    expect(imageForRow({ tags: ["community", "community-centre"] })).toBeNull();
+    expect(imageForRow({ tags: ["bowling", "social"] })).toBeNull();
     expect(imageForRow({ tags: null })).toBeNull();
+  });
+
+  it("is a calm picture of people together for a community hall with no photograph", () => {
+    expect(imageForRow({ tags: ["community", "community-centre"] })?.src).toBe("/images/fallback/social.jpg");
   });
 
   it("prefers the real photograph to a stand-in", () => {
