@@ -20,7 +20,8 @@ import type { ItineraryItemView, SurpriseView } from "@/lib/types";
 import { distanceHint } from "@/lib/account/distanceHint";
 import { countNearbyPlaces, isThinArea } from "@/lib/coverage/nearbyPlaces";
 import { imageForRow } from "@/lib/imagery/forRow";
-import { directionsUrl, travelModeToward } from "@/lib/act/directions";
+import { directionsUrl, foodNearbyUrl, travelModeToward } from "@/lib/act/directions";
+import { offersFoodSearch } from "@/lib/someTime/recommend";
 import { itemCalendarUrl } from "@/lib/act/links";
 import { longDate, shareMessage } from "@/lib/act/share";
 import { dateOfDay } from "@/lib/calendar/event";
@@ -131,6 +132,9 @@ export default async function WeekPage() {
                 mobility_notes: profile.mobility_notes,
               })
             ),
+            food: offersFoodSearch({ tags: activity.tags ?? [], duration_minutes: activity.duration_minutes ?? null }, false)
+              ? foodNearbyUrl({ lat: activity.location_lat, lng: activity.location_lng })
+              : null,
             calendar: row.member_action === "accepted" ? itemCalendarUrl(row.id) : null,
             share: shareMessage({
               title: activity.title,

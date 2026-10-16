@@ -120,6 +120,12 @@ function toFoodStopOption(stop: FoodStop): FoodStopOption {
   };
 }
 
+/** Whether to offer a search for food nearby: a day trip or a long outing that is not itself food and has no stop of ours to eat at. Pure. */
+export function offersFoodSearch(c: { tags: string[]; duration_minutes: number | null }, hasFoodStop: boolean): boolean {
+  if (hasFoodStop || isFoodVenue(c)) return false;
+  return c.tags.includes("day-trip") || (c.duration_minutes ?? 0) >= 120;
+}
+
 function toTimeOption(ctx: { date: string; dayWord: string }, entry: ShortlistEntry, why: string, includeFood: boolean, modelTitle: string | null = null): TimeOption {
   const { evaluated: e, foodStop } = entry;
   const c = e.candidate;
@@ -173,6 +179,7 @@ function toTimeOption(ctx: { date: string; dayWord: string }, entry: ShortlistEn
       end: clockLabel(stop ? stop.endMin : e.endMin),
       foodId: stop ? stop.candidate.id : null,
       moreUrl: worthSharing(c.booking_url),
+      foodNearby: offersFoodSearch(c, stop !== null),
     }),
     checkWhatsOn,
     contextNotes: e.unverified ?? [],

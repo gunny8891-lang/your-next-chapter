@@ -27,6 +27,16 @@ export function directionsUrl(place: { lat?: number | null; lng?: number | null 
   return `https://www.google.com/maps/dir/?${params.toString()}`;
 }
 
+/**
+ * "Find food nearby": the phone's maps searching for places to eat around a spot. For an outing whose surroundings are not in
+ * our catalogue (a day out in a city we have not listed the cafés of), so there is always a way to find lunch. Pure.
+ */
+export function foodNearbyUrl(place: { lat?: number | null; lng?: number | null }): string | null {
+  if (directionsUrl(place) === null) return null;
+  const params = new URLSearchParams({ api: "1", query: `restaurants and cafes near ${Number(place.lat).toFixed(5)},${Number(place.lng).toFixed(5)}` });
+  return `https://www.google.com/maps/search/?${params.toString()}`;
+}
+
 /** The way this member would get there (from their own travel answers and how far it is), or null when home is not known. */
 export function travelModeToward(
   home: { lat?: number | null; lng?: number | null } | null | undefined,

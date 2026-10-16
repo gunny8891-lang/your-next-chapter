@@ -4,13 +4,15 @@
  * catalogue holds, so the browser is only ever given finished links. Pure.
  */
 
-import { directionsUrl } from "@/lib/act/directions";
+import { directionsUrl, foodNearbyUrl } from "@/lib/act/directions";
 import { shareMessage, longDate } from "@/lib/act/share";
 import type { TravelMode } from "@/lib/someTime/travel";
 
 export type ActLinks = {
   /** Opens the phone's maps at the place, or null when we do not know where it is. */
   directions: string | null;
+  /** Opens the phone's maps looking for somewhere to eat around the place, for a long outing with no food stop of ours; absent or null otherwise. */
+  food?: string | null;
   /** A calendar file for the outing, or null when it cannot be placed on a day. */
   calendar: string | null;
   /** For the phone's share menu. */
@@ -46,9 +48,12 @@ export function ideaActLinks(args: {
   end: string;
   foodId: string | null;
   moreUrl: string | null;
+  /** Offer a search for food nearby: a long outing, or a day trip, that has no stop of ours to eat at. */
+  foodNearby?: boolean;
 }): ActLinks {
   return {
     directions: directionsUrl({ lat: args.lat, lng: args.lng }, args.mode),
+    food: args.foodNearby ? foodNearbyUrl({ lat: args.lat, lng: args.lng }) : null,
     calendar: ideaCalendarUrl({ activityId: args.activityId, date: args.date, start: args.start, end: args.end, foodId: args.foodId }),
     share: shareMessage({ title: args.experienceTitle, when: longDate(args.date), at: args.start, place: args.placeTitle, address: args.address, moreUrl: args.moreUrl }),
   };

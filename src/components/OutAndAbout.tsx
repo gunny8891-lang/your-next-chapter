@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarPlus, Navigation, Share2 } from "lucide-react";
+import { CalendarPlus, Navigation, Share2, Utensils } from "lucide-react";
 import type { ActLinks } from "@/lib/act/links";
 import styles from "@/components/OutAndAbout.module.css";
 
@@ -38,6 +38,11 @@ export function OutAndAbout({ act }: { act: ActLinks }) {
         {act.directions && (
           <a className={styles.action} href={act.directions} target="_blank" rel="noopener noreferrer">
             <Navigation size={18} strokeWidth={1.75} aria-hidden="true" /> How to get there
+          </a>
+        )}
+        {act.food && (
+          <a className={styles.action} href={act.food} target="_blank" rel="noopener noreferrer">
+            <Utensils size={18} strokeWidth={1.75} aria-hidden="true" /> Find food nearby
           </a>
         )}
         {act.calendar && (

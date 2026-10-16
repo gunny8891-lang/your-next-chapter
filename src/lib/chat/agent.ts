@@ -9,6 +9,7 @@ import { careGuidance, type CareAssessment } from "@/lib/chat/care";
 import { PLAIN_WORDS_RULE } from "@/lib/ai/plainWords";
 import { loadMemberLife, memberLifeText } from "@/lib/chat/memberContext";
 import { dayTripsText, wantsDayTrips } from "@/lib/chat/dayTrips";
+import { foodText, wantsFood } from "@/lib/chat/food";
 import { loadRecentIdeas, recentIdeasText, type RecentIdea } from "@/lib/chat/recentIdeas";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { addDays, londonToday } from "@/lib/opportunities/schedule";
@@ -27,6 +28,7 @@ type ProfileForPrompt = {
   goals: string[];
   budget_band: string | null;
   mobility_notes: string | null;
+  dietary_preferences?: string | null;
 };
 
 type ThisWeekItemRow = {
@@ -58,7 +60,11 @@ export function buildSystemPrompt(
   /** Their wishes, the kinds of people in their life, and how the week has gone (see memberContext.ts). */
   lifeText: string = "",
   /** Well-known places further afield, only when they asked for a day out (see dayTrips.ts). Empty otherwise. */
-  dayTripsList: string = ""
+  dayTripsList: string = "",
+  /** Cafés, pubs, restaurants and tea rooms near home, only when they asked about eating or drinking (see food.ts). Empty otherwise. */
+  foodList: string = "",
+  /** The time now in London, "14:05", so "lunch" can be matched to what is open. */
+  timeNow: string = ""
 ) {
   const weekItemsText = weekItems.length
     ? weekItems
@@ -82,7 +88,7 @@ export function buildSystemPrompt(
 A member is asking you a live question — answer it directly and concisely (2-4 short sentences, warm and clear, \
 no wall of text, no markdown headers or bullet spam). Speak in second person.
 
-Today is ${todayLabel}.
+Today is ${todayLabel}${timeNow ? `, and it is ${timeNow} in London` : ""}.
 
 Member profile:
 - Location: ${profile.location_text ?? "unknown"}
@@ -91,6 +97,7 @@ Member profile:
 - Goals: ${profile.goals.join(", ") || "none recorded"}
 - Budget band: ${profile.budget_band ?? "unknown"}
 - Mobility notes: ${profile.mobility_notes ?? "none recorded"}
+- Food and dietary needs: ${profile.dietary_preferences?.trim() || "none recorded"}
 
 Member history summary: ${affinitySummary}
 
@@ -100,8 +107,12 @@ ${weekItemsText}
 OTHER CANDIDATE ACTIVITIES NEARBY (not yet scheduled — use this for "find me something" questions):
 ${candidatesText || "No other active candidate activities available right now."}
 
-${dayTripsList ? `DAY TRIPS (well-known places further afield, listed because they asked for a day out; say roughly how far and how long it takes, as an estimate, and that it is worth checking opening times and booking before they go):
+${dayTripsList ? `DAY TRIPS (well-known places further afield, listed because they asked for a day out; say roughly how far and how long it takes, as an estimate, and that it is worth checking opening times and booking before they go. We do not list cafés or restaurants near these, so for lunch there say they can look on a map once they arrive):
 ${dayTripsList}
+
+` : ""}${foodList ? `FOOD AND DRINK NEAR HOME (listed because they asked about eating or drinking; the opening hours are as the map records them and may be out of date, so say to check before going):
+${foodList}
+For these: suggest two or three at most, from this list only, saying what sort of place each is and roughly how far. Never invent a menu, a price, a dish or a booking. Only say a place has vegetarian or vegan options if its line says so; for any dietary need that is not on its line, say we do not know and suggest they ring ahead. If hours are given, say whether it looks open at the time they mean.
 
 ` : ""}IDEAS THEY HAVE RECENTLY SEEN OR SAVED ON TODAY AND EXPLORE (real places the app itself suggested; they may ask about these, so you may talk about them, but you only know what is on each line):
 ${recentIdeasText(recentIdeas)}
@@ -167,7 +178,7 @@ export async function conciergeReply(
 
   const { data: profile } = await supabase
     .from("member_profiles")
-    .select("location_text, travel_radius_km, interests, goals, budget_band, mobility_notes")
+    .select("location_text, travel_radius_km, interests, goals, budget_band, mobility_notes, dietary_preferences")
     .eq("user_id", memberId)
     .single();
 
@@ -206,7 +217,9 @@ export async function conciergeReply(
     await loadRecentIdeas(supabase, memberId, scheduledActivityIds),
     nextDays(),
     memberLifeText(await loadMemberLife(supabase, memberId, londonToday(), weekItems.filter((i) => i.member_action === "accepted").length)),
-    wantsDayTrips(question) ? await dayTripsText(supabase, memberId, scheduledActivityIds) : ""
+    wantsDayTrips(question) ? await dayTripsText(supabase, memberId, scheduledActivityIds) : "",
+    wantsFood(question) ? await foodText(supabase, memberId) : "",
+    new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date())
   );
 
   const client = new Anthropic({ apiKey });
