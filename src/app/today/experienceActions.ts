@@ -5,6 +5,8 @@ import { createClient } from "@/utils/supabase/server";
 import { londonToday } from "@/lib/opportunities/schedule";
 import { parseDailyState } from "@/lib/experience/dailyState";
 import { clearDailyState, loadDailyState, saveDailyState } from "@/lib/experience/dailyStateStore";
+import { createAdminClient } from "@/utils/supabase/admin";
+import { planAgain, type PlanAgainResult } from "@/lib/experience/planAgain";
 import { buildContext, recordExperience, signalForOutcome, validateEvent, type Outcome } from "@/lib/experience/events";
 
 const MAX_EVENTS_PER_CALL = 20;
@@ -65,6 +67,22 @@ export async function completeExperienceAction(activityId: string, outcome: Outc
   }
   revalidatePath("/today");
   return { error: null };
+}
+
+/** "Plan it again next week": the same part of the same day a week later, if it can be repeated (see planAgain.ts). */
+export async function planAgainAction(activityId: string, date: string, slot: string): Promise<PlanAgainResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Please sign in again." };
+
+  const result = await planAgain({ member: supabase, admin: createAdminClient(), memberId: user.id, now: new Date() }, { activityId, date, slot });
+  if (!result.error) {
+    revalidatePath("/week");
+    revalidatePath("/today");
+  }
+  return result;
 }
 
 /** Today's Daily State: a few fixed choices, replaced if they change their mind. */

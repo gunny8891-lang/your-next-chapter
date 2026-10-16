@@ -100,6 +100,7 @@ export function TodayView({
   onSaveDailyState,
   onClearDailyState,
   onAnswerReflection,
+  onPlanAgain,
 }: {
   greeting: string;
   firstName: string;
@@ -123,6 +124,7 @@ export function TodayView({
   onSaveDailyState: (state: DailyState) => Promise<{ error: string | null }>;
   onClearDailyState: () => Promise<{ error: string | null }>;
   onAnswerReflection: React.ComponentProps<typeof Reflections>["onAnswer"];
+  onPlanAgain: React.ComponentProps<typeof Reflections>["onPlanAgain"];
 }) {
   // How they said they are today, followed as it changes so the sheet can offer it.
   const [dailyState, setDailyState] = useState<DailyState | null>(initialDailyState);
@@ -165,7 +167,7 @@ export function TodayView({
 
       <DailyStateStrip initial={initialDailyState} onSave={onSaveDailyState} onClear={onClearDailyState} onChange={setDailyState} />
 
-      <Reflections items={reflections} onAnswer={onAnswerReflection} />
+      <Reflections items={reflections} onAnswer={onAnswerReflection} onPlanAgain={onPlanAgain} />
 
       <section className={styles.section} aria-labelledby="your-day">
         <h2 id="your-day" className={styles.label}>

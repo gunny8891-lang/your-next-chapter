@@ -87,7 +87,7 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 /** How far ahead something can be added: the plans people make. */
 export const MAX_DAYS_AHEAD = 28;
 const PARTS: SlotName[] = ["morning", "afternoon", "evening"];
-const FULL_DAY: Record<string, string> = { Mon: "Monday", Tue: "Tuesday", Wed: "Wednesday", Thu: "Thursday", Fri: "Friday", Sat: "Saturday", Sun: "Sunday" };
+export const FULL_DAY: Record<string, string> = { Mon: "Monday", Tue: "Tuesday", Wed: "Wednesday", Thu: "Thursday", Fri: "Friday", Sat: "Saturday", Sun: "Sunday" };
 
 type ActivityRow = {
   id: string;
@@ -107,7 +107,7 @@ const fail = (error: string, extra: Record<string, unknown> = {}): ToolOutcome =
 const readable = (date: string) => `${FULL_DAY[weekdayOf(date)]} ${new Date(`${date}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "UTC" })}`;
 const clock = (min: number) => `${String(Math.floor((min % 1440) / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
 
-async function readActivity(member: SupabaseClient, id: string): Promise<ActivityRow | null> {
+export async function readActivity(member: SupabaseClient, id: string): Promise<ActivityRow | null> {
   const { data } = await member
     .from("activities")
     .select("id, title, category, address, date_time, expires_at, recurrence_rule, duration_minutes, price_estimate, booking_url, description")
@@ -266,13 +266,18 @@ async function addToPlan(input: Record<string, unknown>, ctx: ToolContext): Prom
   };
 }
 
-function defaultRecordPlanned(ctx: ToolContext) {
+/** Notes that they planned it, so the app learns from it. No surface: it did not come from a card. */
+export function recordPlannedBy(member: SupabaseClient, memberId: string, now: Date) {
   return async (activityId: string) => {
     const planned = validateEvent({ type: "planned", activityId });
     if (!planned) return;
-    const state = await loadDailyState(ctx.member, ctx.memberId, londonToday(ctx.now));
-    await recordExperience(ctx.member, ctx.memberId, [{ ...planned, context: buildContext(state, {}) }]);
+    const state = await loadDailyState(member, memberId, londonToday(now));
+    await recordExperience(member, memberId, [{ ...planned, context: buildContext(state, {}) }]);
   };
+}
+
+function defaultRecordPlanned(ctx: ToolContext) {
+  return recordPlannedBy(ctx.member, ctx.memberId, ctx.now);
 }
 
 async function addToGoogle(input: Record<string, unknown>, ctx: ToolContext): Promise<ToolOutcome> {

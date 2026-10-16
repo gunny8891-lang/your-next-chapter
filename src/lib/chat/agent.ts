@@ -7,6 +7,7 @@ import { callClaude } from "@/lib/ai/client";
 import { AI_MODELS, QUICK_THINKING } from "@/lib/ai/models";
 import { careGuidance, type CareAssessment } from "@/lib/chat/care";
 import { PLAIN_WORDS_RULE } from "@/lib/ai/plainWords";
+import { loadMemberLife, memberLifeText } from "@/lib/chat/memberContext";
 import { loadRecentIdeas, recentIdeasText, type RecentIdea } from "@/lib/chat/recentIdeas";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { addDays, londonToday } from "@/lib/opportunities/schedule";
@@ -52,7 +53,9 @@ export function buildSystemPrompt(
   care: CareAssessment = { level: "none", topics: [] },
   recentIdeas: RecentIdea[] = [],
   /** The next days with their dates, so "Saturday" can be turned into the right date. */
-  calendarDays: string = ""
+  calendarDays: string = "",
+  /** Their wishes, the kinds of people in their life, and how the week has gone (see memberContext.ts). */
+  lifeText: string = ""
 ) {
   const weekItemsText = weekItems.length
     ? weekItems
@@ -96,6 +99,9 @@ ${candidatesText || "No other active candidate activities available right now."}
 
 IDEAS THEY HAVE RECENTLY SEEN OR SAVED ON TODAY AND EXPLORE (real places the app itself suggested; they may ask about these, so you may talk about them, but you only know what is on each line):
 ${recentIdeasText(recentIdeas)}
+
+WHAT THEY HAVE TOLD US ABOUT THEIR LIFE (use it when they ask for help becoming more active, for something to do with family or friends, or what to do with their time; do not recite it, and never guess names):
+${lifeText || "Nothing yet."}
 
 WHAT YOU CAN DO FOR THEM: put things in their Lark Hour plan (their My Week calendar) and, if they have connected it, on their Google Calendar. Tools: get_event_details, add_to_my_plan, add_to_google_calendar. The next days, with dates:
 ${calendarDays}
@@ -192,7 +198,8 @@ export async function conciergeReply(
     summarizeAffinity(affinity),
     care,
     await loadRecentIdeas(supabase, memberId, scheduledActivityIds),
-    nextDays()
+    nextDays(),
+    memberLifeText(await loadMemberLife(supabase, memberId, londonToday(), weekItems.filter((i) => i.member_action === "accepted").length))
   );
 
   const client = new Anthropic({ apiKey });

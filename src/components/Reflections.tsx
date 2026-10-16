@@ -24,11 +24,15 @@ const CHOICES: { value: Answer; label: string; variant: "secondary" | "quiet" }[
 export function Reflections({
   items,
   onAnswer,
+  onPlanAgain,
 }: {
   items: Reflection[];
   onAnswer: (activityId: string, answer: Answer) => Promise<{ error: string | null }>;
+  onPlanAgain: (activityId: string, date: string, slot: string) => Promise<{ error: string | null; when?: string }>;
 }) {
-  const [done, setDone] = useState<Record<string, boolean>>({});
+  const [done, setDone] = useState<Record<string, Answer>>({});
+  // Planning it again: what it said, once it has been tried.
+  const [again, setAgain] = useState<Record<string, { message: string; ok: boolean }>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -38,7 +42,15 @@ export function Reflections({
     const res = await onAnswer(activityId, value);
     setBusy(null);
     if (res.error) setErrors((e) => ({ ...e, [activityId]: res.error ?? "" }));
-    else setDone((d) => ({ ...d, [activityId]: true }));
+    else setDone((d) => ({ ...d, [activityId]: value }));
+  };
+
+  const planItAgain = async (item: Reflection) => {
+    if (!item.slot) return;
+    setBusy(item.activityId);
+    const res = await onPlanAgain(item.activityId, item.date, item.slot);
+    setBusy(null);
+    setAgain((a) => ({ ...a, [item.activityId]: res.error ? { message: res.error, ok: false } : { message: `Done: ${res.when} next week.`, ok: true } }));
   };
 
   if (items.length === 0) return null;
@@ -52,9 +64,19 @@ export function Reflections({
         {items.map((item) => (
           <li key={item.activityId} className={styles.item}>
             {done[item.activityId] ? (
-              <p className={styles.thanks}>
-                <Check size={18} strokeWidth={2.25} aria-hidden="true" /> Thanks, that helps us choose better.
-              </p>
+              <>
+                <p className={styles.thanks}>
+                  <Check size={18} strokeWidth={2.25} aria-hidden="true" /> Thanks, that helps us choose better.
+                </p>
+                {done[item.activityId] === "loved" && item.canRepeat && item.slot && !again[item.activityId]?.ok && (
+                  <div className={styles.choices}>
+                    <Button size="sm" variant="secondary" disabled={busy === item.activityId} onClick={() => planItAgain(item)}>
+                      Plan it again next week
+                    </Button>
+                  </div>
+                )}
+                {again[item.activityId] && <p className={again[item.activityId].ok ? styles.thanks : styles.error}>{again[item.activityId].message}</p>}
+              </>
             ) : (
               <>
                 <p className={styles.question}>

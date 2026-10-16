@@ -7,7 +7,7 @@ import { getTodayWeather, weatherCoordinates } from "@/lib/nudges/weather";
 import { formatCost, formatTime, LOCATION_UNKNOWN } from "@/lib/itinerary/format";
 import { scheduleImageLookups } from "@/lib/someTime/imageLookups";
 import { getFeaturedOption } from "@/lib/someTime/recommend";
-import { completeExperienceAction, clearDailyStateAction, saveDailyStateAction } from "@/app/today/experienceActions";
+import { completeExperienceAction, clearDailyStateAction, planAgainAction, saveDailyStateAction } from "@/app/today/experienceActions";
 import { loadDailyState } from "@/lib/experience/dailyStateStore";
 import { loadReflections } from "@/lib/experience/reflections";
 import { londonToday, londonWeekStart } from "@/lib/opportunities/schedule";
@@ -98,7 +98,7 @@ export default async function TodayPage() {
       return null;
     }),
     loadDailyState(supabase, user.id, londonToday()),
-    loadReflections(supabase, user.id, londonToday()),
+    loadReflections(supabase, user.id, londonToday(), londonClock(new Date()).minutes),
     countNearbyPlaces(supabase, profile.location_lat, profile.location_lng),
   ]);
 
@@ -131,6 +131,7 @@ export default async function TodayPage() {
       onSaveDailyState={saveDailyStateAction}
       onClearDailyState={clearDailyStateAction}
       onAnswerReflection={completeExperienceAction}
+      onPlanAgain={planAgainAction}
     />
   );
 }
