@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { runDiscoveryAgent } from "@/lib/discovery/run";
 import { searchRegionsThrottled, themedRequests } from "@/lib/discovery/regional";
-import { ensureOpenStreetMapPlacesForRegions } from "@/lib/discovery/osmPlaces";
+import { ensureDayTripsForRegions, ensureOpenStreetMapPlacesForRegions } from "@/lib/discovery/osmPlaces";
 import { enrichDueImages } from "@/lib/imagery/store";
 import { searchAllowed } from "@/lib/ai/limits";
 import { createTicketmasterSource, RICHMOND_AREA } from "@/lib/discovery/sources/ticketmaster";
@@ -19,6 +19,8 @@ const MAX_REGIONAL_SEARCHES_PER_RUN = 1;
 // The free place layer is quick (about 20 requests a region); this just stops a
 // long backlog of new regions turning into one very long run.
 const MAX_PLACE_FETCHES_PER_RUN = 2;
+// The well-known places for a day out take a couple of minutes a region, so one region a night; they hardly ever change.
+const MAX_DAY_TRIP_FETCHES_PER_RUN = 1;
 // Photographs are looked for a few places a night (two quick requests each, spaced out),
 // newest places first, so the catalogue fills in over time without a long run.
 const MAX_IMAGE_LOOKUPS_PER_RUN = 12;
@@ -75,18 +77,27 @@ export async function GET(request: Request) {
   // since the search alone can take most of the function's time limit.
   // The same system-wide daily search budget that holds member-triggered searches holds this one.
   const searchBudget = await searchAllowed(admin, null);
-  const [regionalSettled, places, images] = await Promise.all([
+  const [regionalSettled, osm, images] = await Promise.all([
     searchRegionsThrottled(admin, regionRequests, { maxSearches: searchBudget.allowed ? MAX_REGIONAL_SEARCHES_PER_RUN : 0, force }).then(
       (summary) => ({ summary, error: null as string | null }),
       // Fails closed — if the throttle can't be consulted, nothing is searched.
       (err: unknown) => ({ summary: null, error: err instanceof Error ? err.message : "Regional search failed" })
     ),
-    ensureOpenStreetMapPlacesForRegions(admin, regions, { maxFetches: MAX_PLACE_FETCHES_PER_RUN }),
+    // One after the other, never together: both ask OpenStreetMap's search service, which allows about a request a second.
+    (async () => {
+      const places = await ensureOpenStreetMapPlacesForRegions(admin, regions, { maxFetches: MAX_PLACE_FETCHES_PER_RUN });
+      // A bonus: it never fails the run.
+      const dayTrips = await ensureDayTripsForRegions(admin, regions, { maxFetches: MAX_DAY_TRIP_FETCHES_PER_RUN }).catch((err: unknown) => [
+        { region: "day trips", status: "failed" as const, inserted: 0, error: err instanceof Error ? err.message : "Day trips failed" },
+      ]);
+      return { places, dayTrips };
+    })(),
     // A bonus: it never fails the run.
     enrichDueImages(admin, MAX_IMAGE_LOOKUPS_PER_RUN, { budgetMs: 30_000 }).catch((err: unknown) => ({
       error: err instanceof Error ? err.message : "Image lookups failed",
     })),
   ]);
+  const { places, dayTrips } = osm;
   regional = regionalSettled.summary;
   regionalError = regionalSettled.error;
 
@@ -113,5 +124,5 @@ export async function GET(request: Request) {
   // Records of what went wrong are kept 90 days. A bonus: it never fails the run.
   const eventsPurged = await purgeOldAppEvents(admin);
 
-  return NextResponse.json({ results, regional, regionalError, themed, themedError, places, images, duplicates, eventsPurged, ticketmasterSkipped, searchBudget });
+  return NextResponse.json({ results, regional, regionalError, themed, themedError, places, dayTrips, images, duplicates, eventsPurged, ticketmasterSkipped, searchBudget });
 }

@@ -8,7 +8,8 @@ export type StartChoice = "now" | "afternoon" | "evening" | "tomorrow" | "saturd
 export const isLaterDay = (start: StartChoice): boolean => start === "tomorrow" || start === "saturday" || start === "sunday";
 /** "until_next" is the time before the next thing already in the member's day (see untilMin). */
 export type DurationChoice = "30m" | "1-2h" | "half_day" | "all_day" | "rest_of_day" | "until_next";
-export type Mood = "surprise" | "outdoors" | "social" | "active" | "culture" | "relaxed" | "food";
+/** "daytrip" is the well-known places further afield (see opportunities/engine.ts): a whole day, not a nearby hour. */
+export type Mood = "surprise" | "outdoors" | "social" | "active" | "culture" | "relaxed" | "food" | "daytrip";
 
 export type TimeRequest = {
   start: StartChoice;
@@ -47,7 +48,7 @@ export function parseHere(raw: unknown): HereLocation | null {
 const STARTS: StartChoice[] = ["now", "afternoon", "evening", "tomorrow", "saturday", "sunday"];
 const DURATIONS: DurationChoice[] = ["30m", "1-2h", "half_day", "all_day", "rest_of_day", "until_next"];
 const WHOS: SurpriseWho[] = ["just_me", "partner", "friends", "family"];
-const MOODS: Mood[] = ["surprise", "outdoors", "social", "active", "culture", "relaxed", "food"];
+const MOODS: Mood[] = ["surprise", "outdoors", "social", "active", "culture", "relaxed", "food", "daytrip"];
 const MAX_EXCLUDED = 40;
 
 function oneOf<T extends string>(value: unknown, allowed: readonly T[]): T | null {
@@ -98,4 +99,5 @@ export const MOOD_LABEL: Record<Mood, string> = {
   culture: "Culture / interesting",
   relaxed: "Relaxed",
   food: "Food & drink",
+  daytrip: "A day trip",
 };

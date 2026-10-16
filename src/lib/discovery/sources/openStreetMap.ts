@@ -35,15 +35,15 @@ export const OSM_THINGS_NOTE_PREFIX = `${OSM_NOTE_PREFIX} (things`;
 
 export type OsmLayer = "places" | "food" | "things";
 
-const NOMINATIM_SEARCH = "https://nominatim.openstreetmap.org/search";
-const MIN_REQUEST_GAP_MS = 1100;
+export const NOMINATIM_SEARCH = "https://nominatim.openstreetmap.org/search";
+export const MIN_REQUEST_GAP_MS = 1100;
 const NEAR_RADIUS_KM = 8;
 const FAR_RADIUS_KM = 20;
 /** If the near box yields fewer than this many usable places for a type, widen. */
 const SPARSE_THRESHOLD = 4;
-const DUPLICATE_DISTANCE_KM = 0.4;
+export const DUPLICATE_DISTANCE_KM = 0.4;
 
-type PlaceType =
+export type PlaceType =
   | "sports_centre" | "swimming_pool" | "park" | "yoga"
   | "museum" | "castle" | "nature_reserve" | "garden"
   | "library" | "arts_centre" | "community_centre"
@@ -52,7 +52,7 @@ type PlaceType =
   | "leisure_centre" | "bowling_alley" | "mini_golf" | "trampoline_park" | "ice_rink" | "golf" | "dance_studio"
   | "attraction" | "heritage_house" | "zoo" | "theme_park" | "aquarium" | "art_gallery";
 
-type TypeConfig = {
+export type TypeConfig = {
   category: CategoryName;
   label: string;
   /** How many of this type to keep per region. */
@@ -69,7 +69,7 @@ type TypeConfig = {
 // categories) and told apart by the food-venue tag; see opportunities/kinds.ts.
 const FOOD = FOOD_VENUE_TAG;
 
-const TYPES: Record<PlaceType, TypeConfig> = {
+export const TYPES: Record<PlaceType, TypeConfig> = {
   sports_centre: { category: "Move", label: "Sports and leisure centre", keep: 4, minutes: 60, layer: "places", tags: ["fitness", "indoor"] },
   swimming_pool: { category: "Move", label: "Swimming pool", keep: 3, minutes: 45, layer: "places", tags: ["swimming", "gentle exercise"] },
   park: { category: "Move", label: "Public park — good for a walk", keep: 4, minutes: 60, layer: "places", tags: ["walking", "outdoors", "grandchildren"], freeByDefault: true },
@@ -188,7 +188,7 @@ const TERM_QUERY: Record<string, string> = {
 const LEISURE_CENTRE_TERMS = new Set(["leisure centre", "swimming centre"]);
 const SCHOOL_HALL_NAME = /\b(sports hall|boys|girls|school|prep)\b/i;
 // Things tagged as attractions that are a statue or a viewpoint, not somewhere to spend a few hours.
-const NOT_AN_ATTRACTION = /\b(station|platform|whipping post|stocks|statue|memorial|monument|viewpoint|view point|fountain|plaque|sculpture|bench|gate|gates|bridge|cross|well|pump|stone|mural|sign|trail marker|picnic|car park)\b/i;
+export const NOT_AN_ATTRACTION = /\b(station|platform|whipping post|stocks|statue|memorial|monument|viewpoint|view point|fountain|plaque|sculpture|bench|gate|gates|bridge|cross|well|pump|stone|mural|sign|trail marker|picnic|car park)\b/i;
 // A building you can visit: an attraction named as a house, hall, castle, abbey, palace, manor or estate.
 const HERITAGE_HOUSE_NAME = /\b(house|hall|castle|abbey|priory|palace|manor|estate|court|lodge|mansion)\b/i;
 
@@ -349,7 +349,7 @@ export function classifyPlace(place: NominatimPlace, term: string): PlaceType | 
   return type;
 }
 
-function websiteOf(place: NominatimPlace): string | null {
+export function websiteOf(place: NominatimPlace): string | null {
   const raw = place.extratags?.website ?? place.extratags?.["contact:website"];
   if (!raw) return null;
   const withScheme = /^https?:\/\//i.test(raw.trim()) ? raw.trim() : `https://${raw.trim()}`;
@@ -361,7 +361,7 @@ function websiteOf(place: NominatimPlace): string | null {
   }
 }
 
-function osmUrl(place: NominatimPlace): string {
+export function osmUrl(place: NominatimPlace): string {
   return `https://www.openstreetmap.org/${place.osm_type ?? "node"}/${place.osm_id}`;
 }
 
@@ -384,7 +384,7 @@ function qualityScore(place: NominatimPlace, distanceKm: number, type: PlaceType
 }
 
 /** Opening hours worth keeping: something with times in it, short enough to be a real rule. */
-function openingHoursOf(place: NominatimPlace): string | null {
+export function openingHoursOf(place: NominatimPlace): string | null {
   const hours = place.extratags?.opening_hours?.trim();
   return hours && /\d/.test(hours) && hours.length <= 200 ? hours : null;
 }
@@ -395,7 +395,7 @@ function cuisineLabel(place: NominatimPlace): string | null {
   return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
 }
 
-function describe(type: PlaceType, place: NominatimPlace, area: string): string {
+export function describe(type: PlaceType, place: NominatimPlace, area: string): string {
   const cfg = TYPES[type];
   const hours = place.extratags?.opening_hours;
   const cuisine = TYPES[type].layer === "food" && type !== "pub" && type !== "tea_room" ? cuisineLabel(place) : null;
@@ -421,12 +421,12 @@ function foodTags(place: NominatimPlace): string[] {
   return tags;
 }
 
-function areaOf(place: NominatimPlace, fallback: string): string {
+export function areaOf(place: NominatimPlace, fallback: string): string {
   const a = place.address ?? {};
   return a.suburb || a.neighbourhood || a.town || a.city || a.village || a.city_district || fallback;
 }
 
-function addressOf(place: NominatimPlace, fallback: string): string {
+export function addressOf(place: NominatimPlace, fallback: string): string {
   const a = place.address ?? {};
   const street = [a.house_number, a.road].filter(Boolean).join(" ");
   const parts = [street, a.suburb || a.town || a.city || a.village, a.postcode].filter(Boolean);
@@ -542,7 +542,7 @@ export function selectPlaces(
   });
 }
 
-const defaultFetchJson: FetchJson = async (url) => {
+export const defaultFetchJson: FetchJson = async (url) => {
   const res = await fetch(url, {
     headers: { "User-Agent": "LarkHour/1.0 (retirement concierge app)" },
     signal: AbortSignal.timeout(20_000),
@@ -551,9 +551,9 @@ const defaultFetchJson: FetchJson = async (url) => {
   return res.json();
 };
 
-async function loadExisting(supabase: SupabaseClient, centre: Coordinates): Promise<ExistingPlace[]> {
-  const dLat = FAR_RADIUS_KM / 111 + 0.05;
-  const dLng = FAR_RADIUS_KM / (111 * Math.cos((centre.lat * Math.PI) / 180)) + 0.05;
+export async function loadExisting(supabase: SupabaseClient, centre: Coordinates, radiusKm: number = FAR_RADIUS_KM): Promise<ExistingPlace[]> {
+  const dLat = radiusKm / 111 + 0.05;
+  const dLng = radiusKm / (111 * Math.cos((centre.lat * Math.PI) / 180)) + 0.05;
   const box =
     `and(location_lat.gte.${centre.lat - dLat},location_lat.lte.${centre.lat + dLat},` +
     `location_lng.gte.${centre.lng - dLng},location_lng.lte.${centre.lng + dLng})`;
@@ -561,7 +561,7 @@ async function loadExisting(supabase: SupabaseClient, centre: Coordinates): Prom
     .from("activities")
     .select("title, location_lat, location_lng")
     .or(`location_lat.is.null,${box}`)
-    .limit(1000);
+    .limit(radiusKm > FAR_RADIUS_KM ? 3000 : 1000);
   // Without this a failed read would look like "nothing exists yet" and insert duplicates.
   if (error) throw new Error(`Couldn't check existing activities: ${error.message}`);
   return (data ?? []) as ExistingPlace[];

@@ -8,6 +8,7 @@ import { AI_MODELS, QUICK_THINKING } from "@/lib/ai/models";
 import { careGuidance, type CareAssessment } from "@/lib/chat/care";
 import { PLAIN_WORDS_RULE } from "@/lib/ai/plainWords";
 import { loadMemberLife, memberLifeText } from "@/lib/chat/memberContext";
+import { dayTripsText, wantsDayTrips } from "@/lib/chat/dayTrips";
 import { loadRecentIdeas, recentIdeasText, type RecentIdea } from "@/lib/chat/recentIdeas";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { addDays, londonToday } from "@/lib/opportunities/schedule";
@@ -55,7 +56,9 @@ export function buildSystemPrompt(
   /** The next days with their dates, so "Saturday" can be turned into the right date. */
   calendarDays: string = "",
   /** Their wishes, the kinds of people in their life, and how the week has gone (see memberContext.ts). */
-  lifeText: string = ""
+  lifeText: string = "",
+  /** Well-known places further afield, only when they asked for a day out (see dayTrips.ts). Empty otherwise. */
+  dayTripsList: string = ""
 ) {
   const weekItemsText = weekItems.length
     ? weekItems
@@ -97,7 +100,10 @@ ${weekItemsText}
 OTHER CANDIDATE ACTIVITIES NEARBY (not yet scheduled — use this for "find me something" questions):
 ${candidatesText || "No other active candidate activities available right now."}
 
-IDEAS THEY HAVE RECENTLY SEEN OR SAVED ON TODAY AND EXPLORE (real places the app itself suggested; they may ask about these, so you may talk about them, but you only know what is on each line):
+${dayTripsList ? `DAY TRIPS (well-known places further afield, listed because they asked for a day out; say roughly how far and how long it takes, as an estimate, and that it is worth checking opening times and booking before they go):
+${dayTripsList}
+
+` : ""}IDEAS THEY HAVE RECENTLY SEEN OR SAVED ON TODAY AND EXPLORE (real places the app itself suggested; they may ask about these, so you may talk about them, but you only know what is on each line):
 ${recentIdeasText(recentIdeas)}
 
 WHAT THEY HAVE TOLD US ABOUT THEIR LIFE (use it when they ask for help becoming more active, for something to do with family or friends, or what to do with their time; do not recite it, and never guess names):
@@ -199,7 +205,8 @@ export async function conciergeReply(
     care,
     await loadRecentIdeas(supabase, memberId, scheduledActivityIds),
     nextDays(),
-    memberLifeText(await loadMemberLife(supabase, memberId, londonToday(), weekItems.filter((i) => i.member_action === "accepted").length))
+    memberLifeText(await loadMemberLife(supabase, memberId, londonToday(), weekItems.filter((i) => i.member_action === "accepted").length)),
+    wantsDayTrips(question) ? await dayTripsText(supabase, memberId, scheduledActivityIds) : ""
   );
 
   const client = new Anthropic({ apiKey });

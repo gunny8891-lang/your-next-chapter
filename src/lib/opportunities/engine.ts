@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { scoreActivity, type AffinityScores } from "@/lib/memory/scoring";
 import { computeLearnedAffinity, LEARNING_WINDOW_DAYS, type LearningEvent, type LearningSignal } from "@/lib/memory/learning";
 import { filterByDistance } from "@/lib/geo/filterByDistance";
+import { haversineDistanceKm } from "@/lib/geo/haversine";
 import { isStillAvailable } from "@/lib/opportunities/availability";
 import { applyFoodVenueMode, type FoodVenueMode } from "@/lib/opportunities/kinds";
 import { normaliseTags } from "@/lib/opportunities/tags";
@@ -41,7 +42,18 @@ export type OpportunityCandidate = {
   dog_source?: string | null;
 };
 
+/** The tag that marks a well-known place worth a day out (see discovery/sources/dayTrips.ts). */
+export const DAY_TRIP_TAG = "day-trip";
+/** How far a day trip can be, in a straight line, whatever their usual travel radius: about an hour or more each way. */
+export const DAY_TRIP_MAX_KM = 60;
+
 export type FetchOpportunitiesOptions = {
+  /**
+   * Day trips: only the well-known places worth a day out, up to DAY_TRIP_MAX_KM away, whatever their usual travel radius.
+   * Left off, a day-trip place is offered like any other, only when it is within that radius; and never when we cannot
+   * tell how far it is, so a member with no position on file is not shown another city's museums as everyday ideas.
+   */
+  dayTrips?: boolean;
   /** Never include these activity ids in the result (already scheduled, currently on screen, etc). */
   excludeActivityIds?: Set<string>;
   /** Restrict to a single category (e.g. swap alternatives within the same slot's category). */
@@ -130,12 +142,27 @@ export async function fetchRankedOpportunities(
     options.foodVenues ?? "exclude"
   );
 
-  const inRange = filterByDistance(
-    allActive,
-    options.origin
-      ? { location_lat: options.origin.lat, location_lng: options.origin.lng, travel_radius_km: profile?.travel_radius_km ?? null }
-      : (profile ?? { location_lat: null, location_lng: null, travel_radius_km: null })
-  );
+  const from = options.origin
+    ? { location_lat: options.origin.lat, location_lng: options.origin.lng, travel_radius_km: profile?.travel_radius_km ?? null }
+    : (profile ?? { location_lat: null, location_lng: null, travel_radius_km: null });
+  const isDayTrip = (a: OpportunityCandidate) => a.tags.includes(DAY_TRIP_TAG);
+  let inRange: OpportunityCandidate[];
+  if (options.dayTrips) {
+    inRange =
+      from.location_lat == null || from.location_lng == null
+        ? []
+        : allActive.filter(
+            (a) =>
+              isDayTrip(a) &&
+              a.location_lat != null &&
+              a.location_lng != null &&
+              haversineDistanceKm(from.location_lat!, from.location_lng!, a.location_lat, a.location_lng) <= DAY_TRIP_MAX_KM
+          );
+  } else {
+    const near = filterByDistance(allActive, from);
+    const distanceKnown = from.location_lat != null && from.location_lng != null && from.travel_radius_km != null;
+    inRange = distanceKnown ? near : near.filter((a) => !isDayTrip(a));
+  }
 
   const eligible = options.excludeActivityIds
     ? inRange.filter((a) => !options.excludeActivityIds!.has(a.id))

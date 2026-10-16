@@ -9,7 +9,7 @@ describe("the questions", () => {
   });
 
   it("offers Surprise me first, then the ways to steer it", () => {
-    expect(MOOD_OPTIONS.map((m) => m.label)).toEqual(["Surprise me", "Outdoors", "Food", "Culture", "Social", "Relaxed"]);
+    expect(MOOD_OPTIONS.map((m) => m.label)).toEqual(["Surprise me", "Outdoors", "Food", "Culture", "Social", "Relaxed", "Day trip"]);
   });
 });
 
