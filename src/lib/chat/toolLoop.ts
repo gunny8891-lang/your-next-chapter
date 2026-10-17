@@ -49,7 +49,7 @@ export async function runToolLoop(opts: {
 
 /** What a reply says it has done: "I've added it", "it's now in your plan", "booked". */
 const CLAIMS_DONE =
-  /\b(i['’]?ve|i have)\s+(just\s+|now\s+)?(added|booked|scheduled|put|placed|popped)\b|\b(has|have)\s+been\s+(added|booked|scheduled)\b|(?:^|[.!?]\s*)added\s+(it\s+|that\s+|this\s+)?to\s+your\b/i;
+  /\b(i['’]?ve|i have)\s+(just\s+|now\s+)?((added|booked|scheduled)\s+(it|that|this|them|[^.!?]{0,60}\b(to|in|into|on)\s+your)\b|put\s+(it|that|this|them)\s+(in|on|into)\b)|\b(has|have)\s+been\s+(added|booked|scheduled)\b|(?:^|[.!?]\s*)added\s+(it\s+|that\s+|this\s+)?to\s+your\b/i;
 
 export const NOT_ADDED =
   "I haven't added anything yet. Would you like me to add it? Tell me the day and I'll put it in your plan.";

@@ -118,18 +118,29 @@ export async function fetchRankedOpportunities(
     .eq("user_id", memberId)
     .maybeSingle();
 
-  let query = supabase
+  // The catalogue is read a page at a time: a read returns at most a thousand rows whatever is asked for, and the live
+  // catalogue is past half that and growing, so one read would quietly stop seeing the newest places and events.
+  const PAGE = 1000;
+  const MAX_ROWS = 10_000;
+  const buildQuery = () => {
+    let q = supabase
     .from("activities")
     .select(
       "id, title, description, category, address, price_estimate, tags, rating, accessibility_notes, location_lat, location_lng, booking_url, date_time, expires_at, recurrence_rule, duration_minutes, price_min, price_max, price_type, cost_confidence, booking_required, dog_access, dog_restrictions, dog_confidence, dog_source"
     )
     .eq("status", "active");
-  if (options.category) query = query.eq("category", options.category);
-
-  const { data: activities, error: activitiesError } = await query;
-  // A failed read must not look like "nothing nearby" — that would silently
-  // empty every recommendation surface at once.
-  if (activitiesError) throw new Error(`Couldn't load activities: ${activitiesError.message}`);
+    if (options.category) q = q.eq("category", options.category);
+    return q.order("id");
+  };
+  const activities: unknown[] = [];
+  for (let from = 0; from < MAX_ROWS; from += PAGE) {
+    const { data, error: activitiesError } = await buildQuery().range(from, from + PAGE - 1);
+    // A failed read must not look like "nothing nearby" — that would silently
+    // empty every recommendation surface at once.
+    if (activitiesError) throw new Error(`Couldn't load activities: ${activitiesError.message}`);
+    activities.push(...(data ?? []));
+    if ((data ?? []).length < PAGE) break;
+  }
 
   // Never recommend something that's already over: a one-off event whose date
   // has passed, or an exhibition/series past its end. Done here rather than by

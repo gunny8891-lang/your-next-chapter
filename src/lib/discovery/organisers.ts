@@ -18,11 +18,11 @@ import { addDays } from "@/lib/opportunities/schedule";
 export const ENGAGEMENT_WINDOW_DAYS = 45;
 /** How many organisers are put forward at a time: the throttle then decides which are due. */
 export const ORGANISER_POOL = 12;
-/** Organisers reread in one run: each can take a minute or two. */
-export const ORGANISERS_PER_RUN = 2;
+/** Organisers reread in one run: each can take a minute or two, and the daily search budget is only checked at the start of a run. The job runs twice a day. */
+export const ORGANISERS_PER_RUN = 1;
 
 /** Pages that are not an organiser's own listing: maps, social networks, encyclopaedias, the fallback search link. */
-const NOT_AN_ORGANISER = ["openstreetmap.org", "google.com", "google.co.uk", "facebook.com", "instagram.com", "twitter.com", "x.com", "youtube.com", "wikipedia.org", "wikimedia.org", "search.local"];
+const NOT_AN_ORGANISER = ["openstreetmap.org", "google.com", "google.co.uk", "facebook.com", "instagram.com", "twitter.com", "x.com", "youtube.com", "wikipedia.org", "wikimedia.org", "search.local", "ticketmaster.co.uk", "ticketmaster.com", "eventbrite.co.uk", "eventbrite.com", "meetup.com"];
 
 /** The site a link belongs to, without "www."; null if it is not a web address. Pure. */
 export function hostOf(url: string | null | undefined): string | null {
@@ -65,7 +65,7 @@ export function rankOrganisers(rows: OrganiserRow[], engagement: Map<string, num
       [...group].sort((a, b) => (engagement.get(b.id) ?? 0) - (engagement.get(a.id) ?? 0) || (b.date_time ?? "").localeCompare(a.date_time ?? ""))[0];
     // A link with a "#" is an address we made to tell one event from another on a shared page: the page itself is before it.
     const entryUrl = (best.booking_url ?? "").split("#")[0];
-    organisers.push({ host, entryUrl, engaged, upcoming, rows: group.length, score: engaged * 3 + upcoming + Math.min(group.length, 5) * 0.2 });
+    organisers.push({ host, entryUrl, engaged, upcoming, rows: group.length, score: engaged * 3 + Math.min(upcoming, 5) + Math.min(group.length, 5) * 0.2 });
   }
   return organisers.sort((a, b) => b.score - a.score || a.host.localeCompare(b.host)).slice(0, ORGANISER_POOL);
 }

@@ -47,7 +47,7 @@ function fakeDb(profile: Record<string, unknown> | null) {
     from(table: string) {
       const rows = tables[table] ?? [];
       const chain: Record<string, unknown> = {};
-      for (const m of ["select", "eq", "in", "not", "gte", "order", "limit"]) chain[m] = () => chain;
+      for (const m of ["select", "eq", "in", "not", "gte", "order", "limit", "range"]) chain[m] = () => chain;
       chain.maybeSingle = () => Promise.resolve({ data: rows[0] ?? null, error: null });
       chain.then = (resolve: (v: unknown) => void) => resolve({ data: rows, error: null });
       return chain;

@@ -11,6 +11,7 @@ import { generateAndSaveItinerary } from "@/lib/itinerary/generateAndSave";
 import { dogFromForm } from "@/lib/account/dog";
 import { planInputsChanged } from "@/lib/account/planInputs";
 import { triggerDiscoveryForRegion } from "@/lib/discovery/regional";
+import { cleanLocationText } from "@/lib/geo/locationText";
 import { googleConfig } from "@/lib/calendar/google";
 import { disconnectCalendar } from "@/lib/calendar/service";
 
@@ -36,13 +37,17 @@ export async function updateProfileAction(formData: FormData) {
 
   const radiusRaw = formData.get("travel_radius_km");
   const budgetRaw = String(formData.get("budget_band") ?? "");
-  const newLocationText = String(formData.get("location_text") ?? "").trim() || null;
+  // Only a place name is kept (see lib/geo/locationText.ts); anything else leaves the place as it was.
+  const typedLocation = String(formData.get("location_text") ?? "").trim();
+  const cleanedLocation = typedLocation ? cleanLocationText(typedLocation) : null;
 
   const { data: existing } = await supabase
     .from("member_profiles")
     .select("location_text, location_lat, location_lng, travel_radius_km, budget_band, dietary_preferences, mobility_notes, drives, uses_public_transport, interests, goals")
     .eq("user_id", user.id)
     .single();
+
+  const newLocationText = typedLocation ? (cleanedLocation ?? existing?.location_text ?? null) : null;
 
   // Only re-geocode when the location text actually changed — avoids hitting
   // Nominatim on every save of an unrelated field, and avoids clobbering a
@@ -114,7 +119,9 @@ export async function deleteAccountAction() {
 
   const { error } = await admin.auth.admin.deleteUser(user.id);
   if (error) {
-    redirect(`/account?deleteError=${encodeURIComponent(error.message)}`);
+    // The reason goes to the server log; the address carries only a flag, so nobody can put words of their own on the page.
+    console.warn("delete account: could not delete:", error.message);
+    redirect("/account?deleteError=1");
   }
 
   await supabase.auth.signOut().catch(() => {});

@@ -9,7 +9,8 @@ import { haversineDistanceKm } from "@/lib/geo/haversine";
  * selection of everything, so a question about the grandchildren would not reliably find the places for them without this.
  */
 
-const MENTIONS_CHILDREN = /\b(grand-?child(?:ren)?|grandkids?|grandsons?|granddaughters?|kids?|children|toddlers?|little ones|babies|baby|nephews?|nieces?)\b/i;
+const MENTIONS_CHILDREN =
+  /\b(grand-?child(?:ren)?|grandkids?|grandsons?|granddaughters?)\b|\b(?:with|for|my|our|the)\s+(?:an?\s+)?(?:little\s+)?(?:kids?|children|toddlers?|babies|nephews?|nieces?|little ones)\b|\btake\s+(?:the\s+)?(?:kids|children)\b/i;
 
 /** Whether the question is about children or grandchildren. Pure. */
 export function wantsKidsActivities(question: string): boolean {

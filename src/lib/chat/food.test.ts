@@ -97,7 +97,7 @@ describe("what the concierge is given", () => {
     return {
       from(table: string) {
         const chain: Record<string, unknown> = {};
-        for (const m of ["select", "eq", "in", "not", "gte", "order", "limit"]) chain[m] = () => chain;
+        for (const m of ["select", "eq", "in", "not", "gte", "order", "limit", "range"]) chain[m] = () => chain;
         chain.maybeSingle = () => Promise.resolve({ data: (tables[table] ?? [])[0] ?? null, error: null });
         chain.then = (resolve: (v: unknown) => void) => resolve({ data: tables[table] ?? [], error: null });
         return chain;

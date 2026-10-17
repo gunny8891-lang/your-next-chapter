@@ -411,7 +411,7 @@ export function AccountSettingsForm({
           This permanently deletes your account and everything with it: your details, your plans and what we have learned about what you like. It can&apos;t be undone.
         </p>
 
-        {deleteError && <ErrorNote>{deleteError}</ErrorNote>}
+        {deleteError && <ErrorNote>We couldn&apos;t delete your account just now. Nothing has been removed. Please try again in a moment, or email us.</ErrorNote>}
 
         {!showDeleteConfirm ? (
           <Button variant="secondary" onClick={() => setShowDeleteConfirm(true)}>

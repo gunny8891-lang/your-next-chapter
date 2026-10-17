@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isCronRequest } from "@/lib/jobs/cronAuth";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { refreshOrganisers } from "@/lib/discovery/organisers";
 import { mergeDuplicateVenues } from "@/lib/discovery/duplicates";
@@ -7,9 +8,10 @@ import { searchAllowed } from "@/lib/ai/limits";
 // Rereads the pages of the organisers members have shown an interest in, for new events (see lib/discovery/organisers.ts).
 // A separate job from the nightly search, so each has the whole of its own time limit: the search alone can take most of it.
 // Triggered by Vercel Cron (see vercel.json), or by hand with the same bearer token; `?force=1` rereads a due-or-not organiser.
+export const maxDuration = 300;
+
 export async function GET(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isCronRequest(request)) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 

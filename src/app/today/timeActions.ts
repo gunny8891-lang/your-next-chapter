@@ -201,6 +201,8 @@ export async function saveIdeaAction(activityId: string, meta?: ActionMeta): Pro
   // The list is what the member sees; a failed learning signal is not worth failing the save for.
   if (error) console.warn("save: could not record the preference signal:", error.message);
 
+  // The Saved list on Explore is read from the server; a screen held from a moment ago would show the old list.
+  revalidatePath("/explore");
   const saved = eventFor("saved", activityId, meta);
   if (saved) {
     const state = await loadDailyState(supabase, user.id, londonToday());
@@ -221,5 +223,6 @@ export async function unsaveIdeaAction(activityId: string): Promise<{ error: str
   if (!user) return { error: "Please sign in again." };
 
   const { error } = await supabase.from("saved_ideas").delete().eq("member_id", user.id).eq("activity_id", activityId);
+  if (!error) revalidatePath("/explore");
   return { error: error?.message ?? null };
 }

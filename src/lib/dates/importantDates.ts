@@ -1,4 +1,3 @@
-import { addDays } from "@/lib/opportunities/schedule";
 
 /**
  * Dates to remember: birthdays, anniversaries, a day to remember, anything else. Held as a month and a day so a date comes round
@@ -122,6 +121,3 @@ export function parseNewDate(raw: unknown, thisYear: number): NewImportantDate |
 export const TODAY_LOOKS_AHEAD_DAYS = 14;
 /** How far ahead the concierge is told about. */
 export const CONCIERGE_LOOKS_AHEAD_DAYS = 30;
-
-/** The calendar date a number of days ahead (used by tests and callers that need the day itself). */
-export const dayAfter = (today: string, days: number) => addDays(today, days);

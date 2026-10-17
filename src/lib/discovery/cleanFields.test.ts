@@ -24,17 +24,21 @@ describe("an address a model could not give", () => {
 
 describe("a day with no time", () => {
   it("is a midnight start however it is written", () => {
-    for (const iso of ["2026-11-10T00:00:00", "2026-11-10T00:00", "2026-11-10T00:00:00Z", "2026-11-10T00:00:00+00:00", "2026-11-10T00:00:00.000Z"]) {
+    for (const iso of ["2026-11-10T00:00:00", "2026-11-10T00:00", "2026-11-10T00:00:00Z", "2026-11-10T00:00:00+00:00", "2026-11-10T00:00:00.000Z", "2026-11-10", "2026-11-10 00:00", "2026-11-10 00:00:00"]) {
       expect(hasNoTime(iso), iso).toBe(true);
     }
-    for (const iso of ["2026-11-10T10:30:00", "2026-11-10T00:30:00Z", "2026-11-10T12:00:00+00:00", "2026-11-10", "", null]) {
+    for (const iso of ["2026-11-10T10:30:00", "2026-11-10T00:30:00Z", "2026-11-10T12:00:00+00:00", "2026-11-10 14:30", "", null]) {
       expect(hasNoTime(iso as never), String(iso)).toBe(false);
     }
   });
 
   it("is put at a morning start so it can be reached, and flagged, while a real time is left alone", () => {
     expect(startOf("2026-11-10T00:00:00")).toEqual({ dateTime: `2026-11-10T${DEFAULT_START}Z`, timeGiven: false });
-    expect(startOf("2026-11-05T10:30:00")).toEqual({ dateTime: "2026-11-05T10:30:00", timeGiven: true });
+    expect(startOf("2026-11-10")).toEqual({ dateTime: `2026-11-10T${DEFAULT_START}Z`, timeGiven: false });
+    expect(startOf("2026-11-05T10:30:00")).toEqual({ dateTime: "2026-11-05T10:30:00Z", timeGiven: true });
+    // The clock time is kept, not converted: the app stores 10am as 10:00, whatever the offset the page used.
+    expect(startOf("2026-10-17T19:00:00+01:00")).toEqual({ dateTime: "2026-10-17T19:00:00Z", timeGiven: true });
+    expect(startOf("2026-10-17 14:30")).toEqual({ dateTime: "2026-10-17T14:30:00Z", timeGiven: true });
     expect(startOf(null)).toEqual({ dateTime: null, timeGiven: false });
     expect(TIME_NOT_GIVEN_NOTE).toMatch(/check it before going/);
   });
@@ -53,7 +57,7 @@ describe("what an organiser's page gives, tidied", () => {
 
   it("leaves a real time and a real address as they are", () => {
     const [c] = candidatesFromAnswer(answer({ dateTime: "2026-11-05T10:30:00", address: "Ewen Hall", description: "A talk" }), "barnet.u3asite.uk", entry);
-    expect(c).toMatchObject({ dateTime: "2026-11-05T10:30:00", address: "Ewen Hall", description: "A talk" });
+    expect(c).toMatchObject({ dateTime: "2026-11-05T10:30:00Z", address: "Ewen Hall", description: "A talk" });
   });
 
   it("is applied to the general and focused searches too", () => {

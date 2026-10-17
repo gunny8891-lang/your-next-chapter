@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isCronRequest } from "@/lib/jobs/cronAuth";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { detectNudgeCandidate } from "@/lib/nudges/detect";
 import { writeNudgeMessage } from "@/lib/nudges/message";
@@ -21,8 +22,7 @@ function usersOf(users: MemberRow["users"]): { email: string; status: string } |
 // Triggered by Vercel Cron daily (see vercel.json), or manually via curl with
 // the same bearer token — separate from the weekly itinerary/digest job.
 export async function GET(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isCronRequest(request)) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 

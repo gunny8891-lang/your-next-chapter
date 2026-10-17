@@ -10,7 +10,7 @@ import { haversineDistanceKm } from "@/lib/geo/haversine";
  */
 
 const ASKS_ABOUT_FOOD =
-  /\b(eat|eating|eats|lunch|dinner|breakfast|brunch|supper|coffee|cafes?|caf[eé]s?|pubs?|restaurants?|meal|meals|food|hungry|snack|bite to eat|afternoon tea|tea ?rooms?|cake|drinks?|takeaway)\b/i;
+  /\b(eat|eating|lunch|dinner|breakfast|brunch|hungry|cafes?|caf[eé]s?|pubs?|restaurants?|bite to eat|something to eat|afternoon tea|tea ?rooms?|takeaway|a (coffee|drink|meal|snack)|coffee (and|&) cake|coffee shops?)\b/i;
 
 /** Whether this is about somewhere to eat or drink. Pure. */
 export function wantsFood(question: string): boolean {

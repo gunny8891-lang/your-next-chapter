@@ -36,7 +36,7 @@ describe("fetchRankedOpportunities reads tags in one vocabulary", () => {
       from(table: string) {
         const rows = tables[table] ?? [];
         const chain: Record<string, unknown> = {};
-        for (const method of ["select", "eq", "in", "not", "gte", "order", "limit"]) chain[method] = () => chain;
+        for (const method of ["select", "eq", "in", "not", "gte", "order", "limit", "range"]) chain[method] = () => chain;
         chain.maybeSingle = () => Promise.resolve({ data: (rows as unknown[])[0] ?? null, error: null });
         chain.then = (resolve: (v: unknown) => void) => resolve({ data: rows, error: null });
         return chain;

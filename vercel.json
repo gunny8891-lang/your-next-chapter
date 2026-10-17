@@ -7,11 +7,15 @@
     },
     {
       "path": "/api/discovery/organisers",
-      "schedule": "0 5 * * *"
+      "schedule": "0 5,17 * * *"
     },
     {
       "path": "/api/jobs/health-report",
       "schedule": "0 7 * * 1"
+    },
+    {
+      "path": "/api/discovery/day-trips",
+      "schedule": "0 4 * * *"
     },
     {
       "path": "/api/jobs/weekly-digest",

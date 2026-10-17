@@ -162,8 +162,7 @@ describe("sending it", () => {
 
   it("is a job protected by the secret (and never open when the secret is missing), run on Monday mornings, with a dry run", () => {
     const route = read("src/app/api/jobs/health-report/route.ts");
-    expect(route).toContain("!process.env.CRON_SECRET ||");
-    expect(route).toContain("Bearer ${process.env.CRON_SECRET}");
+    expect(route).toContain("if (!isCronRequest(request))");
     expect(route).toContain('searchParams.get("dry") === "1"');
     const crons = JSON.parse(read("vercel.json")).crons as { path: string; schedule: string }[];
     expect(crons).toContainEqual({ path: "/api/jobs/health-report", schedule: "0 7 * * 1" });

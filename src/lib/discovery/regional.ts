@@ -296,9 +296,11 @@ export async function triggerDiscoveryForRegion(
     const { data: home } = await supabase.from("member_profiles").select("location_lat, location_lng").eq("user_id", memberId).maybeSingle();
     const request: RegionRequest = { label: region, lat: home?.location_lat ?? null, lng: home?.location_lng ?? null };
     const budget = await (deps.searchAllowed ?? searchAllowed)(supabase, memberId);
+    // A place that could not be found on a map is not searched for with the paid search: the words may not be a place at all.
+    if (request.lat == null || request.lng == null) console.warn(`discovery: not searching "${region}": it could not be found on a map`);
     if (!budget.allowed) console.warn(`discovery: not searching "${region}" for member ${memberId.slice(0, 8)} (${budget.reason}); the nightly job will reach it when it is due`);
     const [summary, places, events] = await Promise.all([
-      (deps.searchRegions ?? searchRegionsThrottled)(supabase, [request], { maxSearches: budget.allowed ? 1 : 0, memberId }),
+      (deps.searchRegions ?? searchRegionsThrottled)(supabase, [request], { maxSearches: budget.allowed && request.lat != null && request.lng != null ? 1 : 0, memberId }),
       (deps.ensurePlaces ?? ensureOpenStreetMapPlaces)(supabase, region),
       (deps.events ?? fetchTicketmasterNear)(supabase, memberId).catch(() => 0),
     ]);

@@ -94,13 +94,18 @@ describe("making sure a region has them", () => {
   /** A database where the layers named have rows near the centre, and the rest do not. */
   function db(covered: string[]) {
     const asked: string[] = [];
+    const upserts: Record<string, unknown>[] = [];
+    const markers = new Map<string, unknown>();
     const client = {
       from: () => {
         let prefix = "";
         const chain: Record<string, unknown> = {};
         chain.select = () => chain;
         chain.like = (_c: string, value: string) => ((prefix = value), chain);
-        for (const m of ["gte", "lte"]) chain[m] = () => chain;
+        for (const m of ["gte", "lte", "eq"]) chain[m] = () => chain;
+        // The record of when garden centres were last looked for in a region: none yet, and writing one is allowed.
+        chain.maybeSingle = async () => ({ data: markers.get("garden") ?? null, error: null });
+        chain.upsert = async (row: Record<string, unknown>) => (upserts.push(row), { error: null });
         chain.limit = async () => {
           asked.push(prefix);
           const has = covered.some((c) => prefix.startsWith(c));
@@ -109,7 +114,7 @@ describe("making sure a region has them", () => {
         return chain;
       },
     } as unknown as SupabaseClient;
-    return { client, asked };
+    return { client, asked, upserts, markers };
   }
   const deps = { geocode: async () => BARNET, sleep: async () => {}, fetchJson: async () => [] };
   const ALL_BUT_GARDEN = [`${OSM_PLACES_NOTE_PREFIX}`, `${OSM_FOOD_NOTE_PREFIX}`, `${OSM_THINGS_NOTE_PREFIX}`];
@@ -178,5 +183,79 @@ describe("the concierge and garden centres", () => {
     expect(agent).toContain('wantsGardenCentres(question) ? await gardenCentresText(supabase, memberId) : ""');
     expect(agent).toContain("GARDEN CENTRES NEAR HOME");
     expect(agent).toContain("Do not say what a garden centre sells, whether it has a café, or what it charges");
+  });
+});
+
+describe("a region with no garden centre near it is not asked about every night", () => {
+  function setup(marker: Record<string, unknown> | null) {
+    const markers = new Map<string, unknown>();
+    if (marker) markers.set("garden", marker);
+    const upserts: Record<string, unknown>[] = [];
+    const client = {
+      from: () => {
+        let prefix = "";
+        const chain: Record<string, unknown> = {};
+        chain.select = () => chain;
+        chain.like = (_c: string, value: string) => ((prefix = value), chain);
+        for (const m of ["gte", "lte", "eq"]) chain[m] = () => chain;
+        chain.maybeSingle = async () => ({ data: markers.get("garden") ?? null, error: null });
+        chain.upsert = async (row: Record<string, unknown>) => (upserts.push(row), { error: null });
+        // Every nearby-places layer is covered; garden centres have none within reach.
+        chain.limit = async () => ({ data: prefix.includes("garden centres") ? [] : [{ location_lat: 51.66, location_lng: -0.19 }], error: null });
+        return chain;
+      },
+    } as unknown as SupabaseClient;
+    return { client, upserts };
+  }
+  const NOW = new Date("2026-10-17T03:00:00Z");
+  const deps = { geocode: async () => BARNET, sleep: async () => {}, fetchJson: async () => [], now: NOW };
+
+  it("is looked for once, remembered, and left alone for three months", async () => {
+    const { ensureOpenStreetMapPlaces } = await import("@/lib/discovery/osmPlaces");
+    const { persistDiscovery } = await import("@/lib/discovery/run");
+    vi.mocked(persistDiscovery).mockClear();
+    vi.mocked(persistDiscovery).mockResolvedValue({ results: [{ source: "openstreetmap-garden-centres", found: 0, inserted: 0, insertedActive: 0, errors: [] }], pending: [] } as never);
+
+    const first = setup(null);
+    expect((await ensureOpenStreetMapPlaces(first.client, "Central London", deps)).status).toBe("already_covered");
+    expect(persistDiscovery).toHaveBeenCalledTimes(1);
+    expect(first.upserts[0]).toMatchObject({ region_key: "central london#osm-gardencentres", last_success_at: NOW.toISOString() });
+
+    vi.mocked(persistDiscovery).mockClear();
+    const later = setup({ last_attempt_at: "2026-09-01T03:00:00Z", last_success_at: "2026-09-01T03:00:00Z" });
+    await ensureOpenStreetMapPlaces(later.client, "Central London", deps);
+    expect(persistDiscovery).not.toHaveBeenCalled();
+
+    const old = setup({ last_attempt_at: "2026-05-01T03:00:00Z", last_success_at: "2026-05-01T03:00:00Z" });
+    await ensureOpenStreetMapPlaces(old.client, "Central London", deps);
+    expect(persistDiscovery).toHaveBeenCalledTimes(1);
+  });
+
+  it("is left alone for a few days after a failed look, and not marked as done", async () => {
+    const { ensureOpenStreetMapPlaces } = await import("@/lib/discovery/osmPlaces");
+    const { persistDiscovery } = await import("@/lib/discovery/run");
+    vi.mocked(persistDiscovery).mockClear();
+    vi.mocked(persistDiscovery).mockResolvedValue({ results: [{ source: "x", found: 0, inserted: 0, insertedActive: 0, errors: ["all requests failed"] }], pending: [] } as never);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const failing = setup(null);
+    expect((await ensureOpenStreetMapPlaces(failing.client, "Central London", deps)).status).toBe("already_covered");
+    expect(failing.upserts[0]).not.toHaveProperty("last_success_at");
+
+    vi.mocked(persistDiscovery).mockClear();
+    const recent = setup({ last_attempt_at: "2026-10-16T03:00:00Z" });
+    await ensureOpenStreetMapPlaces(recent.client, "Central London", deps);
+    expect(persistDiscovery).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it("is not remembered for 'this area', which stands for a different place each time", async () => {
+    const { ensureOpenStreetMapPlaces } = await import("@/lib/discovery/osmPlaces");
+    const { persistDiscovery } = await import("@/lib/discovery/run");
+    vi.mocked(persistDiscovery).mockResolvedValue({ results: [{ source: "x", found: 0, inserted: 0, insertedActive: 0, errors: [] }], pending: [] } as never);
+    const here = setup({ last_attempt_at: NOW.toISOString(), last_success_at: NOW.toISOString() });
+    vi.mocked(persistDiscovery).mockClear();
+    await ensureOpenStreetMapPlaces(here.client, "this area", deps);
+    expect(persistDiscovery).toHaveBeenCalledTimes(1);
+    expect(here.upserts).toEqual([]);
   });
 });

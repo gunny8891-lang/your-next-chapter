@@ -43,6 +43,24 @@ const LAYERS: { layer: OsmLayer; notePrefix: string; coveredKm?: number }[] = [
   { layer: "gardencentres", notePrefix: OSM_GARDEN_CENTRES_NOTE_PREFIX, coveredKm: GARDEN_CENTRES_COVERED_KM },
 ];
 
+/** The key under which the last look for garden centres in a region is remembered (see themes.ts: a key with "#" is never a place). */
+export const GARDEN_CENTRES_KEY = "osm-gardencentres";
+const GARDEN_CENTRES_RECHECK_DAYS = 90;
+const GARDEN_CENTRES_RETRY_DAYS = 3;
+
+async function gardenCentresDoneRecently(supabase: SupabaseClient, key: string, now: Date): Promise<boolean> {
+  const { data } = await supabase.from("discovery_regions").select("last_attempt_at, last_success_at").eq("region_key", key).maybeSingle();
+  if (!data) return false;
+  const since = (iso: unknown) => (iso ? now.getTime() - new Date(iso as string).getTime() : Infinity);
+  return since(data.last_success_at) < GARDEN_CENTRES_RECHECK_DAYS * 86_400_000 || since(data.last_attempt_at) < GARDEN_CENTRES_RETRY_DAYS * 86_400_000;
+}
+
+async function rememberGardenCentres(supabase: SupabaseClient, key: string, region: string, now: Date, success: boolean): Promise<void> {
+  await supabase
+    .from("discovery_regions")
+    .upsert({ region_key: key, region_label: region, last_attempt_at: now.toISOString(), ...(success ? { last_success_at: now.toISOString() } : {}) }, { onConflict: "region_key" });
+}
+
 export type OsmRegionOutcome = {
   region: string;
   status: "added" | "already_covered" | "failed";
@@ -52,6 +70,7 @@ export type OsmRegionOutcome = {
 
 type Deps = OpenStreetMapDeps & {
   geocode?: (query: string) => Promise<Coordinates | null>;
+  now?: Date;
 };
 
 /** Whether any of these places is within the covered distance of the centre: a true distance, not the corner of a box. Pure. */
@@ -101,6 +120,9 @@ export async function ensureOpenStreetMapPlaces(
 
     for (const { layer, notePrefix, coveredKm } of LAYERS) {
       if (await alreadyCovered(supabase, centre, notePrefix, coveredKm)) continue;
+      // Garden centres: where there are none within reach, that is asked again every three months, not every night.
+      const gardenKey = layer === "gardencentres" && region !== "this area" ? themedKey(normalizeRegionKey(region), GARDEN_CENTRES_KEY) : null;
+      if (gardenKey && (await gardenCentresDoneRecently(supabase, gardenKey, deps.now ?? new Date()))) continue;
       fetchedAny = true;
       if (layer !== "gardencentres") fetchedMore = true;
 
@@ -110,9 +132,14 @@ export async function ensureOpenStreetMapPlaces(
       const result = results[0];
       inserted += result.inserted;
       if (result.errors.length) errors.push(`${layer}: ${result.errors[0]}`);
+      if (gardenKey) await rememberGardenCentres(supabase, gardenKey, region, deps.now ?? new Date(), result.errors.length === 0);
     }
 
-    if (!fetchedAny || (!fetchedMore && inserted === 0 && errors.length === 0)) return { region, status: "already_covered", inserted: 0 };
+    // Only garden centres were looked at: nothing to report, and no use of the night's few fetches (a failure there is only logged).
+    if (!fetchedAny || (!fetchedMore && inserted === 0)) {
+      if (errors.length > 0) console.warn(`garden centres for "${region}":`, errors.join("; "));
+      return { region, status: "already_covered", inserted: 0 };
+    }
     if (errors.length) return { region, status: "failed", inserted, error: errors.join("; ") };
     return { region, status: "added", inserted };
   } catch (err) {
@@ -185,14 +212,18 @@ export async function ensureDayTrips(supabase: SupabaseClient, region: string, d
       return { region, status: "already_covered", inserted: 0 };
     }
 
-    const centre = await (deps.geocode ?? geocodeLocation)(region);
-    if (!centre) return { region, status: "failed", inserted: 0, error: `Couldn't locate "${region}"` };
-
     const remember = (success: boolean) =>
       supabase.from("discovery_regions").upsert(
         { region_key: key, region_label: region, last_attempt_at: now.toISOString(), ...(success ? { last_success_at: now.toISOString() } : {}) },
         { onConflict: "region_key" }
       );
+
+    const centre = await (deps.geocode ?? geocodeLocation)(region);
+    if (!centre) {
+      // Tried and failed: left alone for a few days, rather than tried again first thing every night, ahead of every later region.
+      await remember(false);
+      return { region, status: "failed", inserted: 0, error: `Couldn't locate "${region}"` };
+    }
 
     if ((await nearbyDayTripRows(supabase, centre)) >= COVERED_BY_NEARBY_ROWS) {
       await remember(true);
@@ -221,6 +252,8 @@ export async function ensureDayTripsForRegions(
   let fetched = 0;
   for (const region of regions) {
     if (fetched >= maxFetches) break;
+    // Each region is looked up on the map before anything is fetched: spaced, as the map service asks.
+    if (outcomes.length > 0) await (options.sleep ?? sleep)(1100);
     const outcome = await ensureDayTrips(supabase, region, options);
     outcomes.push(outcome);
     if (outcome.status !== "already_covered") fetched += 1;

@@ -222,10 +222,13 @@ describe("what is read from an organiser's pages", () => {
 describe("the job", () => {
   it("is protected like the others, stays within the daily search budget, and runs every morning", () => {
     const route = read("src/app/api/discovery/organisers/route.ts");
-    expect(route).toContain("Bearer ${process.env.CRON_SECRET}");
+    expect(route).toContain("if (!isCronRequest(request))");
+    expect(route).toContain("export const maxDuration = 300;");
     expect(route).toContain("searchAllowed(admin, null)");
     expect(route).toContain("refreshOrganisers(admin, { force })");
     const cron = JSON.parse(read("vercel.json")).crons as { path: string; schedule: string }[];
-    expect(cron).toContainEqual({ path: "/api/discovery/organisers", schedule: "0 5 * * *" });
+    // One organiser a run, twice a day: the daily search budget is only looked at when a run starts.
+    expect(cron).toContainEqual({ path: "/api/discovery/organisers", schedule: "0 5,17 * * *" });
+    expect(ORGANISERS_PER_RUN).toBe(1);
   });
 });

@@ -6,6 +6,7 @@ import { DATE_FIELD_PROMPT, isValidIso, parseAvailableUntil } from "@/lib/discov
 import { callClaude } from "@/lib/ai/client";
 import { AI_MODELS, QUICK_THINKING } from "@/lib/ai/models";
 import { scheduleOf } from "@/lib/discovery/sources/claudeWebSearch";
+import { safeHttpUrl } from "@/lib/discovery/safeUrl";
 import { cleanAddress, startOf, TIME_NOT_GIVEN_NOTE } from "@/lib/discovery/cleanFields";
 
 /**
@@ -67,6 +68,8 @@ export function candidatesFromAnswer(text: string, host: string, entryUrl: strin
     return [];
   }
   const items = ((JSON.parse(match[0]).items ?? []) as Item[]).filter((i) => i.title && CATEGORIES.includes(i.category as CategoryName));
+  // Only real web addresses are kept as an event's page; anything else is treated as having none (see safeUrl.ts).
+  for (const i of items) i.sourceUrl = safeHttpUrl(i.sourceUrl) ?? undefined;
   const urls = uniqueUrls(items, entryUrl);
   return items.map((item, index): RawActivityCandidate => {
     const { openingHours, holdForReview } = scheduleOf(item);

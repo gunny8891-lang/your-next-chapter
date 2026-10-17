@@ -52,7 +52,7 @@ const FULL_SEARCH = 40;
 const GRID = 3;
 const MAX_DEPTH = 2;
 /** Nothing that is not itself somewhere to go: a street, a bank's head office, a depot, a racecourse. */
-const NOT_A_DESTINATION = /\b(street|road|depot|racecourse|bank of england|guildhall)\b/i;
+const NOT_A_DESTINATION = /\b(street|road|depot|racecourse|bank of england)\b|^(the )?guildhall$/i;
 const MIN_VISIT_MINUTES = 120;
 
 /** What each search may spend: the nine boxes of the grid, and more for the kinds a city has hundreds of. */
@@ -226,12 +226,29 @@ export function createDayTripSource(supabase: SupabaseClient, centre: Coordinate
         }
       };
 
-      const searchCell = async (query: string, box: Box, depth: number): Promise<NominatimPlace[]> => {
-        if (spent >= allowed) return [];
-        const places = [...(await searchBox(query, box))];
-        // A full answer means there was more than it could give: look at each quarter on its own.
-        if (places.length >= FULL_SEARCH && depth < MAX_DEPTH) {
-          for (const quarter of quarters(box)) places.push(...(await searchCell(query, quarter, depth + 1)));
+      /**
+       * Every box of the grid first, so each part of the area is looked at; then the boxes that came back full are looked at
+       * closer, in order, with whatever the search has left. (Going deep into the first box would leave the others, and in a
+       * city the middle of the grid is where the famous places are, with nothing.)
+       */
+      const searchTerm = async (query: string): Promise<NominatimPlace[]> => {
+        const places: NominatimPlace[] = [];
+        const queue: { box: Box; depth: number }[] = [];
+        for (const box of grid) {
+          if (spent >= allowed) break;
+          const found = await searchBox(query, box);
+          places.push(...found);
+          if (found.length >= FULL_SEARCH) queue.push({ box, depth: 0 });
+        }
+        while (queue.length > 0 && spent < allowed) {
+          const { box, depth } = queue.shift()!;
+          if (depth >= MAX_DEPTH) continue;
+          for (const quarter of quarters(box)) {
+            if (spent >= allowed) break;
+            const found = await searchBox(query, quarter);
+            places.push(...found);
+            if (found.length >= FULL_SEARCH) queue.push({ box: quarter, depth: depth + 1 });
+          }
         }
         return places;
       };
@@ -242,9 +259,7 @@ export function createDayTripSource(supabase: SupabaseClient, centre: Coordinate
       for (const { term, query, budget } of SEARCHES) {
         spent = 0;
         allowed = budget;
-        const places: NominatimPlace[] = [];
-        for (const box of grid) places.push(...(await searchCell(query, box, 0)));
-        results.push({ term, places });
+        results.push({ term, places: await searchTerm(query) });
       }
 
       if (requests > 0 && failures === requests) {

@@ -7,11 +7,15 @@ import type { ToolAction } from "@/lib/chat/calendarTools";
 import { chatMessage, classifyAiFailure } from "@/lib/ai/unavailable";
 import { alreadyOfferedSupport, assessCare, supportFooter, urgentReply } from "@/lib/chat/care";
 
+/** The longest message the concierge will take: ample for anything a person types, and a limit on what one message can cost. */
+export const MAX_MESSAGE_CHARS = 1000;
+
 export async function sendChatMessageAction(
   question: string
 ): Promise<{ error: string | null; reply?: string; actions?: ToolAction[] }> {
   const trimmed = question.trim();
   if (!trimmed) return { error: "Message is empty" };
+  if (trimmed.length > MAX_MESSAGE_CHARS) return { error: "That message is a little long for me. Could you shorten it, or send it in two parts?" };
 
   const supabase = await createClient();
   const {
@@ -23,7 +27,8 @@ export async function sendChatMessageAction(
     .from("chat_messages")
     .select("role, content")
     .eq("member_id", user.id)
-    .order("created_at", { ascending: true })
+    // The latest twenty (newest first, then turned round): ascending would hand back the oldest twenty for ever.
+    .order("created_at", { ascending: false })
     .limit(20);
 
   const { error: insertUserError } = await supabase
@@ -31,7 +36,7 @@ export async function sendChatMessageAction(
     .insert({ member_id: user.id, role: "user", content: trimmed });
   if (insertUserError) return { error: insertUserError.message };
 
-  const history = (historyRows ?? []) as ChatHistoryMessage[];
+  const history = [...((historyRows ?? []) as ChatHistoryMessage[])].reverse();
   const care = assessCare(trimmed);
   // Someone who has said they want to die or harm themselves is not answered by the model, nor made to wait for it.
   // Someone bereaved, lonely or low is answered with care, and told once (not on every message) who can listen.
@@ -55,6 +60,8 @@ export async function sendChatMessageAction(
 
   await supabase.from("chat_messages").insert({ member_id: user.id, role: "assistant", content: reply });
 
+  // The conversation itself is read from the server, so a screen held from a moment ago would be missing this exchange.
+  revalidatePath("/chat");
   // Something put in their plan or calendar: the screens that show it are fresh the next time they look.
   if (actions.length > 0) {
     revalidatePath("/week");

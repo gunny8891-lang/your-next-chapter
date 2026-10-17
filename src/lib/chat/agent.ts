@@ -253,7 +253,8 @@ export async function conciergeReply(
   const { text, actions } = await runToolLoop({
     messages,
     create: (turns, allowTools) =>
-      callClaude(client, supabase, { userId: memberId, feature: "concierge_chat" }, {
+      // The usage is recorded with the service role, never the member's own session: see migration 30.
+      callClaude(client, admin, { userId: memberId, feature: "concierge_chat" }, {
         model: MODEL,
         // Replies are short, but any thinking is counted here too: at 400 a thoughtful reply could be cut off.
         max_tokens: 900,

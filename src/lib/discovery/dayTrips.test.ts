@@ -222,11 +222,17 @@ describe("making sure a region has them", () => {
     expect(persistDiscovery).toHaveBeenCalledTimes(1);
   });
 
-  it("runs after the nearby places, never alongside them, in the nightly job", () => {
-    const route = read("src/app/api/discovery/run/route.ts");
-    const at = route.indexOf("ensureOpenStreetMapPlacesForRegions(admin");
-    expect(at).toBeGreaterThan(0);
-    expect(route.indexOf("ensureDayTripsForRegions(admin", at)).toBeGreaterThan(at);
-    expect(route.slice(at - 6, at)).toBe("await ");
+  it("is a job of its own with its own time limit, one region a run, not part of the nightly job", () => {
+    const route = read("src/app/api/discovery/day-trips/route.ts");
+    expect(route).toContain("if (!isCronRequest(request))");
+    expect(route).toContain("export const maxDuration = 300;");
+    expect(route).toContain("MAX_DAY_TRIP_FETCHES_PER_RUN = 1");
+    expect(read("src/app/api/discovery/run/route.ts")).not.toContain("ensureDayTripsForRegions");
+    const crons = JSON.parse(read("vercel.json")).crons as { path: string; schedule: string }[];
+    expect(crons).toContainEqual({ path: "/api/discovery/day-trips", schedule: "0 4 * * *" });
+  });
+
+  it("only looks for day trips around a place that was found on a map", () => {
+    expect(read("src/app/api/discovery/day-trips/route.ts")).toContain(".filter((p) => p.location_lat != null && p.location_lng != null)");
   });
 });

@@ -23,10 +23,11 @@ export default async function ChatPage() {
     .from("chat_messages")
     .select("id, role, content, created_at")
     .eq("member_id", user.id)
-    .order("created_at", { ascending: true })
+    // The latest fifty, newest first, turned round below so they read in order.
+    .order("created_at", { ascending: false })
     .limit(50);
 
-  const messages: ChatMessageView[] = (history ?? []).map((m) => ({
+  const messages: ChatMessageView[] = (history ?? []).slice().reverse().map((m) => ({
     id: m.id,
     role: m.role as "user" | "assistant",
     content: m.content,

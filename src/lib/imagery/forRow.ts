@@ -1,4 +1,5 @@
 import { fallbackImageFor } from "@/lib/imagery/fallback";
+import { normaliseTags } from "@/lib/opportunities/tags";
 import type { PlaceImage } from "@/lib/imagery/types";
 
 type RowWithImage = {
@@ -25,5 +26,6 @@ export function imageForRow(row: RowWithImage): PlaceImage | null {
       license: row.image_license ?? "",
     };
   }
-  return fallbackImageFor(row.tags ?? []);
+  // The tags as the catalogue spells them ("soft_play" is "soft play"), so the rules about what has no picture still apply to a row read straight from the database.
+  return fallbackImageFor(normaliseTags(row.tags ?? []));
 }

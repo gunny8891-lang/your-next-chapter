@@ -30,6 +30,9 @@ export function Reflections({
   onAnswer: (activityId: string, answer: Answer) => Promise<{ error: string | null }>;
   onPlanAgain: (activityId: string, date: string, slot: string) => Promise<{ error: string | null; when?: string }>;
 }) {
+  // Answering refreshes Today, which then no longer lists what was just answered. What was shown is kept for as long as this
+  // screen is open, so the thanks, and "Plan it again next week" after "Loved it", are still there to be read and tapped.
+  const [kept] = useState<Reflection[]>(items);
   const [done, setDone] = useState<Record<string, Answer>>({});
   // Planning it again: what it said, once it has been tried.
   const [again, setAgain] = useState<Record<string, { message: string; ok: boolean }>>({});
@@ -53,7 +56,8 @@ export function Reflections({
     setAgain((a) => ({ ...a, [item.activityId]: res.error ? { message: res.error, ok: false } : { message: `Done: ${res.when} next week.`, ok: true } }));
   };
 
-  if (items.length === 0) return null;
+  const shown = [...kept, ...items.filter((i) => !kept.some((k) => k.activityId === i.activityId))];
+  if (shown.length === 0) return null;
 
   return (
     <section className={styles.section} aria-labelledby="reflect">
@@ -61,7 +65,7 @@ export function Reflections({
         How did it go?
       </h2>
       <ul className={styles.list} aria-live="polite">
-        {items.map((item) => (
+        {shown.map((item) => (
           <li key={item.activityId} className={styles.item}>
             {done[item.activityId] ? (
               <>

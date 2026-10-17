@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isCronRequest } from "@/lib/jobs/cronAuth";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { generateAndSaveItinerary } from "@/lib/itinerary/generateAndSave";
 import { nextLondonWeekStart } from "@/lib/opportunities/schedule";
@@ -32,8 +33,7 @@ function emailOf(users: MemberRow["users"]): string | null {
 // curl with the same bearer token. It plans each member's COMING week (the one starting tomorrow) and emails it:
 // planning the week that is ending would send a plan for days that have already gone.
 export async function GET(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isCronRequest(request)) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 

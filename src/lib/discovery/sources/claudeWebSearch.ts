@@ -7,6 +7,7 @@ import { callClaude } from "@/lib/ai/client";
 import { AI_MODELS, QUICK_THINKING } from "@/lib/ai/models";
 import { themeByKey, type DiscoveryTheme } from "@/lib/discovery/themes";
 import { parseSchedule } from "@/lib/someTime/openingHours";
+import { safeHttpUrl } from "@/lib/discovery/safeUrl";
 import { cleanAddress, startOf, TIME_NOT_GIVEN_NOTE } from "@/lib/discovery/cleanFields";
 
 // Kept on the smart tier: this does agentic multi-step tool orchestration
@@ -159,7 +160,9 @@ could take a grandchild for a family-friendly outing (soft play, parks, playgrou
     .filter((item) => item.title && CATEGORIES.includes(item.category as CategoryName))
     .map((item): RawActivityCandidate => {
       const { openingHours, holdForReview } = scheduleOf(item);
-      const bookingUrl = item.sourceUrl || `https://search.local/${encodeURIComponent(regionLabel)}#${encodeURIComponent(item.title!)}`;
+      // A web address only if it is one (see safeUrl.ts); otherwise the stand-in, and the entry cannot be made live by itself.
+      const sourceUrl = safeHttpUrl(item.sourceUrl);
+      const bookingUrl = sourceUrl || `https://search.local/${encodeURIComponent(regionLabel)}#${encodeURIComponent(item.title!)}`;
       return {
         title: item.title!,
         description: (() => {
@@ -175,7 +178,7 @@ could take a grandchild for a family-friendly outing (soft play, parks, playgrou
         availableUntil: parseAvailableUntil(item.availableUntil),
         priceEstimate: item.priceEstimate ?? null,
         bookingUrl,
-        bookingUrlVerified: Boolean(item.sourceUrl),
+        bookingUrlVerified: Boolean(sourceUrl),
         openingHours,
         holdForReview,
         tags: item.tags ?? [],

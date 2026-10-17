@@ -7,6 +7,7 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { geocodeLocation } from "@/lib/geo/geocode";
 import { generateAndSaveItinerary } from "@/lib/itinerary/generateAndSave";
 import { triggerDiscoveryForRegion } from "@/lib/discovery/regional";
+import { cleanLocationText } from "@/lib/geo/locationText";
 import { cleanFirstName } from "@/lib/someTime/format";
 import type { OnboardingAnswers } from "@/components/OnboardingFlow";
 import { budgetBandFor, mobilityNoteFor } from "@/lib/onboarding/choices";
@@ -46,12 +47,14 @@ export async function saveOnboardingAction(submitted: OnboardingAnswers) {
 
   // Best-effort — a member whose town doesn't resolve still completes onboarding;
   // they just won't get distance-filtered results until this can be retried.
-  const geocoded = answers.location ? await geocodeLocation(answers.location) : null;
+  // Only a place name is kept (see lib/geo/locationText.ts): it is searched for on a map, and in a paid search.
+  const location = cleanLocationText(answers.location);
+  const geocoded = location ? await geocodeLocation(location) : null;
 
   await supabase.from("member_profiles").upsert(
     {
       user_id: user.id,
-      location_text: answers.location ?? null,
+      location_text: location,
       location_lat: geocoded?.lat ?? null,
       location_lng: geocoded?.lng ?? null,
       travel_radius_km: answers.radius ? RADIUS_KM[answers.radius] ?? null : null,
@@ -73,8 +76,8 @@ export async function saveOnboardingAction(submitted: OnboardingAnswers) {
   // Kick off discovery for this region now rather than waiting for the
   // nightly cron — queues candidates for admin review, doesn't itself
   // populate the week just generated above (those still need approval).
-  if (answers.location) {
-    after(() => triggerDiscoveryForRegion(admin, user.id, answers.location!));
+  if (location) {
+    after(() => triggerDiscoveryForRegion(admin, user.id, location));
   }
 
   redirect("/today");

@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CategoryName } from "@/lib/categories";
 import { callClaude } from "@/lib/ai/client";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { containsJargon } from "@/lib/ai/plainWords";
 import { AI_MODELS } from "@/lib/ai/models";
 import { summarizeAffinity, type AffinityScores } from "@/lib/memory/scoring";
@@ -330,7 +331,8 @@ function defaultAsk(supabase: SupabaseClient, memberId: string): Ask {
   return async (system, user) => {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
-    const response = await callClaude(new Anthropic({ apiKey }), supabase, { userId: memberId, feature: "some_time" }, {
+    // The usage is recorded with the service role, never the member's own session: see migration 30.
+    const response = await callClaude(new Anthropic({ apiKey }), createAdminClient(), { userId: memberId, feature: "some_time" }, {
       model: MODEL,
       max_tokens: MAX_TOKENS,
       // Choosing three of eight and writing a sentence each is not a task for deliberation. With thinking left on

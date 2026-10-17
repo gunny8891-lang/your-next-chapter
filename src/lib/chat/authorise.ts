@@ -14,18 +14,18 @@
 export type Authorisation = "explicit" | "affirmative" | "none";
 
 const ADD_WORDS =
-  /\b(add|adding|put|pop|book|schedule|diary|calendar|plan|pencil|sign me up|put me down|i'?d like to go|i would like to go|i want to go|i'?ll go|i will go|let'?s do|let'?s go|count me in)\b/i;
+  /\b(add|adding|put|pop|pencil|sign me up|put me down|i'?d like to go|i would like to go|i want to go|i'?ll go|i will go|let'?s do|let'?s go|count me in)\b|\b(book|schedule|diary)\s+(this|it|that|these|those|me|us)\b/i;
 
 /** Asking about adding (or whether to), which is not asking for it to be done. */
 const NOT_A_REQUEST =
   /\b(should i|do you think i should|how do i|how can i|can i add|could i add|can i put|is it possible to add|what if i|will it let me|does it let me|what does adding)\b/i;
 
 const YES =
-  /^(yes|yeah|yep|yup|ok|okay|sure|please|please do|yes please|go ahead|do it|do that|that would be (lovely|great|good|nice)|that'?s? (fine|good|great|right|perfect)|sounds (good|great|lovely|perfect)|perfect|lovely|great|brilliant|thank you|thanks|yes,? (please|add it|do|go ahead|that'?s? (right|fine)))[\s.!,]*(please|thanks|thank you|add it|do it)?[\s.!]*$/i;
+  /^(yes|yeah|yep|yup|ok|okay|sure|please|please do|yes please|go ahead|do it|do that|that would be (lovely|great|good|nice)|that'?s? (fine|good|great|right|perfect)|sounds (good|great|lovely|perfect)|perfect|lovely|great|brilliant|yes,? (please|add it|do|go ahead|that'?s? (right|fine)))[\s.!,]*(please|add it|do it)?[\s.!]*$/i;
 
 /** What the concierge's last message has to have said for a bare "yes" to count: it offered to add, schedule or book it. */
 const OFFERED =
-  /\b(shall i|should i|would you like me to|do you want me to|want me to|happy for me to|i can)\b[^?.!]*\b(add|put|schedule|book|pop|place)\b|\badd (it|this|that|them)\b[^?]*\?/i;
+  /\b(shall i|should i|would you like me to|do you want me to|want me to|happy for me to)\b[^?.!]*\b(add|put|schedule|book|pop|place)\b|\badd (it|this|that|them)\b[^?.!]*\?/i;
 const OFFERED_GOOGLE = /\bgoogle calendar\b[^.!]*\?|\?[^.!]*\bgoogle calendar\b/i;
 
 export function authorisationFor(message: string, previousAssistant: string | null): Authorisation {

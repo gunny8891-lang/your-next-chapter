@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
+import { isCronRequest } from "@/lib/jobs/cronAuth";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { runDiscoveryAgent } from "@/lib/discovery/run";
 import { searchRegionsThrottled, themedRequests } from "@/lib/discovery/regional";
-import { ensureDayTripsForRegions, ensureOpenStreetMapPlacesForRegions } from "@/lib/discovery/osmPlaces";
+import { ensureOpenStreetMapPlacesForRegions } from "@/lib/discovery/osmPlaces";
 import { enrichDueImages } from "@/lib/imagery/store";
 import { searchAllowed } from "@/lib/ai/limits";
 import { createTicketmasterSource, RICHMOND_AREA } from "@/lib/discovery/sources/ticketmaster";
@@ -16,11 +17,11 @@ import { purgeOldAppEvents } from "@/lib/appEvents";
 // picked up by a later run. If this ever needs to cover more than a handful of
 // regions a week, add more cron slots rather than raising this.
 const MAX_REGIONAL_SEARCHES_PER_RUN = 1;
+// The longest of the jobs: a regional search alone has been seen taking four and a half minutes.
+export const maxDuration = 300;
 // The free place layer is quick (about 20 requests a region); this just stops a
 // long backlog of new regions turning into one very long run.
 const MAX_PLACE_FETCHES_PER_RUN = 2;
-// The well-known places for a day out take a couple of minutes a region, so one region a night; they hardly ever change.
-const MAX_DAY_TRIP_FETCHES_PER_RUN = 1;
 // Photographs are looked for a few places a night (two quick requests each, spaced out),
 // newest places first, so the catalogue fills in over time without a long run.
 const MAX_IMAGE_LOOKUPS_PER_RUN = 12;
@@ -29,8 +30,7 @@ const MAX_IMAGE_LOOKUPS_PER_RUN = 12;
 // curl with the same bearer token in the meantime. `?force=1` searches a due-
 // or-not region (still capped, still never one that's mid-search).
 export async function GET(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isCronRequest(request)) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
@@ -55,7 +55,8 @@ export async function GET(request: Request) {
   // by position, so a member who typed a postcode and one who typed the town are one region, not two.
   const regionRequests = (profiles ?? [])
     .map((p) => ({ label: p.location_text?.replace(/^Near /, "").trim() ?? "", lat: p.location_lat, lng: p.location_lng }))
-    .filter((r) => r.label && r.label !== "Somewhere else");
+    // Only a place found on a map is searched for with the paid search: text that could not be found may not be a place at all.
+    .filter((r) => r.label && r.label !== "Somewhere else" && r.lat != null && r.lng != null);
 
   // Events come from where members actually live, not one fixed town (Richmond is
   // only the fallback when nobody has a resolved location). The key is checked
@@ -86,18 +87,14 @@ export async function GET(request: Request) {
     // One after the other, never together: both ask OpenStreetMap's search service, which allows about a request a second.
     (async () => {
       const places = await ensureOpenStreetMapPlacesForRegions(admin, regions, { maxFetches: MAX_PLACE_FETCHES_PER_RUN });
-      // A bonus: it never fails the run.
-      const dayTrips = await ensureDayTripsForRegions(admin, regions, { maxFetches: MAX_DAY_TRIP_FETCHES_PER_RUN }).catch((err: unknown) => [
-        { region: "day trips", status: "failed" as const, inserted: 0, error: err instanceof Error ? err.message : "Day trips failed" },
-      ]);
-      return { places, dayTrips };
+      return { places };
     })(),
     // A bonus: it never fails the run.
     enrichDueImages(admin, MAX_IMAGE_LOOKUPS_PER_RUN, { budgetMs: 30_000 }).catch((err: unknown) => ({
       error: err instanceof Error ? err.message : "Image lookups failed",
     })),
   ]);
-  const { places, dayTrips } = osm;
+  const { places } = osm;
   regional = regionalSettled.summary;
   regionalError = regionalSettled.error;
 
@@ -124,5 +121,5 @@ export async function GET(request: Request) {
   // Records of what went wrong are kept 90 days. A bonus: it never fails the run.
   const eventsPurged = await purgeOldAppEvents(admin);
 
-  return NextResponse.json({ results, regional, regionalError, themed, themedError, places, dayTrips, images, duplicates, eventsPurged, ticketmasterSkipped, searchBudget });
+  return NextResponse.json({ results, regional, regionalError, themed, themedError, places, images, duplicates, eventsPurged, ticketmasterSkipped, searchBudget });
 }
