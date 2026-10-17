@@ -5,6 +5,7 @@ import {
   OSM_FOOD_NOTE_PREFIX,
   OSM_PLACES_NOTE_PREFIX,
   OSM_THINGS_NOTE_PREFIX,
+  OSM_GARDEN_CENTRES_NOTE_PREFIX,
   type OpenStreetMapDeps,
   type OsmLayer,
 } from "@/lib/discovery/sources/openStreetMap";
@@ -29,10 +30,17 @@ export function coverageBox(centre: Coordinates, km: number = COVERED_RADIUS_KM)
   return { latMin: centre.lat - dLat, latMax: centre.lat + dLat, lngMin: centre.lng - dLng, lngMax: centre.lng + dLng };
 }
 
-const LAYERS: { layer: OsmLayer; notePrefix: string }[] = [
+/**
+ * Garden centres are few and far between, so anything within this distance covers a centre: at the usual few kilometres a
+ * region with none nearby would be searched again every night for nothing.
+ */
+const GARDEN_CENTRES_COVERED_KM = 20;
+
+const LAYERS: { layer: OsmLayer; notePrefix: string; coveredKm?: number }[] = [
   { layer: "places", notePrefix: OSM_PLACES_NOTE_PREFIX },
   { layer: "food", notePrefix: OSM_FOOD_NOTE_PREFIX },
   { layer: "things", notePrefix: OSM_THINGS_NOTE_PREFIX },
+  { layer: "gardencentres", notePrefix: OSM_GARDEN_CENTRES_NOTE_PREFIX, coveredKm: GARDEN_CENTRES_COVERED_KM },
 ];
 
 export type OsmRegionOutcome = {
@@ -51,8 +59,8 @@ export function isCovered(places: { location_lat: number | null; location_lng: n
   return places.some((p) => p.location_lat != null && p.location_lng != null && haversineDistanceKm(centre.lat, centre.lng, Number(p.location_lat), Number(p.location_lng)) <= km);
 }
 
-async function alreadyCovered(supabase: SupabaseClient, centre: Coordinates, notePrefix: string): Promise<boolean> {
-  const box = coverageBox(centre);
+async function alreadyCovered(supabase: SupabaseClient, centre: Coordinates, notePrefix: string, km: number = COVERED_RADIUS_KM): Promise<boolean> {
+  const box = coverageBox(centre, km);
   const { data, error } = await supabase
     .from("activities")
     .select("location_lat, location_lng")
@@ -63,7 +71,7 @@ async function alreadyCovered(supabase: SupabaseClient, centre: Coordinates, not
     .lte("location_lng", box.lngMax)
     .limit(500);
   if (error) throw new Error(`Couldn't check existing place coverage: ${error.message}`);
-  return isCovered(data ?? [], centre);
+  return isCovered(data ?? [], centre, km);
 }
 
 /**
@@ -86,11 +94,15 @@ export async function ensureOpenStreetMapPlaces(
 
     let inserted = 0;
     let fetchedAny = false;
+    // Whether anything other than garden centres was fetched: a region with no garden centre near it is looked at again each
+    // night, and that must not use up the few regions a night can fetch for.
+    let fetchedMore = false;
     const errors: string[] = [];
 
-    for (const { layer, notePrefix } of LAYERS) {
-      if (await alreadyCovered(supabase, centre, notePrefix)) continue;
+    for (const { layer, notePrefix, coveredKm } of LAYERS) {
+      if (await alreadyCovered(supabase, centre, notePrefix, coveredKm)) continue;
       fetchedAny = true;
+      if (layer !== "gardencentres") fetchedMore = true;
 
       // Space this request from the previous one — Nominatim allows ~1/second.
       await (deps.sleep ?? sleep)(1100);
@@ -100,7 +112,7 @@ export async function ensureOpenStreetMapPlaces(
       if (result.errors.length) errors.push(`${layer}: ${result.errors[0]}`);
     }
 
-    if (!fetchedAny) return { region, status: "already_covered", inserted: 0 };
+    if (!fetchedAny || (!fetchedMore && inserted === 0 && errors.length === 0)) return { region, status: "already_covered", inserted: 0 };
     if (errors.length) return { region, status: "failed", inserted, error: errors.join("; ") };
     return { region, status: "added", inserted };
   } catch (err) {

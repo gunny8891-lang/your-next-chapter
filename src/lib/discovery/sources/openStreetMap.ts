@@ -33,7 +33,10 @@ export const OSM_FOOD_NOTE_PREFIX = `${OSM_NOTE_PREFIX} (food`;
 /** Notes of the things-to-do layer (bowling, adventure golf, attractions, historic houses, galleries, more leisure centres) start with this. */
 export const OSM_THINGS_NOTE_PREFIX = `${OSM_NOTE_PREFIX} (things`;
 
-export type OsmLayer = "places" | "food" | "things";
+/** Notes of the garden centres layer start with this. A layer of its own so that regions fetched before it existed get theirs. */
+export const OSM_GARDEN_CENTRES_NOTE_PREFIX = `${OSM_NOTE_PREFIX} (garden centres`;
+
+export type OsmLayer = "places" | "food" | "things" | "gardencentres";
 
 export const NOMINATIM_SEARCH = "https://nominatim.openstreetmap.org/search";
 export const MIN_REQUEST_GAP_MS = 1100;
@@ -50,7 +53,8 @@ export type PlaceType =
   | "theatre" | "cinema" | "playground"
   | "restaurant" | "cafe" | "pub" | "tea_room"
   | "leisure_centre" | "bowling_alley" | "mini_golf" | "trampoline_park" | "ice_rink" | "golf" | "dance_studio"
-  | "attraction" | "heritage_house" | "zoo" | "theme_park" | "aquarium" | "art_gallery";
+  | "attraction" | "heritage_house" | "zoo" | "theme_park" | "aquarium" | "art_gallery"
+  | "garden_centre";
 
 export type TypeConfig = {
   category: CategoryName;
@@ -106,6 +110,8 @@ export const TYPES: Record<PlaceType, TypeConfig> = {
   theme_park: { category: "Joy", label: "Theme park", keep: 2, minutes: 240, layer: "things", tags: ["family", "grandchildren"] },
   aquarium: { category: "Explore", label: "Aquarium", keep: 2, minutes: 120, layer: "things", tags: ["wildlife", "family", "grandchildren", "indoor"] },
   art_gallery: { category: "Explore", label: "Art gallery", keep: 4, minutes: 60, layer: "things", tags: ["art", "gallery", "culture", "indoor"] },
+  // A garden centre is a pleasant hour or two for anyone who gardens, and free to wander round; most have a café.
+  garden_centre: { category: "Joy", label: "Garden centre", keep: 6, minutes: 75, layer: "gardencentres", tags: ["gardens", "gardening", "garden centre"], freeByDefault: true },
 };
 
 /**
@@ -143,6 +149,7 @@ const OSM_KIND_TO_TYPE: Record<string, PlaceType> = {
   "tourism=theme_park": "theme_park",
   "tourism=aquarium": "aquarium",
   "tourism=gallery": "art_gallery",
+  "shop=garden_centre": "garden_centre",
 };
 
 /**
@@ -162,6 +169,7 @@ const SEARCH_TERMS: Record<OsmLayer, string[]> = {
     "leisure centre", "swimming centre", "bowling alley", "miniature golf", "trampoline park", "ice rink", "golf course",
     "dance studio", "attraction", "manor", "zoo", "theme park", "aquarium", "art gallery",
   ],
+  gardencentres: ["garden centre"],
 };
 /**
  * What is actually sent for a search term. A plain phrase is ranked by relevance and often finds nothing ("bowling alley"
@@ -183,10 +191,12 @@ const TERM_QUERY: Record<string, string> = {
   "theme park": "[tourism=theme_park]",
   aquarium: "[tourism=aquarium]",
   "art gallery": "[tourism=gallery]",
+  "garden centre": "[shop=garden_centre]",
 };
 /** The searches whose sports centres and pools are kept as leisure_centre (see classifyPlace). */
 const LEISURE_CENTRE_TERMS = new Set(["leisure centre", "swimming centre"]);
 const SCHOOL_HALL_NAME = /\b(sports hall|boys|girls|school|prep)\b/i;
+const NOT_A_RETAIL_GARDEN_CENTRE = /\b(wholesale|trade|landscap\w*|fencing|fence|sheds?|building supplies|builders?|paving|turf|tree surgeons?|contractors?)\b/i;
 // Things tagged as attractions that are a statue or a viewpoint, not somewhere to spend a few hours.
 export const NOT_AN_ATTRACTION = /\b(station|platform|whipping post|stocks|statue|memorial|monument|viewpoint|view point|fountain|plaque|sculpture|bench|gate|gates|bridge|cross|well|pump|stone|mural|sign|trail marker|picnic|car park)\b/i;
 // A building you can visit: an attraction named as a house, hall, castle, abbey, palace, manor or estate.
@@ -343,6 +353,13 @@ export function classifyPlace(place: NominatimPlace, term: string): PlaceType | 
       if (NOT_AN_ATTRACTION.test(name)) return null;
       if (HERITAGE_HOUSE_NAME.test(name)) type = "heritage_house";
     }
+  }
+  // A garden centre that says nothing a visitor could use is not worth sending anyone to, and a supplier of sheds, fencing or
+  // landscaping is a trade counter rather than somewhere to wander round.
+  if (type === "garden_centre") {
+    const e = place.extratags ?? {};
+    if (!(e.website || e["contact:website"] || e.opening_hours)) return null;
+    if (NOT_A_RETAIL_GARDEN_CENTRE.test(name)) return null;
   }
   // Golf clubs are members' clubs; a pay-and-play course or driving range is not.
   if (type === "golf" && (PRIVATE_CLUB_NAME.test(name) || place.extratags?.club)) return null;
@@ -537,7 +554,9 @@ export function selectPlaces(
         ? `${OSM_FOOD_NOTE_PREFIX} & drink; © OpenStreetMap contributors, ODbL) — a venue listing, not a scheduled event.`
         : cfg.layer === "things"
           ? `${OSM_THINGS_NOTE_PREFIX} to do; © OpenStreetMap contributors, ODbL) — a venue listing, not a scheduled event.`
-          : `${OSM_PLACES_NOTE_PREFIX} OpenStreetMap contributors, ODbL) — a venue listing, not a scheduled event.`,
+          : cfg.layer === "gardencentres"
+            ? `${OSM_GARDEN_CENTRES_NOTE_PREFIX}; © OpenStreetMap contributors, ODbL) — a venue listing, not a scheduled event.`
+            : `${OSM_PLACES_NOTE_PREFIX} OpenStreetMap contributors, ODbL) — a venue listing, not a scheduled event.`,
     };
   });
 }
@@ -583,7 +602,7 @@ export function createOpenStreetMapSource(
   const wait = deps.sleep ?? sleep;
 
   return {
-    name: layer === "food" ? "openstreetmap-food" : layer === "things" ? "openstreetmap-things" : "openstreetmap",
+    name: layer === "food" ? "openstreetmap-food" : layer === "things" ? "openstreetmap-things" : layer === "gardencentres" ? "openstreetmap-garden-centres" : "openstreetmap",
     async fetchCandidates(): Promise<RawActivityCandidate[]> {
       let lastRequestAt = 0;
       let requests = 0;

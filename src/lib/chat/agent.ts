@@ -10,6 +10,7 @@ import { PLAIN_WORDS_RULE } from "@/lib/ai/plainWords";
 import { loadMemberLife, memberLifeText } from "@/lib/chat/memberContext";
 import { dayTripsText, wantsDayTrips } from "@/lib/chat/dayTrips";
 import { foodText, wantsFood } from "@/lib/chat/food";
+import { gardenCentresText, wantsGardenCentres } from "@/lib/chat/gardenCentres";
 import { loadRecentIdeas, recentIdeasText, type RecentIdea } from "@/lib/chat/recentIdeas";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { addDays, londonToday } from "@/lib/opportunities/schedule";
@@ -64,7 +65,9 @@ export function buildSystemPrompt(
   /** Cafés, pubs, restaurants and tea rooms near home, only when they asked about eating or drinking (see food.ts). Empty otherwise. */
   foodList: string = "",
   /** The time now in London, "14:05", so "lunch" can be matched to what is open. */
-  timeNow: string = ""
+  timeNow: string = "",
+  /** Garden centres near home, only when they asked about one (see gardenCentres.ts). Empty otherwise. */
+  gardenCentreList: string = ""
 ) {
   const weekItemsText = weekItems.length
     ? weekItems
@@ -109,6 +112,10 @@ ${candidatesText || "No other active candidate activities available right now."}
 
 ${dayTripsList ? `DAY TRIPS (well-known places further afield, listed because they asked for a day out; say roughly how far and how long it takes, as an estimate, and that it is worth checking opening times and booking before they go. We do not list cafés or restaurants near these, so for lunch there say they can look on a map once they arrive):
 ${dayTripsList}
+
+` : ""}${gardenCentreList ? `GARDEN CENTRES NEAR HOME (listed because they asked about garden centres; opening hours are as the map records them and may be out of date, so say to check before going):
+${gardenCentreList}
+For these: suggest two or three at most, from this list only, saying roughly how far each is. Do not say what a garden centre sells, whether it has a café, or what it charges: we do not know.
 
 ` : ""}${foodList ? `FOOD AND DRINK NEAR HOME (listed because they asked about eating or drinking; the opening hours are as the map records them and may be out of date, so say to check before going):
 ${foodList}
@@ -219,7 +226,8 @@ export async function conciergeReply(
     memberLifeText(await loadMemberLife(supabase, memberId, londonToday(), weekItems.filter((i) => i.member_action === "accepted").length)),
     wantsDayTrips(question) ? await dayTripsText(supabase, memberId, scheduledActivityIds) : "",
     wantsFood(question) ? await foodText(supabase, memberId) : "",
-    new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date())
+    new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date()),
+    wantsGardenCentres(question) ? await gardenCentresText(supabase, memberId) : ""
   );
 
   const client = new Anthropic({ apiKey });
