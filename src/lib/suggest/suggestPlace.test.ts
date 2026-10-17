@@ -20,6 +20,8 @@ describe("what a member writes", () => {
       when: "Tuesdays 10 to 12",
       link: null,
       notes: "Step-free.",
+      date: null,
+      time: null,
     });
   });
 
@@ -207,5 +209,42 @@ describe("filling in a thin home area", () => {
     expect(actions).toContain('if (!request.here && request.mood !== "daytrip" && result.options.length < THIN_RESULT_IDEAS)');
     expect(actions).toContain("after(() => ensurePlacesNearHome(user.id))");
     expect(THIN_RESULT_IDEAS).toBe(3);
+  });
+});
+
+describe("an event with a real day and time", () => {
+  const event = { ...raw, name: "Summer Fair", kind: "event", date: "2026-12-05", time: "11:00" };
+  const TODAY = "2026-10-17";
+
+  it("is kept with its day and start time, so it can be offered on that day", () => {
+    const s = cleanSuggestion(event, TODAY)!;
+    expect(s).toMatchObject({ date: "2026-12-05", time: "11:00" });
+    expect(suggestionCandidate(s, BARNET).dateTime).toBe("2026-12-05T11:00:00Z");
+    expect(suggestionMessage(s)).toContain("Date: 2026-12-05 at 11:00");
+  });
+
+  it("needs both the day and the time: a day alone is not a start time", () => {
+    expect(cleanSuggestion({ ...event, time: "" }, TODAY)).toMatchObject({ date: null, time: null });
+    expect(suggestionCandidate(cleanSuggestion({ ...event, time: "" }, TODAY)!, null).dateTime).toBeNull();
+    expect(cleanSuggestion({ ...event, date: "" }, TODAY)).toMatchObject({ date: null, time: null });
+  });
+
+  it("is dropped, not refused, when the day is not one that can be offered: past, too far ahead, or not a day", () => {
+    for (const date of ["2026-10-01", "2029-01-01", "2026-02-31", "next Saturday", "05/12/2026"]) {
+      expect(cleanSuggestion({ ...event, date }, TODAY), date).toMatchObject({ name: "Summer Fair", date: null, time: null });
+    }
+    expect(cleanSuggestion({ ...event, time: "25:99" }, TODAY)).toMatchObject({ date: null, time: null });
+    expect(cleanSuggestion({ ...event, date: TODAY }, TODAY)?.date).toBe(TODAY);
+  });
+
+  it("is only for a one-off event: a place or a group does not get a day", () => {
+    expect(cleanSuggestion({ ...event, kind: "place" }, TODAY)).toMatchObject({ date: null, time: null });
+    expect(cleanSuggestion({ ...event, kind: "group" }, TODAY)).toMatchObject({ date: null, time: null });
+  });
+
+  it("is asked for on the form and passed on by the action", () => {
+    expect(read("src/app/suggest/page.tsx")).toContain('name="date" type="date"');
+    expect(read("src/app/suggest/page.tsx")).toContain('name="time" type="time"');
+    expect(read("src/app/suggest/actions.ts")).toContain('date: formData.get("date")');
   });
 });

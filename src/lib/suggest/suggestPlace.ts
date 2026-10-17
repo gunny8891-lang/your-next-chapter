@@ -25,7 +25,20 @@ export const SUGGEST_KINDS: { value: string; label: string; category: CategoryNa
   { value: "other", label: "Something else", category: "Joy", tags: [] },
 ];
 
-export type Suggestion = { name: string; kind: string; where: string; when: string | null; link: string | null; notes: string | null };
+export type Suggestion = {
+  name: string;
+  kind: string;
+  where: string;
+  when: string | null;
+  link: string | null;
+  notes: string | null;
+  /** For a one-off event: the day (YYYY-MM-DD) and the start time (HH:MM), held only when both are given and the day is still to come. */
+  date: string | null;
+  time: string | null;
+};
+
+/** How far ahead an event can be suggested. */
+const MAX_DAYS_AHEAD = 548;
 
 const MAX = { name: 100, where: 200, when: 120, link: 300, notes: 500 };
 const tidy = (raw: unknown, max: number): string => (typeof raw === "string" ? raw.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, max) : "");
@@ -42,21 +55,40 @@ function cleanLink(raw: unknown): string | null {
   }
 }
 
+const DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
+const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** The day for an event: a real calendar day from today to about eighteen months ahead; otherwise nothing. */
+function cleanEventDate(raw: unknown, today: string): string | null {
+  const text = tidy(raw, 10);
+  const m = DATE.exec(text);
+  if (!m) return null;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const real = new Date(Date.UTC(y, mo - 1, d));
+  if (real.getUTCFullYear() !== y || real.getUTCMonth() !== mo - 1 || real.getUTCDate() !== d) return null;
+  const days = Math.round((real.getTime() - Date.parse(`${today}T00:00:00Z`)) / 86_400_000);
+  return days >= 0 && days <= MAX_DAYS_AHEAD ? text : null;
+}
+
 /** What arrived from the form, tidied; null when it has no name, no kind that exists, or no say of where. */
-export function cleanSuggestion(raw: unknown): Suggestion | null {
+export function cleanSuggestion(raw: unknown, today: string = new Date().toISOString().slice(0, 10)): Suggestion | null {
   if (typeof raw !== "object" || raw === null) return null;
   const r = raw as Record<string, unknown>;
   const name = tidy(r.name, MAX.name);
   const where = tidy(r.where, MAX.where);
   const kind = SUGGEST_KINDS.find((k) => k.value === r.kind)?.value;
   if (name.length < 2 || where.length < 3 || !kind) return null;
-  return { name, kind, where, when: tidy(r.when, MAX.when) || null, link: cleanLink(r.link), notes: tidy(r.notes, MAX.notes) || null };
+  // A day and a time are only kept for a one-off event, and only together: a day alone is not a start time.
+  const date = kind === "event" ? cleanEventDate(r.date, today) : null;
+  const timeText = tidy(r.time, 5);
+  const time = date && TIME.test(timeText) ? timeText : null;
+  return { name, kind, where, when: tidy(r.when, MAX.when) || null, link: cleanLink(r.link), notes: tidy(r.notes, MAX.notes) || null, date: time ? date : null, time };
 }
 
 /** The note to whoever runs the app. */
 export function suggestionMessage(s: Suggestion): string {
   const kind = SUGGEST_KINDS.find((k) => k.value === s.kind)?.label ?? s.kind;
-  return [`Suggested: ${s.name} (${kind})`, `Where: ${s.where}`, s.when ? `When: ${s.when}` : null, s.link ? `Link: ${s.link}` : null, s.notes ? `Notes: ${s.notes}` : null]
+  return [`Suggested: ${s.name} (${kind})`, `Where: ${s.where}`, s.date && s.time ? `Date: ${s.date} at ${s.time}` : null, s.when ? `When: ${s.when}` : null, s.link ? `Link: ${s.link}` : null, s.notes ? `Notes: ${s.notes}` : null]
     .filter((l): l is string => l !== null)
     .join("\n");
 }
@@ -65,6 +97,8 @@ export function suggestionMessage(s: Suggestion): string {
 export function suggestionCandidate(s: Suggestion, coords: Coordinates | null): RawActivityCandidate {
   const kind = SUGGEST_KINDS.find((k) => k.value === s.kind) ?? SUGGEST_KINDS[SUGGEST_KINDS.length - 1];
   const description = [`${kind.label}, suggested by a member and not yet checked.`, s.when ? `When: ${s.when}.` : null, s.notes ? s.notes : null].filter(Boolean).join(" ");
+  // The app keeps the time on the clock as written (10:00 is stored as 10:00 with a Z), as every other source does.
+  const dateTime = s.date && s.time ? `${s.date}T${s.time}:00Z` : null;
   return {
     title: s.name,
     description,
@@ -72,7 +106,7 @@ export function suggestionCandidate(s: Suggestion, coords: Coordinates | null): 
     address: s.where,
     locationLat: coords?.lat ?? null,
     locationLng: coords?.lng ?? null,
-    dateTime: null,
+    dateTime,
     priceEstimate: null,
     // Something to point at until it is checked: their link, or a map search for the name and the place.
     bookingUrl: s.link ?? `https://www.google.com/maps/search/?${new URLSearchParams({ api: "1", query: `${s.name} ${s.where}` }).toString()}`,

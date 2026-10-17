@@ -20,6 +20,8 @@ export async function suggestPlaceAction(formData: FormData) {
       kind: formData.get("kind"),
       where: formData.get("where"),
       when: formData.get("when"),
+      date: formData.get("date"),
+      time: formData.get("time"),
       link: formData.get("link"),
       notes: formData.get("notes"),
     },

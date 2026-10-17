@@ -52,6 +52,8 @@ export default async function SuggestPage({ searchParams }: { searchParams: Prom
             ))}
           </SelectField>
           <Field label="Where is it?" name="where" required minLength={3} maxLength={200} hint="An address or the town and street is plenty." placeholder="e.g. 12 High Street, Barnet" />
+          <Field label="If it is a one-off event: the day" name="date" type="date" hint="Leave this and the time blank for anything that is not a single event." />
+          <Field label="and the time it starts" name="time" type="time" />
           <Field label="When is it on? (if it is not always open)" name="when" maxLength={120} placeholder="e.g. Tuesdays 10 to 12, or Saturday 14 March" />
           <Field label="A web address, if there is one" name="link" maxLength={300} placeholder="e.g. www.example.org" />
           <TextareaField label="Anything else we should know?" name="notes" rows={4} maxLength={500} hint="Costs, whether it suits wheelchairs or dogs, who it is for." />

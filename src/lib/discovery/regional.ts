@@ -10,7 +10,7 @@ import { searchAllowed } from "@/lib/ai/limits";
 import { ensureOpenStreetMapPlaces } from "@/lib/discovery/osmPlaces";
 import { memberAreas } from "@/lib/discovery/areas";
 import { mergeDuplicateVenues } from "@/lib/discovery/duplicates";
-import { DISCOVERY_THEMES, isThemedKey, THEME_REFRESH_DAYS, themedKey } from "@/lib/discovery/themes";
+import { DISCOVERY_THEMES, isThemedKey, refreshDaysFor, themedKey } from "@/lib/discovery/themes";
 import { createTicketmasterSource } from "@/lib/discovery/sources/ticketmaster";
 import { generateAndSaveItinerary } from "@/lib/itinerary/generateAndSave";
 import { decideSearch, nearestRegion, normalizeRegionKey, type RegionState, type SearchDecision } from "@/lib/discovery/throttle";
@@ -23,6 +23,8 @@ export type RegionRequest = {
   lng?: number | null;
   /** A focused search for one kind of thing in this place (see themes.ts), throttled on its own and less often. */
   theme?: string;
+  /** The label is a name, not a place (a website, for rereading an organiser): it is not looked up, and not matched to a place by position. */
+  nameOnly?: boolean;
 };
 
 /** One request per focused search for a place: the same place, once for each theme. */
@@ -116,7 +118,7 @@ export async function searchRegionsThrottled(
   let lookedUp = 0;
   for (const request of requests) {
     let point: Coordinates | null = request.lat != null && request.lng != null ? { lat: Number(request.lat), lng: Number(request.lng) } : null;
-    if (!point) {
+    if (!point && !request.nameOnly) {
       // Without a position the best that can be done is the words. A failed lookup is not an error: it just means that.
       if (lookedUp > 0) await sleep(1100);
       lookedUp += 1;
@@ -143,7 +145,7 @@ export async function searchRegionsThrottled(
 
   const due: Wanted[] = [];
   for (const w of wanted.values()) {
-    const decision = decideSearch(w.state, options.now ?? new Date(), w.theme ? THEME_REFRESH_DAYS : undefined);
+    const decision = decideSearch(w.state, options.now ?? new Date(), w.theme ? refreshDaysFor(w.theme) : undefined);
     const runnable = decision.due || (options.force && decision.reason !== "just_attempted");
     if (runnable) due.push(w);
     else summary.skipped.push({ region: w.theme ? `${w.label} (${w.theme})` : w.label, reason: decision.reason });

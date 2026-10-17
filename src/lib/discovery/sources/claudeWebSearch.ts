@@ -7,6 +7,7 @@ import { callClaude } from "@/lib/ai/client";
 import { AI_MODELS, QUICK_THINKING } from "@/lib/ai/models";
 import { themeByKey, type DiscoveryTheme } from "@/lib/discovery/themes";
 import { parseSchedule } from "@/lib/someTime/openingHours";
+import { cleanAddress, startOf, TIME_NOT_GIVEN_NOTE } from "@/lib/discovery/cleanFields";
 
 // Kept on the smart tier: this does agentic multi-step tool orchestration
 // (web_search/web_fetch loops), not a simple single-pass task, and has
@@ -161,13 +162,16 @@ could take a grandchild for a family-friendly outing (soft play, parks, playgrou
       const bookingUrl = item.sourceUrl || `https://search.local/${encodeURIComponent(regionLabel)}#${encodeURIComponent(item.title!)}`;
       return {
         title: item.title!,
-        description: item.description ?? null,
+        description: (() => {
+          const start = startOf(isValidIso(item.dateTime) ? item.dateTime : null);
+          return start.dateTime && !start.timeGiven ? [item.description, TIME_NOT_GIVEN_NOTE].filter(Boolean).join(" ") : (item.description ?? null);
+        })(),
         category: item.category as CategoryName,
-        address: item.address ?? null,
+        address: cleanAddress(item.address),
         locationLat: null,
         locationLng: null,
-        // A date the database can't parse would reject the whole batch insert.
-        dateTime: isValidIso(item.dateTime) ? item.dateTime : null,
+        // A date the database can't parse would reject the whole batch insert. A day with no time is put at a morning start.
+        dateTime: startOf(isValidIso(item.dateTime) ? item.dateTime : null).dateTime,
         availableUntil: parseAvailableUntil(item.availableUntil),
         priceEstimate: item.priceEstimate ?? null,
         bookingUrl,

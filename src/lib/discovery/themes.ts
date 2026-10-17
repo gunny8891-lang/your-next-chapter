@@ -91,3 +91,15 @@ export function isThemedKey(key: string): boolean {
 
 /** A themed search is for things that change slowly, so it is not repeated as often as the general one. */
 export const THEME_REFRESH_DAYS = 30;
+
+/** The "theme" under which an organiser's own pages are reread (see organisers.ts): not a search, so it has no entry in DISCOVERY_THEMES. */
+export const ORGANISER_THEME = "organiser";
+
+/**
+ * How often a theme is repeated. Dated events go stale in weeks (what is on is looked at for the next three months), and
+ * an organiser's page keeps listing new ones, so both come round every two weeks; the rest change slowly and keep the month.
+ */
+const REFRESH_DAYS_BY_THEME: Record<string, number> = { events: 14, [ORGANISER_THEME]: 14 };
+export function refreshDaysFor(theme: string): number {
+  return REFRESH_DAYS_BY_THEME[theme] ?? THEME_REFRESH_DAYS;
+}

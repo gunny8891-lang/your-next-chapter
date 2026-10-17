@@ -6,6 +6,10 @@
       "schedule": "0 3 * * *"
     },
     {
+      "path": "/api/discovery/organisers",
+      "schedule": "0 5 * * *"
+    },
+    {
       "path": "/api/jobs/weekly-digest",
       "schedule": "0 18 * * 0"
     },
