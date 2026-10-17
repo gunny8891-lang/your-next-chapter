@@ -23,6 +23,26 @@ export type HereDeps = {
   ensure?: typeof ensureOpenStreetMapPlaces;
 };
 
+/** A search that finds fewer than this many ideas for home, in an area few places are known for, is a sign the area needs filling in. */
+export const THIN_RESULT_IDEAS = 3;
+
+/**
+ * A search for ideas from home came back thin: fill in the area around their home from the free map layers, in the background, so
+ * the next search (theirs, or anyone's nearby) finds more. The same once-a-day limit and the same "only where few places are
+ * known" rule as asking near where they are. Never throws.
+ */
+export async function ensurePlacesNearHome(memberId: string, deps: HereDeps = {}): Promise<HereOutcome> {
+  try {
+    const admin = deps.admin ?? createAdminClient();
+    const { data } = await admin.from("member_profiles").select("location_lat, location_lng").eq("user_id", memberId).maybeSingle();
+    if (data?.location_lat == null || data?.location_lng == null) return "known";
+    return await ensurePlacesNearHere(memberId, { lat: Number(data.location_lat), lng: Number(data.location_lng) }, { ...deps, admin });
+  } catch (err) {
+    console.warn("places near home: could not fetch:", err instanceof Error ? err.message : err);
+    return "failed";
+  }
+}
+
 export async function ensurePlacesNearHere(memberId: string, here: { lat: number; lng: number }, deps: HereDeps = {}): Promise<HereOutcome> {
   try {
     const admin = deps.admin ?? createAdminClient();

@@ -12,7 +12,7 @@ export const FEEDBACK_MAX_CHARS = 2000;
 export const FEEDBACK_PER_DAY = 5;
 
 /** The screens feedback can say it came from: a fixed list, so what is stored is never free text from the address. */
-export const FEEDBACK_PAGES = ["Today", "My Week", "Explore", "My Chapter", "Account", "Concierge", "Somewhere else"] as const;
+export const FEEDBACK_PAGES = ["Today", "My Week", "Explore", "My Chapter", "Account", "Concierge", "Suggest a place", "Somewhere else"] as const;
 export type FeedbackPage = (typeof FEEDBACK_PAGES)[number];
 
 export function cleanPage(raw: unknown): FeedbackPage {

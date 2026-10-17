@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Clock, Heart } from "lucide-react";
+import Link from "next/link";
 import { Button, Card, Chip, ErrorNote, Page, PageHeader, SectionTitle, Skeleton } from "@/components/ui";
 import { AreaLearningNote } from "@/components/AreaLearningNote";
 import { HereChoice, type Here } from "@/components/HereChoice";
@@ -299,6 +300,10 @@ export function ExploreView({
           </ul>
         )}
       </section>
+
+      <p className={styles.notice}>
+        Know somewhere good that isn&apos;t here? <Link href="/suggest">Tell us about it</Link>, and we&apos;ll check it and add it for everyone nearby.
+      </p>
     </Page>
   );
 }

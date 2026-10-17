@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
-import { ensurePlacesNearHere } from "@/lib/discovery/hereNow";
+import { ensurePlacesNearHere, ensurePlacesNearHome, THIN_RESULT_IDEAS } from "@/lib/discovery/hereNow";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { eventDate } from "@/lib/opportunities/schedule";
@@ -47,6 +47,11 @@ export async function getTimeOptionsAction(raw: unknown): Promise<TimeResult> {
   try {
     const result = await getTimeOptions(supabase, user.id, request);
     scheduleImageLookups(result.options);
+    // A thin answer from home, in an area few places are known for, means the area needs filling in: do that in the
+    // background for the next search, theirs or a neighbour's. (Day trips are meant to be few and far away: not a sign.)
+    if (!request.here && request.mood !== "daytrip" && result.options.length < THIN_RESULT_IDEAS) {
+      after(() => ensurePlacesNearHome(user.id));
+    }
     return result;
   } catch (err) {
     // Never the raw reason: the member gets a kind sentence, and the real one goes to the server log.
