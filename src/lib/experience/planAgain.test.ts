@@ -155,7 +155,7 @@ describe("what the concierge knows of their life", () => {
       },
     } as unknown as SupabaseClient;
     const out = await loadMemberLife(member, "m1", "2026-10-16", 4);
-    expect(out).toEqual({ wishes: ["Learn to paint"], people: [{ relationship: "Son", interests: ["cycling"], wantsToSeeMore: true, daysSinceSeen: 7 }], planned: 4, went: 2 });
+    expect(out).toEqual({ wishes: ["Learn to paint"], people: [{ relationship: "Son", interests: ["cycling"], wantsToSeeMore: true, daysSinceSeen: 7 }], planned: 4, went: 2, dates: [] });
     const people = asked.find((a) => a.startsWith("people"))!;
     expect(people).not.toMatch(/\bname\b|notes/);
   });

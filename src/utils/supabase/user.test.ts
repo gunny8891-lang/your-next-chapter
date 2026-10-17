@@ -80,7 +80,7 @@ describe("Today is sent in two parts", () => {
   const page = read("src/app/today/page.tsx");
 
   it("asks for the plan, the profile, how they feel and the questions together", () => {
-    expect(page).toMatch(/const \[\{ data: profile \}, \{ data: itinerary \}, dailyState, reflections\] = await Promise\.all/);
+    expect(page).toMatch(/const \[\{ data: profile \}, \{ data: itinerary \}, dailyState, reflections, importantDates\] = await Promise\.all/);
   });
 
   it("does not wait for the idea of the day, which fills in when it is ready", () => {
