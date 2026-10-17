@@ -11,6 +11,7 @@ import { loadMemberLife, memberLifeText } from "@/lib/chat/memberContext";
 import { dayTripsText, wantsDayTrips } from "@/lib/chat/dayTrips";
 import { foodText, wantsFood } from "@/lib/chat/food";
 import { gardenCentresText, wantsGardenCentres } from "@/lib/chat/gardenCentres";
+import { kidsText, wantsKidsActivities } from "@/lib/chat/kids";
 import { loadRecentIdeas, recentIdeasText, type RecentIdea } from "@/lib/chat/recentIdeas";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { addDays, londonToday } from "@/lib/opportunities/schedule";
@@ -67,7 +68,9 @@ export function buildSystemPrompt(
   /** The time now in London, "14:05", so "lunch" can be matched to what is open. */
   timeNow: string = "",
   /** Garden centres near home, only when they asked about one (see gardenCentres.ts). Empty otherwise. */
-  gardenCentreList: string = ""
+  gardenCentreList: string = "",
+  /** Places that say they suit children, only when they mentioned children or grandchildren (see kids.ts). Empty otherwise. */
+  kidsList: string = ""
 ) {
   const weekItemsText = weekItems.length
     ? weekItems
@@ -112,6 +115,10 @@ ${candidatesText || "No other active candidate activities available right now."}
 
 ${dayTripsList ? `DAY TRIPS (well-known places further afield, listed because they asked for a day out; say roughly how far and how long it takes, as an estimate, and that it is worth checking opening times and booking before they go. We do not list cafés or restaurants near these, so for lunch there say they can look on a map once they arrive):
 ${dayTripsList}
+
+` : ""}${kidsList ? `THINGS FOR CHILDREN NEAR HOME (listed because they mentioned children or grandchildren; each says it suits children or families, which is all we know):
+${kidsList}
+For these: if they have not said how old the children are and it would change the answer, ask in a few words before suggesting; otherwise suggest two or three from this list only, with at least one that is indoors if the weather could be poor. Never say a place is safe, supervised or right for an age, or that it has facilities such as changing or a café: we do not know. Say roughly how far, and to check hours and any booking.
 
 ` : ""}${gardenCentreList ? `GARDEN CENTRES NEAR HOME (listed because they asked about garden centres; opening hours are as the map records them and may be out of date, so say to check before going):
 ${gardenCentreList}
@@ -227,7 +234,8 @@ export async function conciergeReply(
     wantsDayTrips(question) ? await dayTripsText(supabase, memberId, scheduledActivityIds) : "",
     wantsFood(question) ? await foodText(supabase, memberId) : "",
     new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date()),
-    wantsGardenCentres(question) ? await gardenCentresText(supabase, memberId) : ""
+    wantsGardenCentres(question) ? await gardenCentresText(supabase, memberId) : "",
+    wantsKidsActivities(question) ? await kidsText(supabase, memberId, scheduledActivityIds) : ""
   );
 
   const client = new Anthropic({ apiKey });

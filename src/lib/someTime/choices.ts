@@ -41,6 +41,7 @@ export const MOOD_OPTIONS: { value: Mood; label: string }[] = [
   { value: "social", label: "Social" },
   { value: "relaxed", label: "Relaxed" },
   { value: "daytrip", label: "Day trip" },
+  { value: "kids", label: "Grandchildren" },
 ];
 
 /**

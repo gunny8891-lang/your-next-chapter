@@ -58,6 +58,14 @@ export const DISCOVERY_THEMES: DiscoveryTheme[] = [
       "escape rooms, competitive-socialising venues (darts, axe throwing, shuffleboard, crazy-golf bars), cinemas with senior, relaxed or family screenings, and local visitor attractions",
   },
   {
+    key: "grandchildren",
+    label: "Things to do with grandchildren",
+    focus:
+      "things a grandparent can do with grandchildren: soft play and toddler sessions, library story and rhyme times, parent-and-toddler or grandparent-and-child groups, " +
+      "children's workshops and family days at museums, farms, wildlife parks and children's farms, family swimming sessions, family theatre, pantomime and children's cinema screenings, " +
+      "and holiday activities, with the ages each is for where the page says",
+  },
+  {
     key: "events",
     label: "Dated events and seasonal happenings",
     focus:

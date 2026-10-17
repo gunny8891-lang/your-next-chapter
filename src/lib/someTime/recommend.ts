@@ -296,6 +296,11 @@ const MOOD_WORD: Partial<Record<Mood, string>> = { outdoors: "outdoors", active:
 
 /** The honest line for a chosen mood that little nearby fits; null when there is plenty, or no mood was chosen. */
 export function moodNotice(mood: Mood | null, fitting: number): string | null {
+  if (mood === "kids") {
+    if (fitting === 0) return "Nothing for children fits that stretch of time just now. Try another day, or a different age. Places for children are gathered as your area is learned, so check back soon.";
+    if (fitting < MAX_OPTIONS) return "That's every idea for children that fits right now. \"Surprise me\" will show more.";
+    return null;
+  }
   if (mood === "daytrip") {
     if (fitting === 0) return "No day trip fits that day just now. Try tomorrow or the weekend. Day trips for a new area are gathered overnight, so check back soon.";
     if (fitting < MAX_OPTIONS) return "That's every day trip I have for your area so far. \"Surprise me\" will show more.";
@@ -346,6 +351,12 @@ function defaultAsk(supabase: SupabaseClient, memberId: string): Ask {
  * hands it to buildRecommendations. Everything the member's profile already
  * says is used rather than asked again.
  */
+/** Going out with the grandchildren is going with family: the same as having said so in "Going with someone?". Pure. */
+export function grandchildrenRequest(request: TimeRequest): TimeRequest {
+  if (request.mood !== "kids" || request.who === "family") return request;
+  return { ...request, who: "family" };
+}
+
 /** A day trip is a whole day: the length they picked for a nearby hour or two is replaced by the day, or what is left of today. Pure. */
 export function dayTripRequest(request: TimeRequest): TimeRequest {
   if (request.mood !== "daytrip") return request;
@@ -359,7 +370,7 @@ export async function getTimeOptions(
   now: Date = new Date(),
   ask: Ask | null = defaultAsk(supabase, memberId)
 ): Promise<TimeResult> {
-  const request = dayTripRequest(requested);
+  const request = grandchildrenRequest(dayTripRequest(requested));
   const resolved = resolveWindow(request, now);
   if (!resolved.ok) return { error: null, notice: resolved.reason, options: [], windowLabel: null };
   const { window } = resolved;

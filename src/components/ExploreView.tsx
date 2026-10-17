@@ -11,6 +11,7 @@ import { exploreDays, exploreDurationFor, MOOD_OPTIONS } from "@/lib/someTime/ch
 import { londonClock } from "@/lib/someTime/window";
 import { placeLabel, priceBand } from "@/lib/someTime/format";
 import type { Mood, StartChoice } from "@/lib/someTime/request";
+import { KIDS_AGE_OPTIONS, type KidsChoice } from "@/lib/opportunities/kids";
 import type { SavedIdea } from "@/lib/someTime/saved";
 import type { TimeOption, TimeResult } from "@/lib/someTime/types";
 import { CATEGORY_COLOR } from "@/lib/theme";
@@ -65,6 +66,8 @@ export function ExploreView({
   // Where they are now, if they asked for ideas near here: held for this screen only, never saved.
   const [here, setHere] = useState<Here | null>(null);
   const [mood, setMood] = useState<Mood | null>(null);
+  // For "With the grandchildren": how old they are. For this search only, never saved.
+  const [kidsAge, setKidsAge] = useState<KidsChoice>("any");
   const [result, setResult] = useState<TimeResult | null>(null);
   const [shown, setShown] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -76,7 +79,7 @@ export function ExploreView({
 
   const savedIds = new Set(savedList.map((s) => s.id));
 
-  const find = (chosen: Mood, exclude: string[], day: StartChoice = when) => {
+  const find = (chosen: Mood, exclude: string[], day: StartChoice = when, age: KidsChoice = kidsAge) => {
     setMood(chosen);
     setError(null);
     setResult(null);
@@ -90,6 +93,7 @@ export function ExploreView({
         who: "just_me",
         mood: chosen,
         exclude,
+        ...(chosen === "kids" ? { context: { kids: age } } : {}),
       });
       if (res.error) {
         setError(res.error);
@@ -173,6 +177,26 @@ export function ExploreView({
             </Chip>
           ))}
         </div>
+        {mood === "kids" && (
+          <>
+            <SectionTitle id="kids-age">How old are they?</SectionTitle>
+            <div className={styles.chips} role="group" aria-labelledby="kids-age">
+              {KIDS_AGE_OPTIONS.map((o) => (
+                <Chip
+                  key={o.value}
+                  selected={kidsAge === o.value}
+                  onClick={() => {
+                    setKidsAge(o.value);
+                    find("kids", [], when, o.value);
+                  }}
+                  disabled={isPending}
+                >
+                  {o.label}
+                </Chip>
+              ))}
+            </div>
+          </>
+        )}
 
         <div className={styles.results} aria-live="polite" aria-busy={loading}>
           {loading &&

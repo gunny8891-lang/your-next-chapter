@@ -1,5 +1,6 @@
 import type { OpportunityCandidate } from "@/lib/opportunities/engine";
 import { foodKindOf, isFoodVenue, type FoodKind } from "@/lib/opportunities/kinds";
+import { suitsChildren } from "@/lib/opportunities/kids";
 import { availableUntilDate, eventDate, weekdayOf } from "@/lib/opportunities/schedule";
 import { scoreActivity, type AffinityScores } from "@/lib/memory/scoring";
 import { haversineDistanceKm } from "@/lib/geo/haversine";
@@ -185,6 +186,8 @@ export function moodBonus(mood: Mood | null, c: Pick<OpportunityCandidate, "cate
       return isFoodVenue(c) ? 4 : -4;
     case "daytrip":
       return c.tags.includes("day-trip") ? 4 : -4;
+    case "kids":
+      return suitsChildren(c.tags) && !isFoodVenue(c) ? 4 : -4;
     default:
       return 0;
   }
@@ -195,7 +198,7 @@ export function moodBonus(mood: Mood | null, c: Pick<OpportunityCandidate, "cate
  * where little nearby fits it, anything else can fill the gaps (a leisure centre for "culture"). When a member has CHOSEN a
  * mood, an idea that does not fit it is left out instead, and we say honestly that there is less to show.
  */
-const MOOD_FIT_MIN: Partial<Record<Mood, number>> = { outdoors: 3, active: 3, social: 1.5, culture: 3, relaxed: 2, food: 4, daytrip: 4 };
+const MOOD_FIT_MIN: Partial<Record<Mood, number>> = { outdoors: 3, active: 3, social: 1.5, culture: 3, relaxed: 2, food: 4, daytrip: 4, kids: 4 };
 
 export function moodFits(mood: Mood | null, c: Pick<OpportunityCandidate, "category" | "tags"> & { title?: string }): boolean {
   if (!mood) return true;
@@ -403,7 +406,7 @@ export function evaluateCandidate(c: OpportunityCandidate, input: ScoringInput):
 
   const mood = moodBonus(request.mood, c);
   score += mood;
-  if (mood >= 3 && request.mood) reasons.push(request.mood === "daytrip" ? "it is well known and worth a day out" : `it suits a ${request.mood === "culture" ? "cultural" : request.mood} mood`);
+  if (mood >= 3 && request.mood) reasons.push(request.mood === "daytrip" ? "it is well known and worth a day out" : request.mood === "kids" ? "it suits children" : `it suits a ${request.mood === "culture" ? "cultural" : request.mood} mood`);
 
   const goalHit = member.goals.find((g) => GOAL_CATEGORIES[g]?.includes(c.category));
   if (goalHit) {

@@ -14,6 +14,7 @@
  * offered, labelled, only when nothing that is certain fits. Pure: no database, no model.
  */
 
+import { KIDS_AGE_PHRASE, KIDS_CHOICES, notForAge, suitsAge, suitsChildren, type KidsAge, type KidsChoice } from "@/lib/opportunities/kids";
 import { COST_TIER_LIMITS, dogFact, dogFriendly, parseDogConfidence, priceUpTo, type CostFacts, type DogFacts } from "@/lib/opportunities/facts";
 
 /** What the member wants to spend on this outing, per person: Free, £ or ££. Absent means "don't mind". */
@@ -29,6 +30,8 @@ export const SPEND_OPTIONS: { value: Spend | "any"; label: string }[] = [
 const SPEND_CAP: Record<Spend, number> = { free: 0, low: COST_TIER_LIMITS.low, mid: COST_TIER_LIMITS.mid };
 
 export type ExperienceContext = {
+  /** Children are coming on this outing, and how old they are ("any" when they did not say). */
+  kids?: KidsChoice;
   /** The dog is coming on this outing. */
   dog?: boolean;
   /** The most they want to spend per person on this outing. A choice for this outing, not a budget. */
@@ -108,8 +111,27 @@ const spendConstraint: Constraint = {
       : `They want to keep this outing to ${{ free: "free things", low: "about £15 a person or less", mid: "about £40 a person or less" }[context.spend]}. Never call a place free or cheap unless its line says so; where a line says to check the price, tell them to check.`,
 };
 
+const kidsConstraint: Constraint = {
+  key: "kids",
+  parse: (raw) => (typeof raw === "string" && (KIDS_CHOICES as string[]).includes(raw) ? (raw as KidsChoice) : undefined),
+  active: (context) => context.kids !== undefined,
+  check: (place, context, role) => {
+    // Somewhere to eat on the way is not asked to be a children's place.
+    if (role === "stop") return { kind: "ok" };
+    const age = context.kids === undefined || context.kids === "any" ? null : (context.kids as KidsAge);
+    // Known not to suit this age (toddlers and a bowling alley): out, however well it fits otherwise.
+    if (age && notForAge(place.tags, age)) return { kind: "exclude" };
+    if (!suitsChildren(place.tags)) return { kind: "unverified", note: "Check it suits children" };
+    return { kind: "ok", reason: "it suits children", bonus: 1 + (age && suitsAge(place.tags, age) ? 1 : 0) };
+  },
+  describe: (context) =>
+    context.kids === undefined
+      ? null
+      : `They are going out with grandchildren ${KIDS_AGE_PHRASE[context.kids]}. Say a place suits children only where its line says so (it is tagged for children or families); never promise that a place is safe, supervised or right for a particular age; where a line says to check it suits children, tell them to check.`,
+};
+
 /** Every constraint the engine knows. */
-const CONSTRAINTS: Constraint[] = [dogConstraint, spendConstraint];
+const CONSTRAINTS: Constraint[] = [dogConstraint, spendConstraint, kidsConstraint];
 
 /** Keeps only what a constraint recognises, from whatever arrived. Never throws. */
 export function parseContext(raw: unknown): ExperienceContext {

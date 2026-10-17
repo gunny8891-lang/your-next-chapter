@@ -41,7 +41,7 @@ const found = { results: [{ source: "x", found: 4, inserted: 4, insertedActive: 
 
 describe("the focused searches", () => {
   it("each ask for one kind of thing, and between them cover groups, walking, fitness, creative, volunteering and events", () => {
-    expect(DISCOVERY_THEMES.map((t) => t.key)).toEqual(["groups", "walking", "fitness", "creative", "volunteering", "entertainment", "events"]);
+    expect(DISCOVERY_THEMES.map((t) => t.key)).toEqual(["groups", "walking", "fitness", "creative", "volunteering", "entertainment", "grandchildren", "events"]);
     expect(themeByKey("groups")?.focus).toMatch(/U3A/);
     expect(themeByKey("walking")?.focus).toMatch(/Walking for Health/);
     expect(themeByKey("fitness")?.focus).toMatch(/walking football/);
