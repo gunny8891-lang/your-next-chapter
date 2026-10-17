@@ -102,10 +102,10 @@ export const DATA_CATEGORIES: DataCategory[] = [
   },
   {
     id: "people",
-    title: "People and goals you add",
-    what: "The first names, relationships and notes you add about people in your life, whether you would like to see them more, and the goals you set for yourself. People you add are not told, and you decide what to write about them: please keep notes to things you would be comfortable with them reading.",
-    why: "To help you keep in touch and work towards what matters to you.",
-    tables: ["people", "goals"],
+    title: "People, goals and dates you add",
+    what: "The first names, relationships and notes you add about people in your life, whether you would like to see them more, the goals you set for yourself, and the dates you ask us to remember (a name, the day and month, and a year only if you give one). People you add are not told, and you decide what to write about them: please keep notes to things you would be comfortable with them reading.",
+    why: "To help you keep in touch, work towards what matters to you, and not miss a birthday or an anniversary.",
+    tables: ["people", "goals", "important_dates"],
   },
   {
     id: "calendar",

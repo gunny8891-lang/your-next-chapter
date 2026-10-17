@@ -54,6 +54,35 @@
   color: var(--color-ink-soft);
 }
 
+/* Dates they asked us to remember, as they come up. */
+.dates {
+  display: grid;
+  gap: var(--space-3);
+  list-style: none;
+}
+
+.dateRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  color: var(--color-ink);
+}
+
+.dateRow svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--color-accent);
+}
+
+.datesLink {
+  display: inline-block;
+  margin-top: var(--space-3);
+  color: var(--color-ink-soft);
+  font-size: var(--text-small);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .row {
   display: grid;
   grid-template-columns: calc(var(--text-label) * 6) 1fr;

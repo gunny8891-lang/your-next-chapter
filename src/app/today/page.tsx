@@ -18,6 +18,8 @@ import { londonClock } from "@/lib/someTime/window";
 import type { CategoryName } from "@/lib/categories";
 import type { ItineraryItemView } from "@/lib/types";
 import { imageForRow } from "@/lib/imagery/forRow";
+import { loadImportantDates } from "@/lib/dates/store";
+import { TODAY_LOOKS_AHEAD_DAYS, upcoming } from "@/lib/dates/importantDates";
 import { quoteForDate } from "@/lib/quotes/daily";
 import { countNearbyPlaces, isThinArea } from "@/lib/coverage/nearbyPlaces";
 
@@ -53,7 +55,7 @@ export default async function TodayPage() {
   const dateLabel = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/London" });
 
   // Everything that needs only who they are is asked for together, not one after another: each is a trip to the database.
-  const [{ data: profile }, { data: itinerary }, dailyState, reflections] = await Promise.all([
+  const [{ data: profile }, { data: itinerary }, dailyState, reflections, importantDates] = await Promise.all([
     supabase.from("member_profiles").select("location_lat, location_lng, has_dog, dog_name, dog_usually_comes").eq("user_id", user.id).maybeSingle(),
     supabase
       .from("itineraries")
@@ -67,6 +69,7 @@ export default async function TodayPage() {
       .maybeSingle(),
     loadDailyState(supabase, user.id, londonToday()),
     loadReflections(supabase, user.id, londonToday(), londonClock(new Date()).minutes),
+    loadImportantDates(supabase, user.id),
   ]);
   if (!profile) redirect("/onboarding");
 
@@ -134,6 +137,7 @@ export default async function TodayPage() {
       onSaveTime={saveIdeaAction}
       dailyState={dailyState}
       reflections={reflections}
+      upcomingDates={upcoming(importantDates, londonToday(), TODAY_LOOKS_AHEAD_DAYS)}
       onSaveDailyState={saveDailyStateAction}
       onClearDailyState={clearDailyStateAction}
       onAnswerReflection={completeExperienceAction}

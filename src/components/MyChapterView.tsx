@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Archive, Check, ChevronRight, Trash2, Users } from "lucide-react";
 import { Button, Card, EmptyState, Field, IconButton, Page, PageHeader, SectionTitle } from "@/components/ui";
+import { ImportantDates } from "@/components/ImportantDates";
+import type { ImportantDate } from "@/lib/dates/importantDates";
 import styles from "@/components/MyChapter.module.css";
 
 export type Goal = {
@@ -20,7 +22,16 @@ export function MyChapterView({
   onAdd,
   onUpdateStatus,
   onDelete,
+  dates,
+  today,
+  onAddDate,
+  onDeleteDate,
 }: {
+  dates: ImportantDate[];
+  /** Today in London, so "in 5 days" is counted from the right day. */
+  today: string;
+  onAddDate: React.ComponentProps<typeof ImportantDates>["onAdd"];
+  onDeleteDate: React.ComponentProps<typeof ImportantDates>["onDelete"];
   goals: Goal[];
   onAdd: (formData: FormData) => Promise<void>;
   onUpdateStatus: (goalId: string, status: Goal["status"]) => Promise<void>;
@@ -137,6 +148,8 @@ export function MyChapterView({
           </ul>
         </section>
       )}
+
+      <ImportantDates dates={dates} today={today} onAdd={onAddDate} onDelete={onDeleteDate} />
     </Page>
   );
 }

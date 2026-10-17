@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ChevronRight, Hourglass } from "lucide-react";
+import Link from "next/link";
+import { CalendarHeart, Check, ChevronRight, Hourglass } from "lucide-react";
+import type { UpcomingDate } from "@/lib/dates/importantDates";
 import { CATEGORY_COLOR } from "@/lib/theme";
 import { Button, Sheet, Thumb, WeatherLine } from "@/components/ui";
 import { ExperienceCard, type FeedbackReason } from "@/components/ExperienceCard";
@@ -101,7 +103,10 @@ export function TodayView({
   onClearDailyState,
   onAnswerReflection,
   onPlanAgain,
+  upcomingDates,
 }: {
+  /** Dates they asked us to remember that fall in the next couple of weeks, soonest first. */
+  upcomingDates: UpcomingDate[];
   greeting: string;
   firstName: string;
   dateLabel: string;
@@ -169,6 +174,28 @@ export function TodayView({
       <DailyStateStrip initial={initialDailyState} onSave={onSaveDailyState} onClear={onClearDailyState} onChange={setDailyState} />
 
       <Reflections items={reflections} onAnswer={onAnswerReflection} onPlanAgain={onPlanAgain} />
+
+      {upcomingDates.length > 0 && (
+        <section className={styles.section} aria-labelledby="coming-up">
+          <h2 id="coming-up" className={styles.label}>
+            Coming up
+          </h2>
+          <ul className={styles.dates}>
+            {upcomingDates.slice(0, 3).map((d) => (
+              <li key={d.id} className={styles.dateRow}>
+                <CalendarHeart size={20} strokeWidth={1.75} aria-hidden="true" />
+                <span>
+                  <strong>{d.title}</strong> · {d.when}
+                  {d.note ? ` · ${d.note}` : ""}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <Link href="/chapter#dates" className={styles.datesLink}>
+            Your dates to remember
+          </Link>
+        </section>
+      )}
 
       <section className={styles.section} aria-labelledby="your-day">
         <h2 id="your-day" className={styles.label}>

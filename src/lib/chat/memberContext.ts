@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { addDays } from "@/lib/opportunities/schedule";
+import { CONCIERGE_LOOKS_AHEAD_DAYS, upcoming, type DateKind } from "@/lib/dates/importantDates";
+import { loadImportantDates } from "@/lib/dates/store";
 
 /**
  * What the concierge may know about a member's life beyond their profile, so "help me become more active" and "find something to
@@ -20,7 +22,11 @@ export type MemberLife = {
   /** Things on this week's plan they have accepted, and things they said they went to in the last seven days. */
   planned: number;
   went: number;
+  /** Dates they asked us to remember that are coming up, as a kind and how far away, never whose. */
+  dates?: { kind: DateKind; days: number; note: string | null }[];
 };
+
+const KIND_WORD: Record<DateKind, string> = { birthday: "a birthday", anniversary: "an anniversary", remembrance: "a day they keep to remember someone", other: "a date they asked us to remember" };
 
 const clip = (text: string) => (text.length > MAX_TEXT ? `${text.slice(0, MAX_TEXT - 1).trimEnd()}…` : text);
 
@@ -41,6 +47,13 @@ export function memberLifeText(life: MemberLife): string {
           .join("\n")
     );
   }
+  if (life.dates?.length) {
+    lines.push(
+      "Dates they asked us to remember, coming up (no names are given to you): " +
+        life.dates.map((d) => `${KIND_WORD[d.kind]} ${d.days === 0 ? "today" : d.days === 1 ? "tomorrow" : `in ${d.days} days`}${d.note ? ` (${d.note})` : ""}`).join("; ") +
+        ". You may mention one when it is relevant (to offer to help plan something), gently, and never guess whose it is."
+    );
+  }
   lines.push(`This week: ${life.planned} outing${life.planned === 1 ? "" : "s"} accepted in their plan; they said they went to ${life.went} in the last seven days.`);
   if (!life.wishes.length && !life.people.length) lines.unshift("They have not told us about things they would love to do, or people in their life, yet.");
   return lines.join("\n");
@@ -50,10 +63,11 @@ export function memberLifeText(life: MemberLife): string {
 export async function loadMemberLife(supabase: SupabaseClient, memberId: string, today: string, weekAccepted: number): Promise<MemberLife> {
   const empty: MemberLife = { wishes: [], people: [], planned: weekAccepted, went: 0 };
   try {
-    const [goals, people, went] = await Promise.all([
+    const [goals, people, went, dates] = await Promise.all([
       supabase.from("goals").select("text").eq("member_id", memberId).eq("status", "active").order("created_at", { ascending: false }).limit(MAX_WISHES),
       supabase.from("people").select("relationship, shared_interests, wants_to_see_more, last_seen_date").eq("member_id", memberId).order("created_at", { ascending: false }).limit(MAX_PEOPLE),
       supabase.from("experience_events").select("id", { count: "exact", head: true }).eq("member_id", memberId).eq("event_type", "completed").gte("created_at", `${addDays(today, -7)}T00:00:00Z`),
+      loadImportantDates(supabase, memberId),
     ]);
     return {
       wishes: (goals.data ?? []).map((g) => clip(String(g.text))).filter(Boolean),
@@ -65,6 +79,7 @@ export async function loadMemberLife(supabase: SupabaseClient, memberId: string,
       })),
       planned: weekAccepted,
       went: went.count ?? 0,
+      dates: upcoming(dates, today, CONCIERGE_LOOKS_AHEAD_DAYS).map((d) => ({ kind: d.kind, days: d.days, note: d.note })),
     };
   } catch (err) {
     console.warn("chat: could not read their wishes and people:", err instanceof Error ? err.message : err);
