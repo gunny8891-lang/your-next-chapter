@@ -1,19 +1,16 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { DiscoverySource, RawActivityCandidate } from "@/lib/discovery/types";
-import { sleep, type Coordinates } from "@/lib/geo/geocode";
+import type { Coordinates } from "@/lib/geo/geocode";
 import { dogFactsFromOsm } from "@/lib/discovery/dogTags";
 import { DAY_TRIP_TAG } from "@/lib/opportunities/engine";
 import {
   addressOf,
   areaOf,
   classifyPlace,
-  defaultFetchJson,
   describe,
   haversineKm,
   isDuplicate,
   loadExisting,
-  MIN_REQUEST_GAP_MS,
-  NOMINATIM_SEARCH,
   NOT_AN_ATTRACTION,
   openingHoursOf,
   osmUrl,
@@ -26,6 +23,7 @@ import {
   type OpenStreetMapDeps,
   type PlaceType,
 } from "@/lib/discovery/sources/openStreetMap";
+import { gridBoxes, quarters, runGridSearch, totalBudget, type GridSearch } from "@/lib/discovery/sources/gridSearch";
 
 /**
  * Well-known places worth a day out, from OpenStreetMap: the big museums, galleries, castles, historic houses, gardens and
@@ -48,15 +46,12 @@ export const DAY_TRIP_SOURCE_RADIUS_KM = 45;
 
 /** Nominatim's importance for a famous place; the British Museum and the V&A are above 0.6, a local museum about 0.3. */
 const MIN_IMPORTANCE = 0.4;
-const FULL_SEARCH = 40;
-const GRID = 3;
-const MAX_DEPTH = 2;
 /** Nothing that is not itself somewhere to go: a street, a bank's head office, a depot, a racecourse. */
 const NOT_A_DESTINATION = /\b(street|road|depot|racecourse|bank of england)\b|^(the )?guildhall$/i;
 const MIN_VISIT_MINUTES = 120;
 
 /** What each search may spend: the nine boxes of the grid, and more for the kinds a city has hundreds of. */
-const SEARCHES: { term: string; query: string; budget: number }[] = [
+const SEARCHES: GridSearch[] = [
   { term: "museum", query: "[tourism=museum]", budget: 24 },
   { term: "art gallery", query: "[tourism=gallery]", budget: 20 },
   { term: "attraction", query: "[tourism=attraction]", budget: 24 },
@@ -66,41 +61,12 @@ const SEARCHES: { term: string; query: string; budget: number }[] = [
   { term: "zoo", query: "[tourism=zoo]", budget: 9 },
 ];
 /** Every request is spaced a second apart, so this bounds the run to about two minutes. */
-export const MAX_DAY_TRIP_REQUESTS = SEARCHES.reduce((sum, s) => sum + s.budget, 0);
+export const MAX_DAY_TRIP_REQUESTS = totalBudget(SEARCHES);
 
 /** How many of each kind are kept for a region. */
 const KEEP: Partial<Record<PlaceType, number>> = { museum: 12, art_gallery: 6, attraction: 12, heritage_house: 8, castle: 4, garden: 5, zoo: 3 };
 
-type Box = { west: number; north: number; east: number; south: number };
-
-const viewbox = (b: Box) => [b.west, b.north, b.east, b.south].map((n) => n.toFixed(4)).join(",");
-
-/** The square around a centre, cut into n by n boxes. Pure. */
-export function gridBoxes(centre: Coordinates, radiusKm: number, n: number = GRID): Box[] {
-  const dLat = radiusKm / 111;
-  const dLng = radiusKm / (111 * Math.cos((centre.lat * Math.PI) / 180));
-  const west = centre.lng - dLng;
-  const north = centre.lat + dLat;
-  const w = (2 * dLng) / n;
-  const h = (2 * dLat) / n;
-  const boxes: Box[] = [];
-  for (let row = 0; row < n; row++) {
-    for (let col = 0; col < n; col++) boxes.push({ west: west + col * w, east: west + (col + 1) * w, north: north - row * h, south: north - (row + 1) * h });
-  }
-  return boxes;
-}
-
-/** A box cut into four. Pure. */
-export function quarters(b: Box): Box[] {
-  const midLng = (b.west + b.east) / 2;
-  const midLat = (b.north + b.south) / 2;
-  return [
-    { west: b.west, north: b.north, east: midLng, south: midLat },
-    { west: midLng, north: b.north, east: b.east, south: midLat },
-    { west: b.west, north: midLat, east: midLng, south: b.south },
-    { west: midLng, north: midLat, east: b.east, south: b.south },
-  ];
-}
+export { gridBoxes, quarters };
 
 /** Whether the map itself treats a place as well known: a Wikipedia or Wikidata page, and a high importance. Pure. */
 export function isWellKnown(place: NominatimPlace): boolean {
@@ -185,83 +151,11 @@ export function selectLandmarks(
 
 /** The source for one area: searches the grid (cutting any full box into four), then selects. */
 export function createDayTripSource(supabase: SupabaseClient, centre: Coordinates, regionLabel: string, deps: OpenStreetMapDeps & { fetchJson?: FetchJson } = {}): DiscoverySource {
-  const fetchJson = deps.fetchJson ?? defaultFetchJson;
-  const wait = deps.sleep ?? sleep;
-
   return {
     name: "openstreetmap-daytrips",
     async fetchCandidates(): Promise<RawActivityCandidate[]> {
-      let lastRequestAt = 0;
-      let requests = 0;
-      let failures = 0;
-      // Requests made for the search in hand and the most it may make: one kind cannot use up what the others need.
-      let spent = 0;
-      let allowed = 0;
-
-      const searchBox = async (query: string, box: Box): Promise<NominatimPlace[]> => {
-        const gap = MIN_REQUEST_GAP_MS - (Date.now() - lastRequestAt);
-        if (gap > 0) await wait(gap);
-        lastRequestAt = Date.now();
-        requests += 1;
-        spent += 1;
-        const url = new URL(NOMINATIM_SEARCH);
-        url.searchParams.set("q", query);
-        url.searchParams.set("viewbox", viewbox(box));
-        url.searchParams.set("bounded", "1");
-        url.searchParams.set("countrycodes", "gb");
-        url.searchParams.set("format", "jsonv2");
-        url.searchParams.set("limit", String(FULL_SEARCH));
-        url.searchParams.set("extratags", "1");
-        url.searchParams.set("addressdetails", "1");
-        try {
-          const body = await fetchJson(url.toString());
-          if (!Array.isArray(body)) {
-            failures += 1;
-            return [];
-          }
-          return body as NominatimPlace[];
-        } catch {
-          failures += 1;
-          return [];
-        }
-      };
-
-      /**
-       * Every box of the grid first, so each part of the area is looked at; then the boxes that came back full are looked at
-       * closer, in order, with whatever the search has left. (Going deep into the first box would leave the others, and in a
-       * city the middle of the grid is where the famous places are, with nothing.)
-       */
-      const searchTerm = async (query: string): Promise<NominatimPlace[]> => {
-        const places: NominatimPlace[] = [];
-        const queue: { box: Box; depth: number }[] = [];
-        for (const box of grid) {
-          if (spent >= allowed) break;
-          const found = await searchBox(query, box);
-          places.push(...found);
-          if (found.length >= FULL_SEARCH) queue.push({ box, depth: 0 });
-        }
-        while (queue.length > 0 && spent < allowed) {
-          const { box, depth } = queue.shift()!;
-          if (depth >= MAX_DEPTH) continue;
-          for (const quarter of quarters(box)) {
-            if (spent >= allowed) break;
-            const found = await searchBox(query, quarter);
-            places.push(...found);
-            if (found.length >= FULL_SEARCH) queue.push({ box: quarter, depth: depth + 1 });
-          }
-        }
-        return places;
-      };
-
       const existing = await loadExisting(supabase, centre, DAY_TRIP_SOURCE_RADIUS_KM);
-      const results: { term: string; places: NominatimPlace[] }[] = [];
-      const grid = gridBoxes(centre, DAY_TRIP_SOURCE_RADIUS_KM);
-      for (const { term, query, budget } of SEARCHES) {
-        spent = 0;
-        allowed = budget;
-        results.push({ term, places: await searchTerm(query) });
-      }
-
+      const { results, requests, failures } = await runGridSearch({ centre, radiusKm: DAY_TRIP_SOURCE_RADIUS_KM, searches: SEARCHES, fetchJson: deps.fetchJson, wait: deps.sleep });
       if (requests > 0 && failures === requests) {
         throw new Error(`OpenStreetMap day-trip search failed for "${regionLabel}" (all ${requests} requests failed)`);
       }

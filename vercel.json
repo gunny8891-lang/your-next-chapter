@@ -18,6 +18,10 @@
       "schedule": "0 4 * * *"
     },
     {
+      "path": "/api/discovery/heritage",
+      "schedule": "0 6 * * *"
+    },
+    {
       "path": "/api/jobs/weekly-digest",
       "schedule": "0 18 * * 0"
     },

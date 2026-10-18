@@ -36,7 +36,7 @@ export const OSM_THINGS_NOTE_PREFIX = `${OSM_NOTE_PREFIX} (things`;
 /** Notes of the garden centres layer start with this. A layer of its own so that regions fetched before it existed get theirs. */
 export const OSM_GARDEN_CENTRES_NOTE_PREFIX = `${OSM_NOTE_PREFIX} (garden centres`;
 
-export type OsmLayer = "places" | "food" | "things" | "gardencentres";
+export type OsmLayer = "places" | "food" | "things" | "gardencentres" | "heritage";
 
 export const NOMINATIM_SEARCH = "https://nominatim.openstreetmap.org/search";
 export const MIN_REQUEST_GAP_MS = 1100;
@@ -54,7 +54,7 @@ export type PlaceType =
   | "restaurant" | "cafe" | "pub" | "tea_room"
   | "leisure_centre" | "bowling_alley" | "mini_golf" | "trampoline_park" | "ice_rink" | "golf" | "dance_studio"
   | "attraction" | "heritage_house" | "zoo" | "theme_park" | "aquarium" | "art_gallery"
-  | "garden_centre";
+  | "garden_centre" | "heritage_site";
 
 export type TypeConfig = {
   category: CategoryName;
@@ -110,6 +110,8 @@ export const TYPES: Record<PlaceType, TypeConfig> = {
   theme_park: { category: "Joy", label: "Theme park", keep: 2, minutes: 240, layer: "things", tags: ["family", "grandchildren"] },
   aquarium: { category: "Explore", label: "Aquarium", keep: 2, minutes: 120, layer: "things", tags: ["wildlife", "family", "grandchildren", "indoor"] },
   art_gallery: { category: "Explore", label: "Art gallery", keep: 4, minutes: 60, layer: "things", tags: ["art", "gallery", "culture", "indoor"] },
+  // A Roman town, a hill fort, an abbey's remains: somewhere to walk round, for those that say how to visit (see classifyPlace). Found by the heritage layer.
+  heritage_site: { category: "Explore", label: "Historic site", keep: 10, minutes: 60, layer: "heritage", tags: ["heritage", "history", "outdoors"] },
   // A garden centre is a pleasant hour or two for anyone who gardens, and free to wander round; most have a café.
   garden_centre: { category: "Joy", label: "Garden centre", keep: 6, minutes: 75, layer: "gardencentres", tags: ["gardens", "gardening", "garden centre"], freeByDefault: true },
 };
@@ -145,11 +147,13 @@ const OSM_KIND_TO_TYPE: Record<string, PlaceType> = {
   "leisure=dance": "dance_studio",
   "tourism=attraction": "attraction",
   "historic=manor": "heritage_house",
+  "building=stately_home": "heritage_house",
   "tourism=zoo": "zoo",
   "tourism=theme_park": "theme_park",
   "tourism=aquarium": "aquarium",
   "tourism=gallery": "art_gallery",
   "shop=garden_centre": "garden_centre",
+  "historic=archaeological_site": "heritage_site",
 };
 
 /**
@@ -170,6 +174,8 @@ const SEARCH_TERMS: Record<OsmLayer, string[]> = {
     "dance studio", "attraction", "manor", "zoo", "theme park", "aquarium", "art gallery",
   ],
   gardencentres: ["garden centre"],
+  // The heritage layer searches by its own list (see sources/heritage.ts).
+  heritage: [],
 };
 /**
  * What is actually sent for a search term. A plain phrase is ranked by relevance and often finds nothing ("bowling alley"
@@ -280,6 +286,11 @@ function sportIsYoga(extratags: Record<string, string> | undefined): boolean {
   return YOGA_LIKE.test((extratags?.sport ?? "").replace(/_/g, " "));
 }
 
+/** Whether the National Trust or English Heritage runs it, from what the map says about who does. */
+function runByHeritageCharity(e: Record<string, string>): boolean {
+  return /national trust|english heritage/i.test(`${e.operator ?? ""} ${e.owner ?? ""} ${e.brand ?? ""}`);
+}
+
 /** Decides what, if anything, a Nominatim result is for our purposes. */
 export function classifyPlace(place: NominatimPlace, term: string): PlaceType | null {
   const name = place.name?.trim();
@@ -338,17 +349,18 @@ export function classifyPlace(place: NominatimPlace, term: string): PlaceType | 
   // are private houses; only keep ones with some public footprint.
   if (type === "garden" || type === "castle") {
     const e = place.extratags ?? {};
-    // Not wikidata: that says a place is notable, not that anyone can walk in.
-    if (!(e.website || e["contact:website"] || e.opening_hours || e.fee)) return null;
+    // Not wikidata: that says a place is notable, not that anyone can walk in. But a property the National Trust or English Heritage
+    // runs is open to visitors, whatever else the map says of it.
+    if (!(e.website || e["contact:website"] || e.opening_hours || e.fee || runByHeritageCharity(e))) return null;
   }
   if (type === "sports_centre" && YOGA_LIKE.test(name)) type = "yoga";
   // A yoga studio belongs to the places pass, which already has its own kind for it.
   if (type === "leisure_centre" && YOGA_LIKE.test(name)) return null;
 
   // Visitor attractions, houses and galleries: only ones that say something a visitor could use, and not a statue or a viewpoint.
-  if (type === "attraction" || type === "heritage_house" || type === "zoo" || type === "theme_park" || type === "aquarium" || type === "art_gallery") {
+  if (type === "attraction" || type === "heritage_house" || type === "zoo" || type === "theme_park" || type === "aquarium" || type === "art_gallery" || type === "heritage_site") {
     const e = place.extratags ?? {};
-    if (!(e.website || e["contact:website"] || e.opening_hours || e.fee)) return null;
+    if (!(e.website || e["contact:website"] || e.opening_hours || e.fee || runByHeritageCharity(e))) return null;
     if (type === "attraction") {
       if (NOT_AN_ATTRACTION.test(name)) return null;
       if (HERITAGE_HOUSE_NAME.test(name)) type = "heritage_house";

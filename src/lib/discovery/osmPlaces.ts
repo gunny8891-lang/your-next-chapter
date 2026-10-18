@@ -10,6 +10,8 @@ import {
   type OsmLayer,
 } from "@/lib/discovery/sources/openStreetMap";
 import { createDayTripSource, OSM_DAYTRIPS_NOTE_PREFIX } from "@/lib/discovery/sources/dayTrips";
+import { createHeritageSource, OSM_HERITAGE_NOTE_PREFIX } from "@/lib/discovery/sources/heritage";
+import type { DiscoverySource } from "@/lib/discovery/types";
 import { themedKey } from "@/lib/discovery/themes";
 import { normalizeRegionKey } from "@/lib/discovery/throttle";
 import { geocodeLocation, sleep, type Coordinates } from "@/lib/geo/geocode";
@@ -170,47 +172,80 @@ export async function ensureOpenStreetMapPlacesForRegions(
   return outcomes;
 }
 
-// ---- day trips -------------------------------------------------------------
+// ---- wide-area layers: day trips and heritage ---------------------------------------------------------------------------
 
 /** The key under which a region's day-trip fetch is remembered (see themes.ts: a key with "#" is never read as a place). */
 export const DAY_TRIPS_KEY = "osm-daytrips";
-/** A region whose last day-trip fetch failed is left alone this long before it is tried again. */
+/** The key under which a region's heritage fetch is remembered. */
+export const HERITAGE_KEY = "osm-heritage";
+/** A region whose last fetch failed is left alone this long before it is tried again. */
 const FAILED_RETRY_DAYS = 3;
-/** If this many day-trip places are already within reach of a centre, it is covered, whatever it was called when it was fetched. */
-const COVERED_BY_NEARBY_ROWS = 12;
-const NEARBY_KM = 20;
 
-async function nearbyDayTripRows(supabase: SupabaseClient, centre: Coordinates): Promise<number> {
-  const box = coverageBox(centre, NEARBY_KM);
+type LandmarkLayer = {
+  /** What the fetch is called in a message. */
+  label: string;
+  key: string;
+  notePrefix: string;
+  /** If this many places of the layer are already within `nearbyKm` of a centre, it is covered, whatever it was called when it was fetched. */
+  minNearby: number;
+  nearbyKm: number;
+  /** A region done longer ago than this is done again (what is already held is not added twice). Never, if absent. */
+  recheckDays?: number;
+  create: (supabase: SupabaseClient, centre: Coordinates, region: string, deps: Deps) => DiscoverySource;
+};
+
+const DAY_TRIPS_LAYER: LandmarkLayer = {
+  label: "day trips",
+  key: DAY_TRIPS_KEY,
+  notePrefix: OSM_DAYTRIPS_NOTE_PREFIX,
+  minNearby: 12,
+  nearbyKm: 20,
+  create: createDayTripSource,
+};
+
+const HERITAGE_LAYER: LandmarkLayer = {
+  label: "heritage",
+  key: HERITAGE_KEY,
+  notePrefix: OSM_HERITAGE_NOTE_PREFIX,
+  minNearby: 25,
+  nearbyKm: 15,
+  // New places are mapped all the time, and the search is better than it was: looked at again twice a year.
+  recheckDays: 180,
+  create: createHeritageSource,
+};
+
+async function nearbyRows(supabase: SupabaseClient, centre: Coordinates, layer: LandmarkLayer): Promise<number> {
+  const box = coverageBox(centre, layer.nearbyKm);
   const { data, error } = await supabase
     .from("activities")
     .select("location_lat, location_lng")
-    .like("admin_notes", `${OSM_DAYTRIPS_NOTE_PREFIX}%`)
+    .like("admin_notes", `${layer.notePrefix}%`)
     .gte("location_lat", box.latMin)
     .lte("location_lat", box.latMax)
     .gte("location_lng", box.lngMin)
     .lte("location_lng", box.lngMax)
-    .limit(200);
-  if (error) throw new Error(`Couldn't check existing day trips: ${error.message}`);
-  return (data ?? []).filter((p) => p.location_lat != null && p.location_lng != null && haversineDistanceKm(centre.lat, centre.lng, Number(p.location_lat), Number(p.location_lng)) <= NEARBY_KM).length;
+    .limit(500);
+  if (error) throw new Error(`Couldn't check existing ${layer.label}: ${error.message}`);
+  return (data ?? []).filter((p) => p.location_lat != null && p.location_lng != null && haversineDistanceKm(centre.lat, centre.lng, Number(p.location_lat), Number(p.location_lng)) <= layer.nearbyKm).length;
 }
 
 /**
- * Makes sure a region has its well-known places for a day out (see sources/dayTrips.ts). They hardly ever change, so once a
- * region has been done it is not done again; that is remembered in the same table that remembers the paid searches, under a
- * key of its own. A region that is the same city under another name is recognised by the places already near it.
- * Never throws: a failure is reported in the outcome.
+ * Makes sure a region has a wide-area layer (day trips, or heritage: see sources/dayTrips.ts and sources/heritage.ts). They
+ * hardly ever change, so once a region has been done it is not done again (or only after `recheckDays`); that is remembered in
+ * the same table that remembers the paid searches, under a key of its own. A region that is the same city under another name is
+ * recognised by the places already near it. Never throws: a failure is reported in the outcome.
  */
-export async function ensureDayTrips(supabase: SupabaseClient, region: string, deps: Deps & { now?: Date } = {}): Promise<OsmRegionOutcome> {
+async function ensureLandmarkLayer(supabase: SupabaseClient, region: string, layer: LandmarkLayer, deps: Deps = {}): Promise<OsmRegionOutcome> {
   try {
-    const key = themedKey(normalizeRegionKey(region), DAY_TRIPS_KEY);
+    const key = themedKey(normalizeRegionKey(region), layer.key);
     const now = deps.now ?? new Date();
     const { data: marker, error: markerError } = await supabase.from("discovery_regions").select("last_attempt_at, last_success_at").eq("region_key", key).maybeSingle();
     if (markerError) throw new Error(`Couldn't read discovery_regions: ${markerError.message}`);
-    if (marker?.last_success_at) return { region, status: "already_covered", inserted: 0 };
-    if (marker?.last_attempt_at && now.getTime() - new Date(marker.last_attempt_at as string).getTime() < FAILED_RETRY_DAYS * 86_400_000) {
+    const age = (iso: unknown) => (iso ? now.getTime() - new Date(iso as string).getTime() : Infinity);
+    if (marker?.last_success_at && (layer.recheckDays === undefined || age(marker.last_success_at) < layer.recheckDays * 86_400_000)) {
       return { region, status: "already_covered", inserted: 0 };
     }
+    if (age(marker?.last_attempt_at) < FAILED_RETRY_DAYS * 86_400_000) return { region, status: "already_covered", inserted: 0 };
 
     const remember = (success: boolean) =>
       supabase.from("discovery_regions").upsert(
@@ -225,27 +260,29 @@ export async function ensureDayTrips(supabase: SupabaseClient, region: string, d
       return { region, status: "failed", inserted: 0, error: `Couldn't locate "${region}"` };
     }
 
-    if ((await nearbyDayTripRows(supabase, centre)) >= COVERED_BY_NEARBY_ROWS) {
+    // The same city under another name: covered already. (Not for a layer that is looked at again, which is about finding more.)
+    if (layer.recheckDays === undefined && (await nearbyRows(supabase, centre, layer)) >= layer.minNearby) {
       await remember(true);
       return { region, status: "already_covered", inserted: 0 };
     }
 
     await (deps.sleep ?? sleep)(1100);
-    const { results } = await persistDiscovery(supabase, [createDayTripSource(supabase, centre, region, deps)]);
+    const { results } = await persistDiscovery(supabase, [layer.create(supabase, centre, region, deps)]);
     const result = results[0];
     await remember(result.errors.length === 0);
-    if (result.errors.length) return { region, status: "failed", inserted: result.inserted, error: `day trips: ${result.errors[0]}` };
+    if (result.errors.length) return { region, status: "failed", inserted: result.inserted, error: `${layer.label}: ${result.errors[0]}` };
     return { region, status: "added", inserted: result.inserted };
   } catch (err) {
     return { region, status: "failed", inserted: 0, error: err instanceof Error ? err.message : "Unknown error" };
   }
 }
 
-/** Day trips for several regions, at most `maxFetches` of which actually search (each takes a couple of minutes). */
-export async function ensureDayTripsForRegions(
+/** Several regions, at most `maxFetches` of which actually search (each takes a couple of minutes). */
+async function ensureLayerForRegions(
   supabase: SupabaseClient,
   regions: string[],
-  options: { maxFetches?: number } & Deps & { now?: Date } = {}
+  layer: LandmarkLayer,
+  options: { maxFetches?: number } & Deps = {}
 ): Promise<OsmRegionOutcome[]> {
   const maxFetches = options.maxFetches ?? 1;
   const outcomes: OsmRegionOutcome[] = [];
@@ -254,9 +291,14 @@ export async function ensureDayTripsForRegions(
     if (fetched >= maxFetches) break;
     // Each region is looked up on the map before anything is fetched: spaced, as the map service asks.
     if (outcomes.length > 0) await (options.sleep ?? sleep)(1100);
-    const outcome = await ensureDayTrips(supabase, region, options);
+    const outcome = await ensureLandmarkLayer(supabase, region, layer, options);
     outcomes.push(outcome);
     if (outcome.status !== "already_covered") fetched += 1;
   }
   return outcomes;
 }
+
+export const ensureDayTrips = (supabase: SupabaseClient, region: string, deps: Deps = {}) => ensureLandmarkLayer(supabase, region, DAY_TRIPS_LAYER, deps);
+export const ensureDayTripsForRegions = (supabase: SupabaseClient, regions: string[], options: { maxFetches?: number } & Deps = {}) => ensureLayerForRegions(supabase, regions, DAY_TRIPS_LAYER, options);
+export const ensureHeritage = (supabase: SupabaseClient, region: string, deps: Deps = {}) => ensureLandmarkLayer(supabase, region, HERITAGE_LAYER, deps);
+export const ensureHeritageForRegions = (supabase: SupabaseClient, regions: string[], options: { maxFetches?: number } & Deps = {}) => ensureLayerForRegions(supabase, regions, HERITAGE_LAYER, options);

@@ -66,6 +66,14 @@ export const DISCOVERY_THEMES: DiscoveryTheme[] = [
       "and holiday activities, with the ages each is for where the page says",
   },
   {
+    key: "heritage",
+    label: "Heritage and culture",
+    focus:
+      "heritage and culture for visitors: National Trust and English Heritage properties and what they have on (guided tours, talks, family trails, seasonal events, open days), " +
+      "local museums and heritage centres and their exhibitions, talks and walks, historic houses and gardens open to the public, archaeological sites, " +
+      "art galleries and their exhibitions, and local history society talks and heritage open days",
+  },
+  {
     key: "events",
     label: "Dated events and seasonal happenings",
     focus:

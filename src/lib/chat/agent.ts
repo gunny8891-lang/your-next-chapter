@@ -12,6 +12,7 @@ import { dayTripsText, wantsDayTrips } from "@/lib/chat/dayTrips";
 import { foodText, wantsFood } from "@/lib/chat/food";
 import { gardenCentresText, wantsGardenCentres } from "@/lib/chat/gardenCentres";
 import { kidsText, wantsKidsActivities } from "@/lib/chat/kids";
+import { heritageText, wantsHeritage } from "@/lib/chat/heritage";
 import { loadRecentIdeas, recentIdeasText, type RecentIdea } from "@/lib/chat/recentIdeas";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { addDays, londonToday } from "@/lib/opportunities/schedule";
@@ -70,7 +71,9 @@ export function buildSystemPrompt(
   /** Garden centres near home, only when they asked about one (see gardenCentres.ts). Empty otherwise. */
   gardenCentreList: string = "",
   /** Places that say they suit children, only when they mentioned children or grandchildren (see kids.ts). Empty otherwise. */
-  kidsList: string = ""
+  kidsList: string = "",
+  /** Heritage and culture near home, only when they asked about it by name (see heritage.ts). Empty otherwise. */
+  heritageList: string = ""
 ) {
   const weekItemsText = weekItems.length
     ? weekItems
@@ -115,6 +118,10 @@ ${candidatesText || "No other active candidate activities available right now."}
 
 ${dayTripsList ? `DAY TRIPS (well-known places further afield, listed because they asked for a day out; say roughly how far and how long it takes, as an estimate, and that it is worth checking opening times and booking before they go. We do not list cafés or restaurants near these, so for lunch there say they can look on a map once they arrive):
 ${dayTripsList}
+
+` : ""}${heritageList ? `HERITAGE, MUSEUMS AND HISTORIC PLACES WITHIN THEIR DISTANCE (listed because they asked about them; opening hours are as the map records them and may be out of date, so say to check before going):
+${heritageList}
+For these: suggest two or three at most, from this list only, saying roughly how far each is and, where it says so, that the National Trust or English Heritage runs it. Say that National Trust and English Heritage properties usually charge unless they are members, and that you do not know whether they are; never state a price, a collection, an exhibition or what is on that is not in a line.
 
 ` : ""}${kidsList ? `THINGS FOR CHILDREN NEAR HOME (listed because they mentioned children or grandchildren; each says it suits children or families, which is all we know):
 ${kidsList}
@@ -236,7 +243,8 @@ export async function conciergeReply(
     wantsFood(question) ? await foodText(supabase, memberId) : "",
     new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date()),
     wantsGardenCentres(question) ? await gardenCentresText(supabase, memberId) : "",
-    wantsKidsActivities(question) ? await kidsText(supabase, memberId, scheduledActivityIds) : ""
+    wantsKidsActivities(question) ? await kidsText(supabase, memberId, scheduledActivityIds) : "",
+    wantsHeritage(question) ? await heritageText(supabase, memberId, question) : ""
   );
 
   const client = new Anthropic({ apiKey });
