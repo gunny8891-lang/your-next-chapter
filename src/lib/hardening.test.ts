@@ -133,9 +133,8 @@ describe("the concierge's conversation", () => {
   });
 
   it("has a limit on how long one message can be", () => {
-    const action = read("src/app/chat/actions.ts");
-    expect(action).toContain("MAX_MESSAGE_CHARS = 1000");
-    expect(action).toContain("trimmed.length > MAX_MESSAGE_CHARS");
+    expect(read("src/lib/chat/limits.ts")).toContain("MAX_MESSAGE_CHARS = 1000");
+    expect(read("src/app/chat/actions.ts")).toContain("trimmed.length > MAX_MESSAGE_CHARS");
   });
 
   it("refreshes the screens a held page would show out of date", () => {

@@ -5,10 +5,8 @@ import { createClient } from "@/utils/supabase/server";
 import { conciergeReply, type ChatHistoryMessage } from "@/lib/chat/agent";
 import type { ToolAction } from "@/lib/chat/calendarTools";
 import { chatMessage, classifyAiFailure } from "@/lib/ai/unavailable";
+import { MAX_MESSAGE_CHARS } from "@/lib/chat/limits";
 import { alreadyOfferedSupport, assessCare, supportFooter, urgentReply } from "@/lib/chat/care";
-
-/** The longest message the concierge will take: ample for anything a person types, and a limit on what one message can cost. */
-export const MAX_MESSAGE_CHARS = 1000;
 
 export async function sendChatMessageAction(
   question: string
