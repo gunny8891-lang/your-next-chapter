@@ -19,7 +19,7 @@ export const ENGAGEMENT_WINDOW_DAYS = 45;
 /** How many organisers are put forward at a time: the throttle then decides which are due. */
 export const ORGANISER_POOL = 12;
 /** Organisers reread in one run: each can take a minute or two, and the daily search budget is only checked at the start of a run. The job runs twice a day. */
-export const ORGANISERS_PER_RUN = 1;
+export const ORGANISERS_PER_RUN = 2;
 
 /** Pages that are not an organiser's own listing: maps, social networks, encyclopaedias, the fallback search link. */
 const NOT_AN_ORGANISER = ["openstreetmap.org", "google.com", "google.co.uk", "facebook.com", "instagram.com", "twitter.com", "x.com", "youtube.com", "wikipedia.org", "wikimedia.org", "search.local", "ticketmaster.co.uk", "ticketmaster.com", "eventbrite.co.uk", "eventbrite.com", "meetup.com"];
@@ -100,8 +100,14 @@ export type OrganiserDeps = {
   now?: Date;
 };
 
-/** Rereads the organisers that are due, at most `max` of them, through the same throttle as the searches. */
-export async function refreshOrganisers(admin: SupabaseClient, options: { max?: number; force?: boolean } & OrganiserDeps = {}): Promise<{ organisers: Organiser[]; summary: ThrottledSearchSummary }> {
+/**
+ * Rereads the organisers that are due, at most `max` of them, through the same throttle as the searches. They are done one at a
+ * time, and the daily search budget is looked at again before each (`allowed`), so a run cannot go on spending after it is used up.
+ */
+export async function refreshOrganisers(
+  admin: SupabaseClient,
+  options: { max?: number; force?: boolean; allowed?: () => Promise<boolean> } & OrganiserDeps = {}
+): Promise<{ organisers: Organiser[]; summary: ThrottledSearchSummary }> {
   const now = options.now ?? new Date();
   const organisers = await (options.load ?? loadOrganisers)(admin, now);
   const entryByHost = new Map(organisers.map((o) => [o.host, o.entryUrl]));
@@ -112,11 +118,15 @@ export async function refreshOrganisers(admin: SupabaseClient, options: { max?: 
   const requests: RegionRequest[] = organisers.map((o) => ({ label: o.host, theme: ORGANISER_THEME, nameOnly: true }));
   const runSearch: RunSearch = (host) => persist(admin, [makeSource(host, entryByHost.get(host) ?? `https://${host}/`)]);
 
-  const summary = await (options.searchRegions ?? searchRegionsThrottled)(admin, requests, {
-    maxSearches: options.max ?? ORGANISERS_PER_RUN,
-    force: options.force,
-    now,
-    runSearch,
-  });
+  const summary: ThrottledSearchSummary = { searched: [], skipped: [], deferred: [] };
+  for (let i = 0; i < (options.max ?? ORGANISERS_PER_RUN); i++) {
+    if (options.allowed && !(await options.allowed())) break;
+    const step = await (options.searchRegions ?? searchRegionsThrottled)(admin, requests, { maxSearches: 1, force: options.force, now, runSearch });
+    summary.searched.push(...step.searched);
+    summary.skipped = step.skipped;
+    summary.deferred = step.deferred;
+    // Nothing was due: nothing more to read.
+    if (step.searched.length === 0) break;
+  }
   return { organisers, summary };
 }

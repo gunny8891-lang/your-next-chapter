@@ -7,7 +7,7 @@
     },
     {
       "path": "/api/discovery/organisers",
-      "schedule": "0 5,17 * * *"
+      "schedule": "0 5 * * *"
     },
     {
       "path": "/api/jobs/health-report",

@@ -23,7 +23,7 @@ export async function GET(request: Request) {
   if (!budget.allowed) return NextResponse.json({ skipped: "search budget used up for today", budget });
 
   try {
-    const { organisers, summary } = await refreshOrganisers(admin, { force });
+    const { organisers, summary } = await refreshOrganisers(admin, { force, allowed: async () => (await searchAllowed(admin, null)).allowed });
     // What was just added may be the same event as one already held, from another page.
     const duplicates = await mergeDuplicateVenues(admin).catch((err: unknown) => ({ merged: 0, error: err instanceof Error ? err.message : "Merge failed" }));
     return NextResponse.json({ organisers: organisers.map((o) => ({ host: o.host, engaged: o.engaged, upcoming: o.upcoming, score: o.score })), summary, duplicates });

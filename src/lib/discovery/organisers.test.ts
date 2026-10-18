@@ -116,13 +116,13 @@ describe("rereading them through the same throttle", () => {
         { label: "barnet.u3asite.uk", theme: ORGANISER_THEME, nameOnly: true },
         { label: "stevenage.gov.uk", theme: ORGANISER_THEME, nameOnly: true },
       ]);
-      expect(options.maxSearches).toBe(ORGANISERS_PER_RUN);
+      expect(options.maxSearches).toBe(1);
       await options.runSearch!("stevenage.gov.uk", ORGANISER_THEME);
-      return { searched: [], skipped: [], deferred: [] };
+      return { searched: [{ region: "stevenage.gov.uk", status: "searched" as const, found: 0, inserted: 0, insertedActive: 0 }], skipped: [], deferred: [] };
     });
     const source = vi.fn((host: string, entry: string) => ({ name: `organiser:${host}`, fetchCandidates: async () => [{ entry }] as never }));
     const persist = vi.fn(async () => ({ results: [], pending: [] }));
-    await refreshOrganisers({} as SupabaseClient, { load: async () => organisers, searchRegions: searchRegions as never, source: source as never, persist: persist as never, now: NOW });
+    await refreshOrganisers({} as SupabaseClient, { load: async () => organisers, searchRegions: searchRegions as never, source: source as never, persist: persist as never, now: NOW, max: 1 });
     expect(source).toHaveBeenCalledWith("stevenage.gov.uk", "https://stevenage.gov.uk/events/a");
     expect(persist).toHaveBeenCalledTimes(1);
   });
@@ -137,10 +137,12 @@ describe("rereading them through the same throttle", () => {
       consecutive_failures: 0,
     });
     const upserts: Record<string, unknown>[] = [];
+    const rows = [state("barnet.u3asite.uk", 3), state("stevenage.gov.uk", 20)];
     const db = {
       from: () => ({
-        select: () => Promise.resolve({ data: [state("barnet.u3asite.uk", 3), state("stevenage.gov.uk", 20)], error: null }),
-        upsert: (v: Record<string, unknown>) => (upserts.push(v), Promise.resolve({ error: null })),
+        select: () => Promise.resolve({ data: rows, error: null }),
+        // Claiming a search records the attempt, as the real table does, so the same organiser is not due again a moment later.
+        upsert: (v: Record<string, unknown>) => (upserts.push(v), Object.assign(rows.find((r) => r.region_key === v.region_key) ?? {}, v), Promise.resolve({ error: null })),
         update: () => ({ eq: () => Promise.resolve({ error: null }) }),
       }),
     } as unknown as SupabaseClient;
@@ -156,7 +158,7 @@ describe("rereading them through the same throttle", () => {
       now: NOW,
     });
     expect(read).toEqual(["stevenage.gov.uk"]);
-    expect(summary.skipped.map((s) => s.region)).toEqual(["barnet.u3asite.uk (organiser)"]);
+    expect(summary.skipped.map((s) => s.region)).toContain("barnet.u3asite.uk (organiser)");
     expect(upserts[0]).toMatchObject({ region_key: "stevenage.gov.uk#organiser" });
   });
 });
@@ -225,10 +227,63 @@ describe("the job", () => {
     expect(route).toContain("if (!isCronRequest(request))");
     expect(route).toContain("export const maxDuration = 300;");
     expect(route).toContain("searchAllowed(admin, null)");
-    expect(route).toContain("refreshOrganisers(admin, { force })");
+    expect(route).toContain("refreshOrganisers(admin, { force, allowed:");
     const cron = JSON.parse(read("vercel.json")).crons as { path: string; schedule: string }[];
-    // One organiser a run, twice a day: the daily search budget is only looked at when a run starts.
-    expect(cron).toContainEqual({ path: "/api/discovery/organisers", schedule: "0 5,17 * * *" });
-    expect(ORGANISERS_PER_RUN).toBe(1);
+    // Two organisers a run, once a day, the budget looked at again before each.
+    expect(cron).toContainEqual({ path: "/api/discovery/organisers", schedule: "0 5 * * *" });
+    expect(ORGANISERS_PER_RUN).toBe(2);
+    expect(route).toContain("allowed: async () => (await searchAllowed(admin, null)).allowed");
+  });
+});
+
+describe("two organisers a run, with the budget looked at before each", () => {
+  const two: Organiser[] = [
+    { host: "a.example.org", entryUrl: "https://a.example.org/", engaged: 1, upcoming: 1, rows: 1, score: 4 },
+    { host: "b.example.org", entryUrl: "https://b.example.org/", engaged: 0, upcoming: 1, rows: 1, score: 1.2 },
+  ];
+  const searched = (region: string) => ({ region, status: "searched" as const, found: 0, inserted: 0, insertedActive: 0 });
+  const stepper = () => {
+    const calls: number[] = [];
+    const fn = vi.fn(async (_db: unknown, _requests: unknown, options: { maxSearches?: number }) => {
+      calls.push(options.maxSearches ?? 0);
+      return { searched: [searched(`host${calls.length}`)], skipped: [], deferred: [] };
+    });
+    return { fn, calls };
+  };
+
+  it("reads one at a time, up to the number allowed in a run", async () => {
+    const { fn, calls } = stepper();
+    const { summary } = await refreshOrganisers({} as SupabaseClient, { load: async () => two, searchRegions: fn as never, now: NOW });
+    expect(calls).toEqual([1, 1]);
+    expect(summary.searched).toHaveLength(ORGANISERS_PER_RUN);
+  });
+
+  it("stops when the daily search budget has been used up, even part way", async () => {
+    const { fn, calls } = stepper();
+    const answers = [true, false];
+    const allowed = vi.fn(async () => answers.shift() ?? false);
+    const { summary } = await refreshOrganisers({} as SupabaseClient, { load: async () => two, searchRegions: fn as never, allowed, now: NOW });
+    expect(calls).toEqual([1]);
+    expect(allowed).toHaveBeenCalledTimes(2);
+    expect(summary.searched).toHaveLength(1);
+  });
+
+  it("stops when nothing is due", async () => {
+    const fn = vi.fn(async () => ({ searched: [], skipped: [{ region: "a (organiser)", reason: "recently_searched" as const }], deferred: [] }));
+    const { summary } = await refreshOrganisers({} as SupabaseClient, { load: async () => two, searchRegions: fn as never, now: NOW });
+    expect(fn).toHaveBeenCalledTimes(1);
+    expect(summary.skipped).toHaveLength(1);
+  });
+});
+
+describe("the schedule", () => {
+  it("runs each job at most once a day: a job set to run more often stopped the whole site from deploying", () => {
+    const crons = JSON.parse(read("vercel.json")).crons as { path: string; schedule: string }[];
+    expect(crons.length).toBeGreaterThan(4);
+    for (const { path, schedule } of crons) {
+      const [minute, hour] = schedule.split(" ");
+      expect(minute, path).toMatch(/^\d+$/);
+      expect(hour, path).toMatch(/^\d+$/);
+    }
   });
 });
