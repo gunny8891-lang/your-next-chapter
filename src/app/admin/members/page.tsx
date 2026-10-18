@@ -4,6 +4,7 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { MembersDashboard } from "@/components/MembersDashboard";
 import { loadMemberStats } from "@/lib/admin/memberStatsLoader";
 import { loadProblems } from "@/lib/admin/problemsLoader";
+import { loadMemberList } from "@/lib/admin/memberListLoader";
 
 export const metadata = { title: "Members" };
 
@@ -19,7 +20,7 @@ export default async function AdminMembersPage() {
   if (profile?.role !== "admin") redirect("/today");
 
   const admin = createAdminClient();
-  const [stats, problems] = await Promise.all([loadMemberStats(admin), loadProblems(admin)]);
+  const [stats, problems, list] = await Promise.all([loadMemberStats(admin), loadProblems(admin), loadMemberList(admin).catch(() => null)]);
 
-  return <MembersDashboard stats={stats} problems={problems} />;
+  return <MembersDashboard stats={stats} problems={problems} list={list} />;
 }

@@ -4,7 +4,7 @@ import { computeMemberStats, type AccountRow, type ActivityStamp, type MemberSta
 /**
  * Reads what memberStats.ts needs. Run with the admin client, after the page has checked
  * the viewer is an admin: it reads every member's rows, so it must never be reachable
- * otherwise. Only ids, dates and yes/no flags leave this file; never an email address.
+ * otherwise. Only ids, dates and yes/no flags leave this file; never an email address (the list of who registered is memberListLoader.ts).
  */
 
 const PAGE = 1000; // the most rows the database returns in one go

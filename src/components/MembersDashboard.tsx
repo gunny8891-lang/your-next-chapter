@@ -4,6 +4,8 @@ import { T } from "@/lib/theme";
 import { RETURNING_DAYS_NEEDED } from "@/lib/admin/memberStats";
 import type { MemberStatsResult } from "@/lib/admin/memberStatsLoader";
 import { kindLabel, type ProblemsSummary } from "@/lib/admin/problemsLoader";
+import { MAX_LISTED } from "@/lib/admin/memberList";
+import type { MemberListResult } from "@/lib/admin/memberListLoader";
 
 const card = {
   background: T.surface,
@@ -30,7 +32,7 @@ function dayLabel(iso: string): string {
   return new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 }
 
-export function MembersDashboard({ stats, problems = null }: { stats: MemberStatsResult; problems?: ProblemsSummary | null }) {
+export function MembersDashboard({ stats, problems = null, list = null }: { stats: MemberStatsResult; problems?: ProblemsSummary | null; list?: MemberListResult | null }) {
   const busiest = Math.max(1, ...stats.daily.map((d) => d.members));
   const of = (n: number) => (stats.registered ? `${Math.round((n / stats.registered) * 100)}% of members` : undefined);
 
@@ -45,7 +47,7 @@ export function MembersDashboard({ stats, problems = null }: { stats: MemberStat
             <Users size={22} /> Members
           </h1>
           <p style={{ color: "#EAE3D0", fontSize: 13.5, margin: "6px 0 0" }}>
-            Counts only, no names or emails. Admin accounts are left out, so your own use does not show here. Days are London days.
+            Counts first, then who has registered. Admin accounts are left out, so your own use does not show here. Days are London days.
           </p>
         </div>
       </div>
@@ -92,6 +94,41 @@ export function MembersDashboard({ stats, problems = null }: { stats: MemberStat
           <Stat label="EMAIL CONFIRMED" value={stats.emailConfirmed} note={of(stats.emailConfirmed)} />
           <Stat label="FINISHED ONBOARDING" value={stats.onboarded} note={of(stats.onboarded)} />
         </div>
+
+        {list && (
+          <>
+            <h2 style={heading}>Who has registered</h2>
+            <div style={{ ...card, marginBottom: 28, overflowX: "auto" }}>
+              {list.rows.length === 0 ? (
+                <p style={{ margin: 0, fontSize: 14, color: T.inkSoft }}>Nobody yet.</p>
+              ) : (
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5, color: T.ink }}>
+                  <thead>
+                    <tr style={{ textAlign: "left", color: T.inkSoft, fontSize: 11.5, letterSpacing: 0.3 }}>
+                      <th style={{ padding: "0 10px 8px 0" }}>EMAIL</th>
+                      <th style={{ padding: "0 10px 8px 0" }}>JOINED</th>
+                      <th style={{ padding: "0 10px 8px 0" }}>EMAIL CONFIRMED</th>
+                      <th style={{ padding: "0 10px 8px 0" }}>FINISHED SETTING UP</th>
+                      <th style={{ padding: "0 0 8px" }}>WEEKLY EMAIL</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {list.rows.map((row) => (
+                      <tr key={row.email} style={{ borderTop: `1px solid ${T.line}` }}>
+                        <td style={{ padding: "8px 10px 8px 0", wordBreak: "break-all" }}>{row.email}</td>
+                        <td style={{ padding: "8px 10px 8px 0", whiteSpace: "nowrap" }}>{dayLabel(row.joined)}</td>
+                        <td style={{ padding: "8px 10px 8px 0", color: row.emailConfirmed ? T.ink : "#8A4A28", fontWeight: row.emailConfirmed ? 400 : 700 }}>{row.emailConfirmed ? "Yes" : "Not yet"}</td>
+                        <td style={{ padding: "8px 10px 8px 0" }}>{row.finishedOnboarding ? "Yes" : "Not yet"}</td>
+                        <td style={{ padding: "8px 0" }}>{row.weeklyPlanEmail === null ? "-" : row.weeklyPlanEmail ? "On" : "Off"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+              {list.total > MAX_LISTED && <p style={{ fontSize: 12.5, color: T.inkSoft, margin: "10px 0 0" }}>Showing the newest {MAX_LISTED} of {list.total}.</p>}
+            </div>
+          </>
+        )}
 
         <h2 style={heading}>Using it</h2>
         <div style={{ ...grid, marginBottom: 8 }}>
