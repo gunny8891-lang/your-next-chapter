@@ -37,7 +37,8 @@ describe("the Sunday job and the rest agree about which week is planned", () => 
   it("the job names next week; nothing else names a week, so it follows what the member is looking at", () => {
     const job = read("src/app/api/jobs/weekly-digest/route.ts");
     expect(job).toContain("const weekStart = nextLondonWeekStart();");
-    expect(job).toContain("generateAndSaveItinerary(admin, member.user_id, { weekStart })");
+    expect(job).toContain("planAndEmailWeekAhead(admin, ");
+    expect(read("src/lib/email/weekAhead.ts")).toContain("generateAndSaveItinerary(admin, member.user_id, { weekStart })");
     for (const caller of ["src/app/account/actions.ts", "src/app/onboarding/actions.ts", "src/app/week/itineraryActions.ts", "src/lib/discovery/regional.ts"]) {
       expect(read(caller), caller).not.toMatch(/generateAndSaveItinerary\([^)]*weekStart/);
     }

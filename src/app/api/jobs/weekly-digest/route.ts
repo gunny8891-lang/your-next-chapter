@@ -1,21 +1,11 @@
 import { NextResponse } from "next/server";
 import { isCronRequest } from "@/lib/jobs/cronAuth";
 import { createAdminClient } from "@/utils/supabase/admin";
-import { generateAndSaveItinerary } from "@/lib/itinerary/generateAndSave";
 import { nextLondonWeekStart } from "@/lib/opportunities/schedule";
-import { formatCost, formatTime } from "@/lib/itinerary/format";
-import { sendWeeklyDigestEmail } from "@/lib/email/send";
-import type { DigestItem, DigestSurprise } from "@/lib/email/WeeklyDigestEmail";
+import { planAndEmailWeekAhead } from "@/lib/email/weekAhead";
 
-type ActivityRow = {
-  title: string;
-  category: string;
-  address: string | null;
-  date_time: string | null;
-  price_estimate: number | null;
-  booking_url: string | null;
-  description?: string | null;
-};
+// Every member is planned and emailed one after another, each taking a few seconds, so this has the whole of its time limit.
+export const maxDuration = 300;
 
 type MemberRow = {
   user_id: string;
@@ -32,6 +22,7 @@ function emailOf(users: MemberRow["users"]): string | null {
 // Triggered by Vercel Cron Sunday evening (see vercel.json), or manually via
 // curl with the same bearer token. It plans each member's COMING week (the one starting tomorrow) and emails it:
 // planning the week that is ending would send a plan for days that have already gone.
+// A member who finishes setting up after this has run is planned and emailed when they finish (see onboarding/actions.ts).
 export async function GET(request: Request) {
   if (!isCronRequest(request)) {
     return new NextResponse("Unauthorized", { status: 401 });
@@ -44,70 +35,8 @@ export async function GET(request: Request) {
   const results: { memberId: string; error: string | null }[] = [];
 
   for (const member of (members ?? []) as unknown as MemberRow[]) {
-    const email = emailOf(member.users);
-    if (!email) {
-      results.push({ memberId: member.user_id, error: "No email on record" });
-      continue;
-    }
-
-    const generated = await generateAndSaveItinerary(admin, member.user_id, { weekStart });
-    if (generated.error || !generated.itineraryId) {
-      results.push({ memberId: member.user_id, error: generated.error ?? "Generation failed" });
-      continue;
-    }
-
-    const { data: itineraryItems } = await admin
-      .from("itinerary_items")
-      .select("day_of_week, slot, rationale_text, activities(title, category, address, date_time, price_estimate, booking_url)")
-      .eq("itinerary_id", generated.itineraryId);
-
-    const items: DigestItem[] = (itineraryItems ?? [])
-      .filter((row) => row.activities)
-      .map((row) => {
-        const activity = row.activities as unknown as ActivityRow;
-        return {
-          day: row.day_of_week,
-          title: activity.title,
-          category: activity.category,
-          time: formatTime(activity.date_time, row.slot),
-          location: activity.address ?? "Location TBC",
-          cost: formatCost(activity.price_estimate),
-          why: row.rationale_text ?? "",
-          bookingUrl: activity.booking_url,
-        };
-      });
-
-    const { data: surpriseCard } = await admin
-      .from("surprise_me_cards")
-      .select("activities(title, address, price_estimate, description, booking_url)")
-      .eq("member_id", member.user_id)
-      .eq("week_start_date", weekStart)
-      .maybeSingle();
-
-    const surprise: DigestSurprise = (() => {
-      const activity = surpriseCard?.activities as unknown as ActivityRow | null;
-      if (!activity) return null;
-      return {
-        title: activity.title,
-        location: activity.address ?? "Location TBC",
-        cost: formatCost(activity.price_estimate),
-        why: activity.description ?? "",
-        bookingUrl: activity.booking_url,
-      };
-    })();
-
-    // The week is still planned in the app; only the email is skipped for someone who has switched it off.
-    if (member.email_weekly_plan === false) {
-      results.push({ memberId: member.user_id, error: null });
-      continue;
-    }
-
-    try {
-      await sendWeeklyDigestEmail(email, member.user_id, member.location_text?.replace("Near ", "") || "Your week", items, surprise, weekStart);
-      results.push({ memberId: member.user_id, error: null });
-    } catch (err) {
-      results.push({ memberId: member.user_id, error: err instanceof Error ? err.message : "Email send failed" });
-    }
+    const error = await planAndEmailWeekAhead(admin, { ...member, email: emailOf(member.users) }, weekStart);
+    results.push({ memberId: member.user_id, error });
   }
 
   return NextResponse.json({ results });

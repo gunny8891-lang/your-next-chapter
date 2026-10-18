@@ -6,6 +6,7 @@ import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { geocodeLocation } from "@/lib/geo/geocode";
 import { generateAndSaveItinerary } from "@/lib/itinerary/generateAndSave";
+import { catchUpWeekAhead } from "@/lib/email/weekAhead";
 import { triggerDiscoveryForRegion } from "@/lib/discovery/regional";
 import { cleanLocationText } from "@/lib/geo/locationText";
 import { cleanFirstName } from "@/lib/someTime/format";
@@ -72,6 +73,10 @@ export async function saveOnboardingAction(submitted: OnboardingAnswers) {
   // demo placeholder data until they notice a "Generate my week" button.
   const admin = createAdminClient();
   await generateAndSaveItinerary(admin, user.id);
+
+  // The Sunday-evening email goes to everyone who has finished setting up by then. Someone finishing after it has gone out
+  // would otherwise wait a whole week for their first, so they are sent the week ahead now.
+  after(() => catchUpWeekAhead(admin, user.id));
 
   // Kick off discovery for this region now rather than waiting for the
   // nightly cron — queues candidates for admin review, doesn't itself
